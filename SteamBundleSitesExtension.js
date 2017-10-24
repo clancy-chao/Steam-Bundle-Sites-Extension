@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.6.8
-// @description  try to take over the world!
+// @version      1.6.9
+// @description  A steam bundle sites' tool kits.
 // @icon         http://store.steampowered.com/favicon.ico
 // @author       Bisumaruko
 // @include      http*://store.steampowered.com/*
