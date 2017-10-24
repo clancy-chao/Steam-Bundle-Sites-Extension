@@ -142,7 +142,7 @@ const i18n = {
         failDetailPS3Required: '需要PS3 啟動',
         failDetailGiftWallet: '偵測到禮物卡／錢包序號',
         failDetailParsingFailed: '處理資料發生錯誤，請稍後再試',
-        failDetailRequestFailedNeedUpdate: '請求發生錯誤，請稍後再試<br>或者嘗試更新SessionID',
+        failDetailRequestFailedNeedUpdate: '請求發生錯誤，請稍後再試</br>或者嘗試更新SessionID',
         noItemDetails: '無產品詳細資料',
         notLoggedInTitle: '未登入',
         notLoggedInMsg: '請登入Steam 以讓腳本紀錄SessionID',
@@ -167,6 +167,7 @@ const i18n = {
         buttonActivate: '啟動',
         buttonCopy: '複製',
         buttonReset: '清空',
+        buttonExport: '匯出',
         checkboxIncludeGameTitle: '遊戲名',
         checkboxJoinKeys: '合併',
         checkboxSkipUsed: '跳過已使用',
@@ -194,14 +195,14 @@ const i18n = {
         failDetailPS3Required: '需要PS3 激活',
         failDetailGiftWallet: '侦测到礼物卡／钱包激活码',
         failDetailParsingFailed: '处理资料发生错误，请稍后再试',
-        failDetailRequestFailedNeedUpdate: '请求发生错误，请稍后再试<br>或者尝试更新SessionID',
+        failDetailRequestFailedNeedUpdate: '请求发生错误，请稍后再试</br>或者尝试更新SessionID',
         noItemDetails: '无产品详细信息',
         notLoggedInTitle: '未登入',
         notLoggedInMsg: '请登入Steam 以让脚本记录SessionID',
         missingTitle: '未发现SessionID',
         missingMsg: '请问要更新SessionID 吗？',
         emptyInput: '未批配到Steam 激活码',
-        settingsTitle: '設置',
+        settingsTitle: '设置',
         settingsAutoUpdateSessionID: '自动更新SessionID',
         settingsSessionID: '我的SessionID',
         settingsLanguage: '语言',
@@ -219,6 +220,7 @@ const i18n = {
         buttonActivate: '激活',
         buttonCopy: '复制',
         buttonReset: '清空',
+        buttonExport: '导出',
         checkboxIncludeGameTitle: '游戏名',
         checkboxJoinKeys: '合并',
         checkboxSkipUsed: '跳过已使用',
@@ -271,6 +273,7 @@ const i18n = {
         buttonActivate: 'Activate',
         buttonCopy: 'Copy',
         buttonReset: 'Reset',
+        buttonExport: 'Export',
         checkboxIncludeGameTitle: 'Game Title',
         checkboxJoinKeys: 'Join',
         checkboxSkipUsed: 'Skip Used',
@@ -342,7 +345,7 @@ GM_addStyle(`
 const getSessionID = () => {
     GM_xmlhttpRequest({
         method: 'GET',
-        url: 'https://store.steampowered.com/',
+        url: 'http://store.steampowered.com/',
         onload: (res) => {
             if (res.status === 200) {
                 const accountID = res.response.match(/g_AccountID = (\d+)/).pop();
@@ -356,7 +359,7 @@ const getSessionID = () => {
                         type: 'error',
                         showCancelButton: true,
                     }).then(() => {
-                        window.open('https://store.steampowered.com/');
+                        window.open('http://store.steampowered.com/');
                     });
                 }
             }
@@ -711,6 +714,22 @@ const bundleSitesBoxHandler = {
     settings() {
         settings.display();
     },
+    export(data,filename) {
+        // data: [{key: ..., title: ...}, ...];
+
+        $('.SBSE_BtnExport').removeAttr('href');
+        $('.SBSE_BtnExport').removeAttr('download');
+        if(data.length > 0){
+            filename = filename.replace(/[\\\/:\*\?"<>\|\!]/g,"");
+            let formattedData = data.map((line) => {
+                return `${line.title},${line.key}`;
+            }).reduce((previous,current) => {
+                return `${previous}\n${current}`;
+            });
+            $('.SBSE_BtnExport').attr('href','data:text/csv;charset=utf-8,\ufeff' + encodeURIComponent(formattedData));
+            $('.SBSE_BtnExport').attr('download',`${filename}.csv`);
+        }
+    }
 };
 const bundleSitesBox = () => {
     GM_addStyle(`
@@ -744,12 +763,28 @@ const bundleSitesBox = () => {
             cursor: pointer;
             transition: all 0.5s;
         }
+        .SBSE_container a {
+            display: inline-block;
+            text-align: center;
+            width: 120px;
+            position: relative;
+            margin-right: 10px;
+            line-height: 28px;
+            box-sizing: border-box;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.5s;
+        }
+        .SBSE_container a:hover {
+
+        }
         .SBSE_container label { margin-right: 10px;}
         #SBSE_BtnSettings {
             width: 20px;
             height: 20px;
             float: right;
             margin-right: 0;
+            margin-top: 3px;
             margin-left: 10px;
             background-color: transparent;
             background-image: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjwhRE9DVFlQRSBzdmcgIFBVQkxJQyAnLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4nICAnaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkJz48c3ZnIGhlaWdodD0iMzJweCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMzIgMzI7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMycHgiIHhtbDpzcGFjZT0icHJlc2VydmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxnIGlkPSJMYXllcl8xIi8+PGcgaWQ9ImNvZyI+PHBhdGggZD0iTTMyLDE3Ljk2OXYtNGwtNC43ODEtMS45OTJjLTAuMTMzLTAuMzc1LTAuMjczLTAuNzM4LTAuNDQ1LTEuMDk0bDEuOTMtNC44MDVMMjUuODc1LDMuMjUgICBsLTQuNzYyLDEuOTYxYy0wLjM2My0wLjE3Ni0wLjczNC0wLjMyNC0xLjExNy0wLjQ2MUwxNy45NjksMGgtNGwtMS45NzcsNC43MzRjLTAuMzk4LDAuMTQxLTAuNzgxLDAuMjg5LTEuMTYsMC40NjlsLTQuNzU0LTEuOTEgICBMMy4yNSw2LjEyMWwxLjkzOCw0LjcxMUM1LDExLjIxOSw0Ljg0OCwxMS42MTMsNC43MDMsMTIuMDJMMCwxNC4wMzF2NGw0LjcwNywxLjk2MWMwLjE0NSwwLjQwNiwwLjMwMSwwLjgwMSwwLjQ4OCwxLjE4OCAgIGwtMS45MDIsNC43NDJsMi44MjgsMi44MjhsNC43MjMtMS45NDVjMC4zNzksMC4xOCwwLjc2NiwwLjMyNCwxLjE2NCwwLjQ2MUwxNC4wMzEsMzJoNGwxLjk4LTQuNzU4ICAgYzAuMzc5LTAuMTQxLDAuNzU0LTAuMjg5LDEuMTEzLTAuNDYxbDQuNzk3LDEuOTIybDIuODI4LTIuODI4bC0xLjk2OS00Ljc3M2MwLjE2OC0wLjM1OSwwLjMwNS0wLjcyMywwLjQzOC0xLjA5NEwzMiwxNy45Njl6ICAgIE0xNS45NjksMjJjLTMuMzEyLDAtNi0yLjY4OC02LTZzMi42ODgtNiw2LTZzNiwyLjY4OCw2LDZTMTkuMjgxLDIyLDE1Ljk2OSwyMnoiIHN0eWxlPSJmaWxsOiM0RTRFNTA7Ii8+PC9nPjwvc3ZnPg==);
@@ -809,6 +844,7 @@ const bundleSitesBox = () => {
                 <button class="SBSE_BtnActivate">${text.buttonActivate}</button>
                 <button class="SBSE_BtnCopy">${text.buttonCopy}</button>
                 <button class="SBSE_BtnReset">${text.buttonReset}</button>
+                <a class="SBSE_BtnExport">${text.buttonExport}</a>
                 <label><input type="checkbox" class="SBSE_ChkTitle">${text.checkboxIncludeGameTitle}</label>
                 <label><input type="checkbox" class="SBSE_ChkJoin">${text.checkboxJoinKeys}</label>
                 <button id="SBSE_BtnSettings"> </button>
@@ -830,8 +866,8 @@ const bundleSitesBox = () => {
 };
 const siteCache = {
     bundlestars: {
-        doms: [document],
-    },
+        doms: [document]
+    }
 };
 const siteHandlers = {
     indiegala() {
@@ -842,12 +878,40 @@ const siteHandlers = {
         GM_addStyle(`
             .SBSE_container { margin-top: 10px;}
             .SBSE_container > textarea { border: 1px solid #CC001D;}
-            .SBSE_container button { background-color: #CC001D; color: white;}
+            .SBSE_container button { background-color: #CC001D; color: white; border-radius: 3px;}
+            .SBSE_BtnExport { background-color: #CC001D; color: white; border-radius: 3px;}
+            .SBSE_BtnExport:hover {color: white;}
         `);
 
         // dom source
         const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
 
+        let extractKeys = () => {
+            const keys = [];
+
+            $(source).find('.game-key-string').each((index, element) => {
+                const $ele = $(element);
+                const key = $ele.find('.keys').val();
+
+                if (key) {
+                    const $a = $ele.find('.title_game > a');
+                    const title = $a.text().trim();
+
+                    // append key details
+                    keyDetails.set(key, {
+                        url: $a.attr('href'),
+                        title: $a.text(),
+                    });
+
+                    keys.push({
+                        key,
+                        title,
+                    });
+                }
+            });
+
+            return keys;
+        }
         // button click
         $('.SBSE_BtnReveal').click(() => {
             const handler = ($games, callback) => {
@@ -891,30 +955,11 @@ const siteHandlers = {
             bundleSitesBoxHandler.reveal(handler, $(source).find('a[id^=fetchlink_]'));
         });
         $('.SBSE_BtnRetrieve').click(() => {
-            const keys = [];
-
-            $(source).find('.game-key-string').each((index, element) => {
-                const $ele = $(element);
-                const key = $ele.find('.keys').val();
-
-                if (key) {
-                    const $a = $ele.find('.title_game > a');
-                    const title = $a.text().trim();
-
-                    // append key details
-                    keyDetails.set(key, {
-                        url: $a.attr('href'),
-                        title: $a.text(),
-                    });
-
-                    keys.push({
-                        key,
-                        title,
-                    });
-                }
-            });
-
-            bundleSitesBoxHandler.retrieve(keys);
+            bundleSitesBoxHandler.retrieve(extractKeys());
+        });
+        $('.SBSE_BtnExport').click(() => {
+            let bundleTitle = 'IndieGala ' + $('#steam-key').prev()[0].innerText;
+            bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
         });
     },
     bundlestars(firstCalled) {
@@ -938,6 +983,20 @@ const siteHandlers = {
 
             return $results;
         };
+        let extractKeys = () => {
+            const keys = [];
+
+            BSselect('.key-container input').each((index, input) => {
+                const $input = $(input);
+
+                keys.push({
+                    key: $input.val(),
+                    title: $input.closest('.key-container').prev().text().trim(),
+                });
+            });
+
+            return keys;
+        }
 
         if ($('.SBSE_container').length === 0 && $anchor.length > 0) {
             // insert textarea
@@ -947,9 +1006,10 @@ const siteHandlers = {
             GM_addStyle(`
                 .SBSE_container { border: 1px solid #424242; color: #999999;}
                 .SBSE_container > textarea { background-color: #303030; color: #DDD;}
-                .SBSE_container button { width: 80px;}
-                .SBSE_container button, .SBSE_container select { border: 1px solid transparent; background-color: #262626; color: #DEDEDE;}
-                .SBSE_container button:hover, .SBSE_container select:hover { color: #A8A8A8;}
+                .SBSE_container button, .SBSE_container a { width: 80px;}
+                .SBSE_container button, .SBSE_container select, .SBSE_container a { border: 1px solid transparent; background-color: #262626; color: #DEDEDE;}
+                .SBSE_container button:hover, .SBSE_container select:hover, .SBSE_container a:hover { color: #A8A8A8;}
+                .SBSE_container a { text-decoration: none;}
                 .SBSE_container label { color: #DEDEDE;}
                 .SBSE_container select { max-width:120px; height: 30px;}
                 .SBSE_container select, .SBSE_container span { margin-right: 0; margin-left: 10px; float: right;}
@@ -983,19 +1043,12 @@ const siteHandlers = {
             });
 
             $('.SBSE_BtnRetrieve').click(() => {
-                const keys = [];
-
-                BSselect('.key-container input').each((index, input) => {
-                    const $input = $(input);
-
-                    keys.push({
-                        key: $input.val(),
-                        title: $input.closest('.key-container').prev().text().trim(),
-                    });
-                });
-
-                bundleSitesBoxHandler.retrieve(keys);
+                bundleSitesBoxHandler.retrieve(extractKeys());
             });
+            $('.SBSE_BtnExport').click(() => {
+                let bundleTitle = 'BundleStars - ' + $('.SBSE_container select')[0][1].innerText;
+                bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
+            })
         }
 
         // setup select
@@ -1053,8 +1106,8 @@ const siteHandlers = {
                 text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
                 border-radius: 5px;
             }
-            .SBSE_container button {
-                width: 80px;
+            .SBSE_container button, .SBSE_container a {
+                width: 70px;
                 border: 1px solid #808080;
                 border-radius: 3px;
                 background-color: #c5c5c5;
@@ -1070,6 +1123,25 @@ const siteHandlers = {
         $('#SBSE_BtnSettings').before(
             $(`<label><input type="checkbox" class="SBSE_ChkSkipOwned">${text.checkboxSkipOwned}</label>`),
         );
+
+        // overwrite inherited color and underline
+        $('.SBSE_BtnExport').css({'color': '#4a4c45','text-decoration': 'none'});
+
+        let extractKeys = () => {
+            const keys = [];
+
+            $('.sr-redeemed-bubble .keyfield-text').each((index, element) => {
+                const $game = $(element);
+                const $heading = $game.closest('[class^=sr-key]').prev().children().eq(0);
+
+                keys.push({
+                    key: $game.text().trim(),
+                    title: $heading.text().trim(),
+                });
+            });
+
+            return keys;
+        }
 
         // button click
         $('.SBSE_BtnReveal').click(() => {
@@ -1093,19 +1165,12 @@ const siteHandlers = {
             bundleSitesBoxHandler.reveal(handler, $('.sr-unredeemed-steam-button'));
         });
         $('.SBSE_BtnRetrieve').click(() => {
-            const keys = [];
-
-            $('.sr-redeemed-bubble .keyfield-text').each((index, element) => {
-                const $game = $(element);
-                const $heading = $game.closest('[class^=sr-key]').prev().children().eq(0);
-
-                keys.push({
-                    key: $game.text().trim(),
-                    title: $heading.text().trim(),
-                });
-            });
-
-            bundleSitesBoxHandler.retrieve(keys);
+            bundleSitesBoxHandler.retrieve(extractKeys());
+        });
+        $('.SBSE_BtnExport').click(() => {
+            let product_json =JSON.parse(/window.models.product_json = ({.*});/.exec(document.head.innerHTML)[1]);
+            let bundleTitle = product_json.human_name;
+            bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
         });
 
         // setup key details
@@ -1150,6 +1215,23 @@ const siteHandlers = {
                 }
             `);
 
+            let extractKeys = () => {
+                const keys = [];
+
+                $('#TableKeys tr').each((index, tr) => {
+                    const $tds = $(tr).children();
+
+                    if (tr.textContent.includes('-')) {
+                        keys.push({
+                            key: $tds.eq(4).text().trim(),
+                            title: $tds.eq(2).text().trim(),
+                        });
+                    }
+                });
+
+                return keys;
+            }
+
             // button click
             $('.SBSE_BtnReveal').click(() => {
                 const handler = () => {
@@ -1169,21 +1251,9 @@ const siteHandlers = {
                 bundleSitesBoxHandler.reveal(handler);
             });
             $('.SBSE_BtnRetrieve').click(() => {
-                const keys = [];
-
-                $('#TableKeys tr').each((index, tr) => {
-                    const $tds = $(tr).children();
-
-                    if (tr.textContent.includes('-')) {
-                        keys.push({
-                            key: $tds.eq(4).text().trim(),
-                            title: $tds.eq(2).text().trim(),
-                        });
-                    }
-                });
-
-                bundleSitesBoxHandler.retrieve(keys);
+                bundleSitesBoxHandler.retrieve(extractKeys());
             });
+            $('.SBSE_BtnExport').remove();
         } else if (pathname === '/account_digstore.html' || pathname === '/account_trades.html') {
             // DIG EasyBuy
             GM_addStyle(`
@@ -1309,12 +1379,16 @@ const siteHandlers = {
                 border-radius: 5px;
             }
             .SBSE_container > div { text-align: left;}
-            .SBSE_container button {
+            .SBSE_container button, .SBSE_container a {
                 width: 80px;
                 border: 1px solid transparent;
                 border-radius: 5px;
                 background-color: #EEE;
                 box-shadow: 0 0 1px 1px rgba(204,204,204,0.5);
+            }
+            .SBSE_BtnExport, .SBSE_container a:hover {
+                text-decoration: none;
+                color: black;
             }
             .SBSE_container label { color: #EEE;}
             .expanded .showOrderMeta {
@@ -1328,6 +1402,21 @@ const siteHandlers = {
 
         // narrow buttons
         $('.SBSE_container button').addClass('narrow');
+
+        let extractKeys = () => {
+            const keys = [];
+
+            $('.deliver-gkey').each((index, element) => {
+                const $game = $(element);
+
+                keys.push({
+                    key: $game.text().trim(),
+                    title: $game.parent().prev().text().trim(),
+                });
+            });
+
+            return keys;
+        }
 
         // button click
         $('.SBSE_BtnReveal').click(() => {
@@ -1343,18 +1432,11 @@ const siteHandlers = {
             bundleSitesBoxHandler.reveal(handler, $('.deliver-btn'));
         });
         $('.SBSE_BtnRetrieve').click(() => {
-            const keys = [];
-
-            $('.deliver-gkey').each((index, element) => {
-                const $game = $(element);
-
-                keys.push({
-                    key: $game.text().trim(),
-                    title: $game.parent().prev().text().trim(),
-                });
-            });
-
-            bundleSitesBoxHandler.retrieve(keys);
+            bundleSitesBoxHandler.retrieve(extractKeys());
+        });
+        $('.SBSE_BtnExport').click(() => {
+            let bundleTitle = 'CCYYCN Bundle';  // can't find bundle title in html
+            bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
         });
     },
     groupees() {
@@ -1364,19 +1446,17 @@ const siteHandlers = {
         // inject css
         GM_addStyle(`
             .SBSE_container > textarea { background-color: #EEE; border-radius: 3px;}
-            .SBSE_container button {
-                font-weight: bold;
-                background-color: #FFF;
-                border: 1px solid #CCC;
-                color: #333;
-            }
-            .SBSE_container button:hover { background-color: #e6e6e6; border-color: #adadad;}
+            #SBSE_BtnSettings { margin-top: 8px;}
         `);
-
+        
         // append checkbox for used-key
         $('#SBSE_BtnSettings').before(
             $(`<label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>`),
         );
+
+        // add buttons style via groupees's class
+        $('.SBSE_container button').addClass('btn btn-default');
+        $('.SBSE_container a').addClass('btn btn-default');
 
         // append mark all as used button
         new MutationObserver((mutations) => {
@@ -1398,6 +1478,25 @@ const siteHandlers = {
             });
         }).observe($('#profile_content')[0], { childList: true });
 
+        let extractKeys = () => {
+            const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
+            const keys = [];
+
+            $('.expanded .code').each((index, element) => {
+                const $game = $(element);
+                const used = $game.closest('li').find('.usage').prop('checked');
+
+                if (!used || (used && !skipUsed)) {
+                    keys.push({
+                        key: $game.val(),
+                        title: $game.closest('.details').find('h3').text().trim(),
+                    });
+                }
+            });
+
+            return keys;
+        }
+
         // button click
         $('.SBSE_BtnReveal').click(() => {
             const handler = ($games, callback) => {
@@ -1418,23 +1517,12 @@ const siteHandlers = {
             }, timer);
         });
         $('.SBSE_BtnRetrieve').click(() => {
-            const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
-            const keys = [];
-
-            $('.expanded .code').each((index, element) => {
-                const $game = $(element);
-                const used = $game.closest('li').find('.usage').prop('checked');
-
-                if (!used || (used && !skipUsed)) {
-                    keys.push({
-                        key: $game.val(),
-                        title: $game.closest('.details').find('h3').text().trim(),
-                    });
-                }
-            });
-
-            bundleSitesBoxHandler.retrieve(keys);
+            bundleSitesBoxHandler.retrieve(extractKeys());
         });
+        $('.SBSE_BtnExport').click(() => {
+            let bundleTitle = 'Groupees - ' + $('.expanded .caption')[0].innerText;
+            bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
+        })
 
         // bind custom event
         $(document).on('activated', (e, key, result) => {
@@ -1451,12 +1539,12 @@ const siteHandlers = {
             // inject css
             GM_addStyle(`
                 .SBSE_container > textarea { border: 1px solid #AAAAAA;}
-                .SBSE_container button {
+                .SBSE_container button, .SBSE_BtnExport {
                     border: 1px solid #d3d3d3;
                     background: #e6e6e6 url(images/ui-bg_glass_75_e6e6e6_1x400.png) 50% 50% repeat-x;
                     color: #555555;
                 }
-                .SBSE_container button:hover {
+                .SBSE_container button:hover, .SBSE_BtnExport:hover {
                     border-color: #999999;
                     background: #dadada url(images/ui-bg_glass_75_dadada_1x400.png) 50% 50% repeat-x;
                     color: #212121;
@@ -1475,6 +1563,10 @@ const siteHandlers = {
             // button click
             $('.SBSE_BtnRetrieve').click(() => {
                 bundleSitesBoxHandler.retrieve(keys);
+            });
+            $('.SBSE_BtnExport').click(() => {
+                let bundleTitle = 'agiso Bundle';
+                bundleSitesBoxHandler.export(keys,bundleTitle);
             });
         }
     },
