@@ -723,9 +723,7 @@ const bundleSitesBoxHandler = {
             filename = filename.replace(/[\\\/:\*\?"<>\|\!]/g,"");
             let formattedData = data.map((line) => {
                 return `${line.title},${line.key}`;
-            }).reduce((previous,current) => {
-                return `${previous}\n${current}`;
-            });
+            }).join(eol);
             $('.SBSE_BtnExport').attr('href','data:text/csv;charset=utf-8,\ufeff' + encodeURIComponent(formattedData));
             $('.SBSE_BtnExport').attr('download',`${filename}.csv`);
         }
@@ -753,7 +751,7 @@ const bundleSitesBox = () => {
             padding-top: 5px;
             box-sizing: border-box;
         }
-        .SBSE_container button {
+        .SBSE_container button, .SBSE_container a {
             width: 120px;
             position: relative;
             margin-right: 10px;
@@ -766,17 +764,6 @@ const bundleSitesBox = () => {
         .SBSE_container a {
             display: inline-block;
             text-align: center;
-            width: 120px;
-            position: relative;
-            margin-right: 10px;
-            line-height: 28px;
-            box-sizing: border-box;
-            outline: none;
-            cursor: pointer;
-            transition: all 0.5s;
-        }
-        .SBSE_container a:hover {
-
         }
         .SBSE_container label { margin-right: 10px;}
         #SBSE_BtnSettings {
@@ -801,8 +788,8 @@ const bundleSitesBox = () => {
         .SBSE_container button:before {
             content: '';
             position: absolute;
-            right: 10px;
             margin-top: 5px;
+            right: 10px;
             width: 20px;
             height: 20px;
             border: 3px solid;
@@ -866,8 +853,8 @@ const bundleSitesBox = () => {
 };
 const siteCache = {
     bundlestars: {
-        doms: [document]
-    }
+        doms: [document],
+    },
 };
 const siteHandlers = {
     indiegala() {
@@ -878,15 +865,14 @@ const siteHandlers = {
         GM_addStyle(`
             .SBSE_container { margin-top: 10px;}
             .SBSE_container > textarea { border: 1px solid #CC001D;}
-            .SBSE_container button { background-color: #CC001D; color: white; border-radius: 3px;}
-            .SBSE_BtnExport { background-color: #CC001D; color: white; border-radius: 3px;}
+            .SBSE_container button, .SBSE_BtnExport { background-color: #CC001D; color: white; border-radius: 3px;}
             .SBSE_BtnExport:hover {color: white;}
         `);
 
         // dom source
         const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
 
-        let extractKeys = () => {
+        const extractKeys = () => {
             const keys = [];
 
             $(source).find('.game-key-string').each((index, element) => {
@@ -958,8 +944,9 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            let bundleTitle = 'IndieGala ' + $('#steam-key').prev()[0].innerText;
-            bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
+            const bundleTitle = `IndieGala ${$('#steam-key').prev()[0].innerText}`;
+
+            bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
     },
     bundlestars(firstCalled) {
@@ -983,7 +970,7 @@ const siteHandlers = {
 
             return $results;
         };
-        let extractKeys = () => {
+        const extractKeys = () => {
             const keys = [];
 
             BSselect('.key-container input').each((index, input) => {
@@ -1046,8 +1033,9 @@ const siteHandlers = {
                 bundleSitesBoxHandler.retrieve(extractKeys());
             });
             $('.SBSE_BtnExport').click(() => {
-                let bundleTitle = 'BundleStars - ' + $('.SBSE_container select')[0][1].innerText;
-                bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
+                const bundleTitle = `BundleStars - ${$('.SBSE_container select')[0][1].innerText}`;
+
+                bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
             })
         }
 
@@ -1127,7 +1115,7 @@ const siteHandlers = {
         // overwrite inherited color and underline
         $('.SBSE_BtnExport').css({'color': '#4a4c45','text-decoration': 'none'});
 
-        let extractKeys = () => {
+        const extractKeys = () => {
             const keys = [];
 
             $('.sr-redeemed-bubble .keyfield-text').each((index, element) => {
@@ -1168,9 +1156,9 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            let product_json =JSON.parse(/window.models.product_json = ({.*});/.exec(document.head.innerHTML)[1]);
-            let bundleTitle = product_json.human_name;
-            bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
+            const bundleTitle = $('meta[name="title"]')[0].content;
+            
+            bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
 
         // setup key details
@@ -1215,7 +1203,7 @@ const siteHandlers = {
                 }
             `);
 
-            let extractKeys = () => {
+            const extractKeys = () => {
                 const keys = [];
 
                 $('#TableKeys tr').each((index, tr) => {
@@ -1403,7 +1391,7 @@ const siteHandlers = {
         // narrow buttons
         $('.SBSE_container button').addClass('narrow');
 
-        let extractKeys = () => {
+        const extractKeys = () => {
             const keys = [];
 
             $('.deliver-gkey').each((index, element) => {
@@ -1435,8 +1423,9 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            let bundleTitle = 'CCYYCN Bundle';  // can't find bundle title in html
-            bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
+            const bundleTitle = `CCYYCN Bundle`;  // can't find bundle title in html
+
+            bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
     },
     groupees() {
@@ -1478,7 +1467,7 @@ const siteHandlers = {
             });
         }).observe($('#profile_content')[0], { childList: true });
 
-        let extractKeys = () => {
+        const extractKeys = () => {
             const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
             const keys = [];
 
@@ -1520,7 +1509,7 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            let bundleTitle = 'Groupees - ' + $('.expanded .caption')[0].innerText;
+            const bundleTitle = 'Groupees - ' + $('.expanded .caption')[0].innerText;
             bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
         })
 
@@ -1565,7 +1554,7 @@ const siteHandlers = {
                 bundleSitesBoxHandler.retrieve(keys);
             });
             $('.SBSE_BtnExport').click(() => {
-                let bundleTitle = 'agiso Bundle';
+                const bundleTitle = 'agiso Bundle';
                 bundleSitesBoxHandler.export(keys,bundleTitle);
             });
         }
