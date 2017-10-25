@@ -2,6 +2,9 @@
 
 ---
 
+- [English](https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/blob/master/README.md)
+- [中文简介](https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/blob/master/README_zh-CN.md)
+
 ## 简介
 
 Steam Bundle Sites Extension 是一个 Steam 包包站的工具箱。🔧

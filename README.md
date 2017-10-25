@@ -2,6 +2,9 @@
 
 ---
 
+- [English](https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/blob/master/README.md)
+- [中文简介](https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/blob/master/README_zh-CN.md)
+
 ## Description
 
 Steam Bundle Sites Extension is a tool kit for Steam bundle websites.🔧
