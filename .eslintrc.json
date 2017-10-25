@@ -1,0 +1,14 @@
+{
+    "extends": "airbnb",
+    "installedESLint": true,
+    "env": {
+        "jquery": true
+    },
+    "rules": {
+        "indent": ["error", 4, {
+            "SwitchCase": 1
+        }],
+        "linebreak-style": 0,
+        "no-param-reassign": ["error", { "props": false }]
+    }
+}
