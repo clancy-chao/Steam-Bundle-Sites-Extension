@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
-// @namespace    http://tampermonkey.net/
-// @version      1.6.9
+// @namespace    https://github.com/clancy-chao
+// @version      1.7.0
 // @description  A steam bundle sites' tool kits.
 // @icon         http://store.steampowered.com/favicon.ico
 // @author       Bisumaruko
@@ -39,9 +39,7 @@ $.fn.pop = [].pop;
 $.fn.shift = [].shift;
 
 // inject swal css
-GM_addStyle(
-    GM_getResourceText('SweetAlert2CSS'),
-);
+GM_addStyle(GM_getResourceText('SweetAlert2CSS'));
 
 // inject script css
 GM_addStyle(`
@@ -54,7 +52,7 @@ GM_addStyle(`
 
 // load up
 const regKey = /((?:([a-zA-Z0-9])(?!\2{4})){5}-){2,5}[a-zA-Z0-9]{5}/g;
-const eol = "\n";
+const eol = '\n';
 
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
@@ -714,20 +712,18 @@ const bundleSitesBoxHandler = {
     settings() {
         settings.display();
     },
-    export(data,filename) {
+    export(data, bundleTitle) {
         // data: [{key: ..., title: ...}, ...];
 
         $('.SBSE_BtnExport').removeAttr('href');
         $('.SBSE_BtnExport').removeAttr('download');
-        if(data.length > 0){
-            filename = filename.replace(/[\\\/:\*\?"<>\|\!]/g,"");
-            let formattedData = data.map((line) => {
-                return `${line.title},${line.key}`;
-            }).join(eol);
-            $('.SBSE_BtnExport').attr('href','data:text/csv;charset=utf-8,\ufeff' + encodeURIComponent(formattedData));
-            $('.SBSE_BtnExport').attr('download',`${filename}.csv`);
+        if (data.length > 0) {
+            const filename = bundleTitle.replace(/[\\/:*?"<>|!]/g, '');
+            const formattedData = data.map(line => `${line.title},${line.key}`).join(eol);
+            $('.SBSE_BtnExport').attr('href', `data:text/csv;charset=utf-8,\ufeff${encodeURIComponent(formattedData)}`);
+            $('.SBSE_BtnExport').attr('download', `${filename}.csv`);
         }
-    }
+    },
 };
 const bundleSitesBox = () => {
     GM_addStyle(`
@@ -770,8 +766,8 @@ const bundleSitesBox = () => {
             width: 20px;
             height: 20px;
             float: right;
-            margin-right: 0;
             margin-top: 3px;
+            margin-right: 0;
             margin-left: 10px;
             background-color: transparent;
             background-image: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjwhRE9DVFlQRSBzdmcgIFBVQkxJQyAnLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4nICAnaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkJz48c3ZnIGhlaWdodD0iMzJweCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMzIgMzI7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMycHgiIHhtbDpzcGFjZT0icHJlc2VydmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxnIGlkPSJMYXllcl8xIi8+PGcgaWQ9ImNvZyI+PHBhdGggZD0iTTMyLDE3Ljk2OXYtNGwtNC43ODEtMS45OTJjLTAuMTMzLTAuMzc1LTAuMjczLTAuNzM4LTAuNDQ1LTEuMDk0bDEuOTMtNC44MDVMMjUuODc1LDMuMjUgICBsLTQuNzYyLDEuOTYxYy0wLjM2My0wLjE3Ni0wLjczNC0wLjMyNC0xLjExNy0wLjQ2MUwxNy45NjksMGgtNGwtMS45NzcsNC43MzRjLTAuMzk4LDAuMTQxLTAuNzgxLDAuMjg5LTEuMTYsMC40NjlsLTQuNzU0LTEuOTEgICBMMy4yNSw2LjEyMWwxLjkzOCw0LjcxMUM1LDExLjIxOSw0Ljg0OCwxMS42MTMsNC43MDMsMTIuMDJMMCwxNC4wMzF2NGw0LjcwNywxLjk2MWMwLjE0NSwwLjQwNiwwLjMwMSwwLjgwMSwwLjQ4OCwxLjE4OCAgIGwtMS45MDIsNC43NDJsMi44MjgsMi44MjhsNC43MjMtMS45NDVjMC4zNzksMC4xOCwwLjc2NiwwLjMyNCwxLjE2NCwwLjQ2MUwxNC4wMzEsMzJoNGwxLjk4LTQuNzU4ICAgYzAuMzc5LTAuMTQxLDAuNzU0LTAuMjg5LDEuMTEzLTAuNDYxbDQuNzk3LDEuOTIybDIuODI4LTIuODI4bC0xLjk2OS00Ljc3M2MwLjE2OC0wLjM1OSwwLjMwNS0wLjcyMywwLjQzOC0xLjA5NEwzMiwxNy45Njl6ICAgIE0xNS45NjksMjJjLTMuMzEyLDAtNi0yLjY4OC02LTZzMi42ODgtNiw2LTZzNiwyLjY4OCw2LDZTMTkuMjgxLDIyLDE1Ljk2OSwyMnoiIHN0eWxlPSJmaWxsOiM0RTRFNTA7Ii8+PC9nPjwvc3ZnPg==);
@@ -897,7 +893,7 @@ const siteHandlers = {
             });
 
             return keys;
-        }
+        };
         // button click
         $('.SBSE_BtnReveal').click(() => {
             const handler = ($games, callback) => {
@@ -944,7 +940,7 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            const bundleTitle = `IndieGala ${$('#steam-key').prev()[0].innerText}`;
+            const bundleTitle = `IndieGala ${$('#steam-key').prev().find('span').text()}`;
 
             bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
@@ -983,7 +979,7 @@ const siteHandlers = {
             });
 
             return keys;
-        }
+        };
 
         if ($('.SBSE_container').length === 0 && $anchor.length > 0) {
             // insert textarea
@@ -1036,7 +1032,7 @@ const siteHandlers = {
                 const bundleTitle = `BundleStars - ${$('.SBSE_container select')[0][1].innerText}`;
 
                 bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
-            })
+            });
         }
 
         // setup select
@@ -1113,7 +1109,7 @@ const siteHandlers = {
         );
 
         // overwrite inherited color and underline
-        $('.SBSE_BtnExport').css({'color': '#4a4c45','text-decoration': 'none'});
+        $('.SBSE_BtnExport').css({'color': '#4a4c45', 'text-decoration': 'none' });
 
         const extractKeys = () => {
             const keys = [];
@@ -1129,7 +1125,7 @@ const siteHandlers = {
             });
 
             return keys;
-        }
+        };
 
         // button click
         $('.SBSE_BtnReveal').click(() => {
@@ -1157,7 +1153,7 @@ const siteHandlers = {
         });
         $('.SBSE_BtnExport').click(() => {
             const bundleTitle = $('meta[name="title"]')[0].content;
-            
+
             bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
 
@@ -1218,7 +1214,7 @@ const siteHandlers = {
                 });
 
                 return keys;
-            }
+            };
 
             // button click
             $('.SBSE_BtnReveal').click(() => {
@@ -1404,7 +1400,7 @@ const siteHandlers = {
             });
 
             return keys;
-        }
+        };
 
         // button click
         $('.SBSE_BtnReveal').click(() => {
@@ -1423,7 +1419,7 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            const bundleTitle = `CCYYCN Bundle`;  // can't find bundle title in html
+            const bundleTitle = 'CCYYCN Bundle';// can't find bundle title in html
 
             bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
@@ -1437,7 +1433,7 @@ const siteHandlers = {
             .SBSE_container > textarea { background-color: #EEE; border-radius: 3px;}
             #SBSE_BtnSettings { margin-top: 8px;}
         `);
-        
+
         // append checkbox for used-key
         $('#SBSE_BtnSettings').before(
             $(`<label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>`),
@@ -1484,7 +1480,7 @@ const siteHandlers = {
             });
 
             return keys;
-        }
+        };
 
         // button click
         $('.SBSE_BtnReveal').click(() => {
@@ -1509,9 +1505,9 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            const bundleTitle = 'Groupees - ' + $('.expanded .caption')[0].innerText;
-            bundleSitesBoxHandler.export(extractKeys(),bundleTitle);
-        })
+            const bundleTitle = `Groupees - ${$('.expanded .caption').text()}`;
+            bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
+        });
 
         // bind custom event
         $(document).on('activated', (e, key, result) => {
@@ -1586,7 +1582,7 @@ const init = () => {
         }
         /* else {
             swal(text.notLoggedInTitle, text.notLoggedInMsg, 'error');
-        }*/
+        } */
     } else {
         const site = location.hostname.replace(/(www|alds|bundle)\./, '').split('.').shift();
 

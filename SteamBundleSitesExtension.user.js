@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
-// @namespace    http://tampermonkey.net/
-// @version      1.6.9
+// @namespace    https://github.com/clancy-chao
+// @version      1.7.0
 // @description  A steam bundle sites' tool kits.
 // @icon         http://store.steampowered.com/favicon.ico
 // @author       Bisumaruko
@@ -52,7 +52,7 @@ GM_addStyle(`
 
 // load up
 const regKey = /((?:([a-zA-Z0-9])(?!\2{4})){5}-){2,5}[a-zA-Z0-9]{5}/g;
-const eol = "\n";
+const eol = '\n';
 
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
@@ -140,7 +140,7 @@ const i18n = {
         failDetailPS3Required: '需要PS3 啟動',
         failDetailGiftWallet: '偵測到禮物卡／錢包序號',
         failDetailParsingFailed: '處理資料發生錯誤，請稍後再試',
-        failDetailRequestFailedNeedUpdate: '請求發生錯誤，請稍後再試</br>或者嘗試更新SessionID',
+        failDetailRequestFailedNeedUpdate: '請求發生錯誤，請稍後再試<br/>或者嘗試更新SessionID',
         noItemDetails: '無產品詳細資料',
         notLoggedInTitle: '未登入',
         notLoggedInMsg: '請登入Steam 以讓腳本紀錄SessionID',
@@ -193,7 +193,7 @@ const i18n = {
         failDetailPS3Required: '需要PS3 激活',
         failDetailGiftWallet: '侦测到礼物卡／钱包激活码',
         failDetailParsingFailed: '处理资料发生错误，请稍后再试',
-        failDetailRequestFailedNeedUpdate: '请求发生错误，请稍后再试</br>或者尝试更新SessionID',
+        failDetailRequestFailedNeedUpdate: '请求发生错误，请稍后再试<br/>或者尝试更新SessionID',
         noItemDetails: '无产品详细信息',
         notLoggedInTitle: '未登入',
         notLoggedInMsg: '请登入Steam 以让脚本记录SessionID',
@@ -246,7 +246,7 @@ const i18n = {
         failDetailPS3Required: 'PS3 Activation Required',
         failDetailGiftWallet: 'Gift Card/Wallet Code Detected',
         failDetailParsingFailed: 'Result parse failed',
-        failDetailRequestFailedNeedUpdate: 'Request failed, please try again<br>or update sessionID',
+        failDetailRequestFailedNeedUpdate: 'Request failed, please try again<br/>or update sessionID',
         noItemDetails: 'No Item Details',
         notLoggedInTitle: 'Not Logged-In',
         notLoggedInMsg: 'Please login to Steam so sessionID can be saved',
@@ -711,19 +711,15 @@ const bundleSitesBoxHandler = {
     settings() {
         settings.display();
     },
-    export(data, filename) {
+    export(data, bundleTitle) {
         // data: [{key: ..., title: ...}, ...];
 
         $('.SBSE_BtnExport').removeAttr('href');
         $('.SBSE_BtnExport').removeAttr('download');
         if (data.length > 0) {
-            filename = filename.replace(/[\\\/:\*\?"<>\|\!]/g, "");
-            let formattedData = data.map(line => {
-                return `${line.title},${line.key}`;
-            }).reduce((previous, current) => {
-                return `${previous}\n${current}`;
-            });
-            $('.SBSE_BtnExport').attr('href', 'data:text/csv;charset=utf-8,\ufeff' + encodeURIComponent(formattedData));
+            const filename = bundleTitle.replace(/[\\/:*?"<>|!]/g, '');
+            const formattedData = data.map(line => `${line.title},${line.key}`).join(eol);
+            $('.SBSE_BtnExport').attr('href', `data:text/csv;charset=utf-8,\ufeff${encodeURIComponent(formattedData)}`);
             $('.SBSE_BtnExport').attr('download', `${filename}.csv`);
         }
     }
@@ -750,7 +746,7 @@ const bundleSitesBox = () => {
             padding-top: 5px;
             box-sizing: border-box;
         }
-        .SBSE_container button {
+        .SBSE_container button, .SBSE_container a {
             width: 120px;
             position: relative;
             margin-right: 10px;
@@ -763,25 +759,14 @@ const bundleSitesBox = () => {
         .SBSE_container a {
             display: inline-block;
             text-align: center;
-            width: 120px;
-            position: relative;
-            margin-right: 10px;
-            line-height: 28px;
-            box-sizing: border-box;
-            outline: none;
-            cursor: pointer;
-            transition: all 0.5s;
-        }
-        .SBSE_container a:hover {
-
         }
         .SBSE_container label { margin-right: 10px;}
         #SBSE_BtnSettings {
             width: 20px;
             height: 20px;
             float: right;
-            margin-right: 0;
             margin-top: 3px;
+            margin-right: 0;
             margin-left: 10px;
             background-color: transparent;
             background-image: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjwhRE9DVFlQRSBzdmcgIFBVQkxJQyAnLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4nICAnaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkJz48c3ZnIGhlaWdodD0iMzJweCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMzIgMzI7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMycHgiIHhtbDpzcGFjZT0icHJlc2VydmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxnIGlkPSJMYXllcl8xIi8+PGcgaWQ9ImNvZyI+PHBhdGggZD0iTTMyLDE3Ljk2OXYtNGwtNC43ODEtMS45OTJjLTAuMTMzLTAuMzc1LTAuMjczLTAuNzM4LTAuNDQ1LTEuMDk0bDEuOTMtNC44MDVMMjUuODc1LDMuMjUgICBsLTQuNzYyLDEuOTYxYy0wLjM2My0wLjE3Ni0wLjczNC0wLjMyNC0xLjExNy0wLjQ2MUwxNy45NjksMGgtNGwtMS45NzcsNC43MzRjLTAuMzk4LDAuMTQxLTAuNzgxLDAuMjg5LTEuMTYsMC40NjlsLTQuNzU0LTEuOTEgICBMMy4yNSw2LjEyMWwxLjkzOCw0LjcxMUM1LDExLjIxOSw0Ljg0OCwxMS42MTMsNC43MDMsMTIuMDJMMCwxNC4wMzF2NGw0LjcwNywxLjk2MWMwLjE0NSwwLjQwNiwwLjMwMSwwLjgwMSwwLjQ4OCwxLjE4OCAgIGwtMS45MDIsNC43NDJsMi44MjgsMi44MjhsNC43MjMtMS45NDVjMC4zNzksMC4xOCwwLjc2NiwwLjMyNCwxLjE2NCwwLjQ2MUwxNC4wMzEsMzJoNGwxLjk4LTQuNzU4ICAgYzAuMzc5LTAuMTQxLDAuNzU0LTAuMjg5LDEuMTEzLTAuNDYxbDQuNzk3LDEuOTIybDIuODI4LTIuODI4bC0xLjk2OS00Ljc3M2MwLjE2OC0wLjM1OSwwLjMwNS0wLjcyMywwLjQzOC0xLjA5NEwzMiwxNy45Njl6ICAgIE0xNS45NjksMjJjLTMuMzEyLDAtNi0yLjY4OC02LTZzMi42ODgtNiw2LTZzNiwyLjY4OCw2LDZTMTkuMjgxLDIyLDE1Ljk2OSwyMnoiIHN0eWxlPSJmaWxsOiM0RTRFNTA7Ii8+PC9nPjwvc3ZnPg==);
@@ -798,8 +783,8 @@ const bundleSitesBox = () => {
         .SBSE_container button:before {
             content: '';
             position: absolute;
-            right: 10px;
             margin-top: 5px;
+            right: 10px;
             width: 20px;
             height: 20px;
             border: 3px solid;
@@ -875,15 +860,14 @@ const siteHandlers = {
         GM_addStyle(`
             .SBSE_container { margin-top: 10px;}
             .SBSE_container > textarea { border: 1px solid #CC001D;}
-            .SBSE_container button { background-color: #CC001D; color: white; border-radius: 3px;}
-            .SBSE_BtnExport { background-color: #CC001D; color: white; border-radius: 3px;}
+            .SBSE_container button, .SBSE_BtnExport { background-color: #CC001D; color: white; border-radius: 3px;}
             .SBSE_BtnExport:hover {color: white;}
         `);
 
         // dom source
         const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
 
-        let extractKeys = () => {
+        const extractKeys = () => {
             const keys = [];
 
             $(source).find('.game-key-string').each((index, element) => {
@@ -955,7 +939,8 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            let bundleTitle = 'IndieGala ' + $('#steam-key').prev()[0].innerText;
+            const bundleTitle = `IndieGala ${$('#steam-key').prev().find('span').text()}`;
+
             bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
     },
@@ -978,7 +963,7 @@ const siteHandlers = {
 
             return $results;
         };
-        let extractKeys = () => {
+        const extractKeys = () => {
             const keys = [];
 
             BSselect('.key-container input').each((index, input) => {
@@ -1041,7 +1026,8 @@ const siteHandlers = {
                 bundleSitesBoxHandler.retrieve(extractKeys());
             });
             $('.SBSE_BtnExport').click(() => {
-                let bundleTitle = 'BundleStars - ' + $('.SBSE_container select')[0][1].innerText;
+                const bundleTitle = `BundleStars - ${$('.SBSE_container select')[0][1].innerText}`;
+
                 bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
             });
         }
@@ -1117,7 +1103,7 @@ const siteHandlers = {
         // overwrite inherited color and underline
         $('.SBSE_BtnExport').css({ 'color': '#4a4c45', 'text-decoration': 'none' });
 
-        let extractKeys = () => {
+        const extractKeys = () => {
             const keys = [];
 
             $('.sr-redeemed-bubble .keyfield-text').each((index, element) => {
@@ -1158,8 +1144,8 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            let product_json = JSON.parse(/window.models.product_json = ({.*});/.exec(document.head.innerHTML)[1]);
-            let bundleTitle = product_json.human_name;
+            const bundleTitle = $('meta[name="title"]')[0].content;
+
             bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
 
@@ -1205,7 +1191,7 @@ const siteHandlers = {
                 }
             `);
 
-            let extractKeys = () => {
+            const extractKeys = () => {
                 const keys = [];
 
                 $('#TableKeys tr').each((index, tr) => {
@@ -1390,7 +1376,7 @@ const siteHandlers = {
         // narrow buttons
         $('.SBSE_container button').addClass('narrow');
 
-        let extractKeys = () => {
+        const extractKeys = () => {
             const keys = [];
 
             $('.deliver-gkey').each((index, element) => {
@@ -1422,7 +1408,8 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            let bundleTitle = 'CCYYCN Bundle'; // can't find bundle title in html
+            const bundleTitle = 'CCYYCN Bundle'; // can't find bundle title in html
+
             bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
     },
@@ -1461,7 +1448,7 @@ const siteHandlers = {
             });
         }).observe($('#profile_content')[0], { childList: true });
 
-        let extractKeys = () => {
+        const extractKeys = () => {
             const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
             const keys = [];
 
@@ -1503,7 +1490,7 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            let bundleTitle = 'Groupees - ' + $('.expanded .caption')[0].innerText;
+            const bundleTitle = `Groupees - ${$('.expanded .caption').text()}`;
             bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
 
@@ -1548,7 +1535,7 @@ const siteHandlers = {
                 bundleSitesBoxHandler.retrieve(keys);
             });
             $('.SBSE_BtnExport').click(() => {
-                let bundleTitle = 'agiso Bundle';
+                const bundleTitle = 'agiso Bundle';
                 bundleSitesBoxHandler.export(keys, bundleTitle);
             });
         }
@@ -1580,7 +1567,7 @@ const init = () => {
         }
         /* else {
             swal(text.notLoggedInTitle, text.notLoggedInMsg, 'error');
-        }*/
+        } */
     } else {
         const site = location.hostname.replace(/(www|alds|bundle)\./, '').split('.').shift();
 
