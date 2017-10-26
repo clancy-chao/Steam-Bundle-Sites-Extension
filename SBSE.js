@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
-// @namespace    SBSE
+// @namespace    Steam Bundle Sites Extension
 // @version      1.7.0
+// @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
+// @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
 // @icon         http://store.steampowered.com/favicon.ico
-// @author       Bisumaruko
+// @author       Bisumaruko, breastsexy
 // @include      http*://store.steampowered.com/*
 // @include      https://www.indiegala.com/gift*
 // @include      https://www.indiegala.com/profile*
@@ -1135,9 +1137,9 @@ const siteHandlers = {
                 if (game) {
                     game.click();
                     setTimeout(() => {
-                        const $popup = $('.sr-wans');
+                        const $popup = $('.sr-warning-modal-buttons');
                         const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
-                        const selector = skipOwned ? '.sr-wal-button' : '.sr-warm-button';
+                        const selector = skipOwned ? '.sr-warning-modal-cancel-button' : '.sr-warning-modal-confirm-button';
 
                         if ($popup.length > 0) $popup.find(selector).click();
 
@@ -1146,7 +1148,7 @@ const siteHandlers = {
                 } else callback();
             };
 
-            bundleSitesBoxHandler.reveal(handler, $('.sr-unredn'));
+            bundleSitesBoxHandler.reveal(handler, $('.sr-unredeemed-steam-button'));
         });
         $('.SBSE_BtnRetrieve').click(() => {
             bundleSitesBoxHandler.retrieve(extractKeys());
