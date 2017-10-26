@@ -52,7 +52,7 @@ GM_addStyle(`
 
 // load up
 const regKey = /((?:([a-zA-Z0-9])(?!\2{4})){5}-){2,5}[a-zA-Z0-9]{5}/g;
-const eol = '\n';
+const eol = "\n";
 
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
@@ -494,9 +494,7 @@ const activateHandler = {
     updateResults(txt = null) {
         const $textarea = $('.SBSE_container > textarea');
 
-        if (txt) {
-            $textarea.val(txt);
-        } else {
+        if (txt) $textarea.val(txt);else {
             const results = this.results;
             const parsed = [];
 
@@ -708,20 +706,21 @@ const bundleSitesBoxHandler = {
     reset() {
         $('.SBSE_container > textarea').val('');
     },
+    export(data, title) {
+        // data: [{key: ..., title: ...}, ...]
+        const $export = $('.SBSE_BtnExport');
+
+        $export.removeAttr('href').removeAttr('download');
+
+        if (Array.isArray(data) && data.length > 0) {
+            const filename = title.replace(/[\\/:*?"<>|!]/g, '');
+            const formattedData = data.map(line => `${line.title.replace(/,/g, ' ')},${line.key}`).join(eol);
+
+            $export.attr('href', `data:text/csv;charset=utf-8,\ufeff${encodeURIComponent(formattedData)}`).attr('download', `${filename}.csv`);
+        }
+    },
     settings() {
         settings.display();
-    },
-    export(data, bundleTitle) {
-        // data: [{key: ..., title: ...}, ...];
-
-        $('.SBSE_BtnExport').removeAttr('href');
-        $('.SBSE_BtnExport').removeAttr('download');
-        if (data.length > 0) {
-            const filename = bundleTitle.replace(/[\\/:*?"<>|!]/g, '');
-            const formattedData = data.map(line => `${line.title},${line.key}`).join(eol);
-            $('.SBSE_BtnExport').attr('href', `data:text/csv;charset=utf-8,\ufeff${encodeURIComponent(formattedData)}`);
-            $('.SBSE_BtnExport').attr('download', `${filename}.csv`);
-        }
     }
 };
 const bundleSitesBox = () => {
@@ -760,7 +759,7 @@ const bundleSitesBox = () => {
             display: inline-block;
             text-align: center;
         }
-        .SBSE_container label { margin-right: 10px;}
+        .SBSE_container label { margin-right: 10px; }
         #SBSE_BtnSettings {
             width: 20px;
             height: 20px;
@@ -798,22 +797,19 @@ const bundleSitesBox = () => {
             animation-name: rotate;
             animation-timing-function: linear;
         }
-
         .SBSE_container button.narrow.working {
             width: 100px;
             padding-right: 40px;
             transition: all 0.5s;
         }
-
         .SBSE_container button.working:before {
             transition-delay: 0.5s;
             transition-duration: 1s;
             opacity: 1;
         }
-
         @keyframes rotate {
-            0% { transform: rotate(0deg);}
-            100% { transform: rotate(360deg);}
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     `);
 
@@ -858,10 +854,10 @@ const siteHandlers = {
 
         // inject css
         GM_addStyle(`
-            .SBSE_container { margin-top: 10px;}
-            .SBSE_container > textarea { border: 1px solid #CC001D;}
-            .SBSE_container button, .SBSE_BtnExport { background-color: #CC001D; color: white; border-radius: 3px;}
-            .SBSE_BtnExport:hover {color: white;}
+            .SBSE_container { margin-top: 10px; }
+            .SBSE_container > textarea { border: 1px solid #CC001D; }
+            .SBSE_container button, .SBSE_BtnExport { background-color: #CC001D; color: white; border-radius: 3px; }
+            .SBSE_BtnExport:hover { color: white; }
         `);
 
         // dom source
@@ -893,6 +889,7 @@ const siteHandlers = {
 
             return keys;
         };
+
         // button click
         $('.SBSE_BtnReveal').click(() => {
             const handler = ($games, callback) => {
@@ -939,9 +936,10 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            const bundleTitle = `IndieGala ${$('#steam-key').prev().find('span').text()}`;
+            const $bundleTitle = $('#bundle-title, #indie_gala_2 > div > span');
+            const title = `IndieGala - ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
 
-            bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
+            bundleSitesBoxHandler.export(extractKeys(), title);
         });
     },
     bundlestars(firstCalled) {
@@ -984,16 +982,16 @@ const siteHandlers = {
 
             // inject css
             GM_addStyle(`
-                .SBSE_container { border: 1px solid #424242; color: #999999;}
-                .SBSE_container > textarea { background-color: #303030; color: #DDD;}
-                .SBSE_container button, .SBSE_container a { width: 80px;}
-                .SBSE_container button, .SBSE_container select, .SBSE_container a { border: 1px solid transparent; background-color: #262626; color: #DEDEDE;}
-                .SBSE_container button:hover, .SBSE_container select:hover, .SBSE_container a:hover { color: #A8A8A8;}
-                .SBSE_container a { text-decoration: none;}
-                .SBSE_container label { color: #DEDEDE;}
-                .SBSE_container select { max-width:120px; height: 30px;}
-                .SBSE_container select, .SBSE_container span { margin-right: 0; margin-left: 10px; float: right;}
-                .SBSE_container span { margin-top: 5px;}
+                .SBSE_container { border: 1px solid #424242; color: #999999; }
+                .SBSE_container > textarea { background-color: #303030; color: #DDD; }
+                .SBSE_container button, .SBSE_container a { width: 80px; }
+                .SBSE_container button, .SBSE_container select, .SBSE_container a { border: 1px solid transparent; background-color: #262626; color: #DEDEDE; }
+                .SBSE_container button:hover, .SBSE_container select:hover, .SBSE_container a:hover { color: #A8A8A8; }
+                .SBSE_container a { text-decoration: none; }
+                .SBSE_container label { color: #DEDEDE; }
+                .SBSE_container select { max-width:120px; height: 30px; }
+                .SBSE_container select, .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
+                .SBSE_container span { margin-top: 5px; }
             `);
 
             // narrow buttons
@@ -1016,7 +1014,7 @@ const siteHandlers = {
                             game.click();
                             setTimeout(handler.bind(null, $games, callback), 300);
                         } else handler($games, callback);
-                    } else setTimeout(callback, 300);
+                    } else setTimeout(callback, 500);
                 };
 
                 bundleSitesBoxHandler.reveal(handler, BSselect('.key-container a[ng-click^="redeemSerial"]'));
@@ -1026,9 +1024,10 @@ const siteHandlers = {
                 bundleSitesBoxHandler.retrieve(extractKeys());
             });
             $('.SBSE_BtnExport').click(() => {
-                const bundleTitle = `BundleStars - ${$('.SBSE_container select')[0][1].innerText}`;
+                const $bundleTitle = $('h3.bundle');
+                const title = `BundleStars - ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
 
-                bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
+                bundleSitesBoxHandler.export(extractKeys(), title);
             });
         }
 
@@ -1066,9 +1065,7 @@ const siteHandlers = {
                         if (removedNode.id === 'loading-bar-spinner') siteHandlers.bundlestars();
                     });
                 });
-            }).observe(document.body, {
-                childList: true
-            });
+            }).observe(document.body, { childList: true });
         }
     },
     humblebundle() {
@@ -1077,7 +1074,7 @@ const siteHandlers = {
 
         // inject css
         GM_addStyle(`
-            .SBSE_container > div { position: relative;}
+            .SBSE_container > div { position: relative; }
             .SBSE_container > textarea {
                 border: 1px solid #AAAAAA;
                 color: #4a4c45;
@@ -1091,7 +1088,7 @@ const siteHandlers = {
                 background-color: #c5c5c5;
                 background: linear-gradient(to top, #cacaca, #e7e7e7);
             }
-            #SBSE_BtnSettings { position: absolute;}
+            #SBSE_BtnSettings { position: absolute; }
         `);
 
         // narrow buttons
@@ -1101,7 +1098,7 @@ const siteHandlers = {
         $('#SBSE_BtnSettings').before($(`<label><input type="checkbox" class="SBSE_ChkSkipOwned">${text.checkboxSkipOwned}</label>`));
 
         // overwrite inherited color and underline
-        $('.SBSE_BtnExport').css({ 'color': '#4a4c45', 'text-decoration': 'none' });
+        $('.SBSE_BtnExport').css({ color: '#4a4c45', 'text-decoration': 'none' });
 
         const extractKeys = () => {
             const keys = [];
@@ -1144,9 +1141,10 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            const bundleTitle = $('meta[name="title"]')[0].content;
+            const $bundleTitle = $('meta[name=title]');
+            const title = `Humble Bundle - ${$bundleTitle.length > 0 ? $bundleTitle.attr('content') : 'Keys'}`;
 
-            bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
+            bundleSitesBoxHandler.export(extractKeys(), title);
         });
 
         // setup key details
@@ -1233,8 +1231,8 @@ const siteHandlers = {
         } else if (pathname === '/account_digstore.html' || pathname === '/account_trades.html') {
             // DIG EasyBuy
             GM_addStyle(`
-                .DIGEasyBuy button { padding: 4px 8px; outline: none;}
-                .DIGEasyBuy_checked { background-color: #222;}
+                .DIGEasyBuy button { padding: 4px 8px; outline: none; }
+                .DIGEasyBuy_checked { background-color: #222; }
             `);
 
             const $target = $('#form3').closest('tr').children().eq(0);
@@ -1351,7 +1349,7 @@ const siteHandlers = {
                 box-shadow: 0 0 1px 1px rgba(204,204,204,0.5);
                 border-radius: 5px;
             }
-            .SBSE_container > div { text-align: left;}
+            .SBSE_container > div { text-align: left; }
             .SBSE_container button, .SBSE_container a {
                 width: 80px;
                 border: 1px solid transparent;
@@ -1363,7 +1361,7 @@ const siteHandlers = {
                 text-decoration: none;
                 color: black;
             }
-            .SBSE_container label { color: #EEE;}
+            .SBSE_container label { color: #EEE; }
             .expanded .showOrderMeta {
                 display: block !important;
                 position: absolute;
@@ -1419,8 +1417,8 @@ const siteHandlers = {
 
         // inject css
         GM_addStyle(`
-            .SBSE_container > textarea { background-color: #EEE; border-radius: 3px;}
-            #SBSE_BtnSettings { margin-top: 8px;}
+            .SBSE_container > textarea { background-color: #EEE; border-radius: 3px; }
+            #SBSE_BtnSettings { margin-top: 8px; }
         `);
 
         // append checkbox for used-key
@@ -1491,6 +1489,7 @@ const siteHandlers = {
         });
         $('.SBSE_BtnExport').click(() => {
             const bundleTitle = `Groupees - ${$('.expanded .caption').text()}`;
+
             bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
 
@@ -1508,7 +1507,7 @@ const siteHandlers = {
 
             // inject css
             GM_addStyle(`
-                .SBSE_container > textarea { border: 1px solid #AAAAAA;}
+                .SBSE_container > textarea { border: 1px solid #AAAAAA; }
                 .SBSE_container button, .SBSE_BtnExport {
                     border: 1px solid #d3d3d3;
                     background: #e6e6e6 url(images/ui-bg_glass_75_e6e6e6_1x400.png) 50% 50% repeat-x;
@@ -1519,7 +1518,7 @@ const siteHandlers = {
                     background: #dadada url(images/ui-bg_glass_75_dadada_1x400.png) 50% 50% repeat-x;
                     color: #212121;
                 }
-                #SBSE_BtnSettings { width: 32px !important; height: 32px !important;}
+                #SBSE_BtnSettings { width: 32px !important; height: 32px !important; }
             `);
 
             // remove event from agiso
@@ -1536,6 +1535,7 @@ const siteHandlers = {
             });
             $('.SBSE_BtnExport').click(() => {
                 const bundleTitle = 'agiso Bundle';
+
                 bundleSitesBoxHandler.export(keys, bundleTitle);
             });
         }
