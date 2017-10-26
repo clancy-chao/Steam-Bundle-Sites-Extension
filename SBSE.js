@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
-// @namespace    Steam Bundle Sites Extension
+// @namespace    http://tampermonkey.net/
 // @version      1.7.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
