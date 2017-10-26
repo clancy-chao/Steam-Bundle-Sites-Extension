@@ -52,7 +52,7 @@ GM_addStyle(`
 
 // load up
 const regKey = /((?:([a-zA-Z0-9])(?!\2{4})){5}-){2,5}[a-zA-Z0-9]{5}/g;
-const eol = "\n";
+const eol = "\r\n";
 
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
