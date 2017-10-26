@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
-// @namespace    https://github.com/clancy-chao
+// @namespace    SBSE
 // @version      1.7.0
 // @description  A steam bundle sites' tool kits.
 // @icon         http://store.steampowered.com/favicon.ico
