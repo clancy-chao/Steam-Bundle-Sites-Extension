@@ -28,7 +28,7 @@ Steam Bundle Sites Extension 是一个 Steam 包包站的工具箱。🔧
 ## 安装
 
 1. 首先需要安装  [Greasemonkey](http://www.greasespot.net/) 或者 [Tampermonkey](https://tampermonkey.net/)，或者其他用户脚本管理工具
-1. 点击 [这里](https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SteamBundleSitesExtension.user.js) 并根据提示安装该脚本
+1. 点击 [这里](https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js) 并根据提示安装该脚本
 1. 就可以使用啦~👌
 
 ---

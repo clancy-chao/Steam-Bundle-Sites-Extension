@@ -28,7 +28,7 @@ Supported webseites include [HumbleBundle](https://www.humblebundle.com), [Bundl
 ## Installation
 
 1. Install [Greasemonkey](http://www.greasespot.net/) or [Tampermonkey](https://tampermonkey.net/), or other userscript manager.
-1. [Click here](https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SteamBundleSitesExtension.user.js) and install this script.
+1. [Click here](https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js) and install this script.
 1. Enjoy in bundle sites.👌
 
 ---
