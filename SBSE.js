@@ -1135,9 +1135,9 @@ const siteHandlers = {
                 if (game) {
                     game.click();
                     setTimeout(() => {
-                        const $popup = $('.sr-warning-modal-buttons');
+                        const $popup = $('.sr-wans');
                         const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
-                        const selector = skipOwned ? '.sr-warning-modal-cancel-button' : '.sr-warning-modal-confirm-button';
+                        const selector = skipOwned ? '.sr-wal-button' : '.sr-warm-button';
 
                         if ($popup.length > 0) $popup.find(selector).click();
 
@@ -1146,7 +1146,7 @@ const siteHandlers = {
                 } else callback();
             };
 
-            bundleSitesBoxHandler.reveal(handler, $('.sr-unredeemed-steam-button'));
+            bundleSitesBoxHandler.reveal(handler, $('.sr-unredn'));
         });
         $('.SBSE_BtnRetrieve').click(() => {
             bundleSitesBoxHandler.retrieve(extractKeys());
