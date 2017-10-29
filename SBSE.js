@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.7.0
+// @version      1.7.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
 // @icon         http://store.steampowered.com/favicon.ico
-// @author       Bisumaruko, breastsexy
+// @author       Bisumaruko, Cloud
 // @include      http*://store.steampowered.com/*
 // @include      https://www.indiegala.com/gift*
 // @include      https://www.indiegala.com/profile*
@@ -862,7 +862,7 @@ const siteHandlers = {
         GM_addStyle(`
             .SBSE_container { margin-top: 10px; }
             .SBSE_container > textarea { border: 1px solid #CC001D; }
-            .SBSE_container button, .SBSE_BtnExport { background-color: #CC001D; color: white; border-radius: 3px; }
+            .SBSE_container button, .SBSE_BtnExport { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
             .SBSE_BtnExport:hover { color: white; }
         `);
 
@@ -942,9 +942,8 @@ const siteHandlers = {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            const $bundleTitle = $('#bundle-title, #indie_gala_2 > div > span');
-            const title = `IndieGala - ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
-
+            const $bundleTitle = location.pathname === '/profile' ? $('[aria-expanded="true"] > div#bundle-title') : $('#bundle-title, #indie_gala_2 > div > span');
+            const title = `IndieGala ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
             bundleSitesBoxHandler.export(extractKeys(), title);
         });
     },
