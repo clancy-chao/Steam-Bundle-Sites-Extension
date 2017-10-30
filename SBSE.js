@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.7.2
+// @version      1.7.3
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -855,9 +855,9 @@ const siteCache = {
 };
 const siteHandlers = {
     indiegala() {
-        const box = bundleSitesBox();
+        const $box = bundleSitesBox();
         // insert textarea
-        $('#library-contain').eq(0).before(box);
+        $('#library-contain').eq(0).before($box);
 
         // inject css
         GM_addStyle(`
@@ -869,7 +869,6 @@ const siteHandlers = {
 
         // dom source
         const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
-
         const extractKeys = () => {
             const keys = [];
 
@@ -898,7 +897,7 @@ const siteHandlers = {
         };
 
         // button click
-        $('.SBSE_BtnReveal').click(() => {
+        $box.find('.SBSE_BtnReveal').click(() => {
             const handler = ($games, callback) => {
                 const game = $games.shift();
 
@@ -939,10 +938,10 @@ const siteHandlers = {
 
             bundleSitesBoxHandler.reveal(handler, $(source).find('a[id^=fetchlink_]'));
         });
-        $('.SBSE_BtnRetrieve').click(() => {
+        $box.find('.SBSE_BtnRetrieve').click(() => {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
-        $('.SBSE_BtnExport').click(() => {
+        $box.find('.SBSE_BtnExport').click(() => {
             const $bundleTitle = location.pathname === '/profile' ? $('[aria-expanded="true"] > div#bundle-title') : $('#bundle-title, #indie_gala_2 > div > span');
             const title = `IndieGala ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
             bundleSitesBoxHandler.export(extractKeys(), title);
@@ -956,7 +955,7 @@ const siteHandlers = {
                 mutations.forEach((mutation) => {
                     mutation.addedNodes.forEach((addedNode) => {
                         if (addedNode.id === 'library-contain') {
-                            $('#library-contain').eq(0).before(box);
+                            $('#library-contain').eq(0).before($box);
                             observer.disconnect();
                         }
                     });
