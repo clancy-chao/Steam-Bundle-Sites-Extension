@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.7.1
+// @version      1.7.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -855,8 +855,9 @@ const siteCache = {
 };
 const siteHandlers = {
     indiegala() {
+        const box = bundleSitesBox();
         // insert textarea
-        $('#library-contain').eq(0).before(bundleSitesBox());
+        $('#library-contain').eq(0).before(box);
 
         // inject css
         GM_addStyle(`
@@ -946,6 +947,24 @@ const siteHandlers = {
             const title = `IndieGala ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
             bundleSitesBoxHandler.export(extractKeys(), title);
         });
+
+        // support for new password protected gift page
+        const $node = $('#gift-contents');
+
+        if ($node.length > 0) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((addedNode) => {
+                        if (addedNode.id === 'library-contain') {
+                            $('#library-contain').eq(0).before(box);
+                            observer.disconnect();
+                        }
+                    });
+                });
+            });
+
+            observer.observe($node[0], { childList: true });
+        }
     },
     bundlestars(firstCalled) {
         const cache = siteCache.bundlestars;
