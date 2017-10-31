@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.7.3
+// @version      1.8.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -13,6 +13,7 @@
 // @include      https://www.indiegala.com/game*
 // @include      http*://*bundlestars.com/*
 // @include      https://www.humblebundle.com/downloads*
+// @include      https://www.humblebundle.com/home/*
 // @include      http*://*dailyindiegame.com/*
 // @include      http*://bundle.ccyycn.com/order/*
 // @include      https://groupees.com/purchases
@@ -1097,8 +1098,33 @@ const siteHandlers = {
         }
     },
     humblebundle() {
+        const $box = bundleSitesBox();
+        let atDownload = true;
+
         // insert textarea
-        $('#steam-tab').closest('.whitebox').eq(0).before(bundleSitesBox());
+        $('#steam-tab').closest('.whitebox').eq(0).before($box);
+
+        // insert at /home/*
+        const $keyManager = $('.js-key-manager-holder');
+
+        if ($keyManager.length > 0) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((addedNode) => {
+                        if (addedNode.className === 'header') {
+                            atDownload = false;
+
+                            $(addedNode).after($box);
+                            $box.find('.SBSE_ChkSkipOwned').parent().remove();
+
+                            observer.disconnect();
+                        }
+                    });
+                });
+            });
+
+            observer.observe($keyManager[0], { childList: true });
+        }
 
         // inject css
         GM_addStyle(`
@@ -1116,26 +1142,27 @@ const siteHandlers = {
                 background-color: #c5c5c5;
                 background: linear-gradient(to top, #cacaca, #e7e7e7);
             }
-            #SBSE_BtnSettings { position: absolute; }
+            .SBSE_container > div > button.narrow.working { width: 76px; padding-right: 36px; }
+            .SBSE_container > div > a { color: #4a4c45 !important; text-decoration: none; }
+            #SBSE_BtnSettings { position: absolute; right: 0; }
         `);
 
         // narrow buttons
-        $('.SBSE_container > div > button').addClass('narrow');
+        $box.find('div > button').addClass('narrow');
 
         // append checkbox for owned game
-        $('#SBSE_BtnSettings').before(
+        $box.find('#SBSE_BtnSettings').before(
             $(`<label><input type="checkbox" class="SBSE_ChkSkipOwned">${text.checkboxSkipOwned}</label>`),
         );
-
-        // overwrite inherited color and underline
-        $('.SBSE_BtnExport').css({ color: '#4a4c45', 'text-decoration': 'none' });
 
         const extractKeys = () => {
             const keys = [];
 
-            $('.sr-redeemed-bubble .keyfield-text').each((index, element) => {
+            $('.sr-redeemed-bubble .keyfield-text, tr:has(.hb-steam) .redeemed > .keyfield-value').each((index, element) => {
                 const $game = $(element);
-                const $heading = $game.closest('[class^=sr-key]').prev().children().eq(0);
+                const $heading = atDownload
+                                    ? $game.closest('[class^=sr-key]').prev().children().eq(0)
+                                    : $game.closest('td').prev('.game-name').find('h4');
 
                 keys.push({
                     key: $game.text().trim(),
@@ -1147,7 +1174,7 @@ const siteHandlers = {
         };
 
         // button click
-        $('.SBSE_BtnReveal').click(() => {
+        $box.find('.SBSE_BtnReveal').click(() => {
             const handler = ($games, callback) => {
                 const game = $games.shift();
 
@@ -1165,12 +1192,12 @@ const siteHandlers = {
                 } else callback();
             };
 
-            bundleSitesBoxHandler.reveal(handler, $('.sr-unredeemed-steam-button'));
+            bundleSitesBoxHandler.reveal(handler, $('.sr-unredeemed-steam-button, div[title="Reveal your Steam key"]'));
         });
-        $('.SBSE_BtnRetrieve').click(() => {
+        $box.find('.SBSE_BtnRetrieve').click(() => {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
-        $('.SBSE_BtnExport').click(() => {
+        $box.find('.SBSE_BtnExport').click(() => {
             const $bundleTitle = $('meta[name=title]');
             const title = `Humble Bundle - ${$bundleTitle.length > 0 ? $bundleTitle.attr('content') : 'Keys'}`;
 
@@ -1178,19 +1205,27 @@ const siteHandlers = {
         });
 
         // setup key details
-        let data = $('.steam-keyredeemer-container').next().text().split(eol)[3].trim().slice(11, -1);
+        const $script = $('.steam-keyredeemer-container').next();
 
-        try {
-            data = JSON.parse(data);
+        if ($script.length > 0) {
+            let data = $script.text()
+                        .split('var data = ')
+                        .pop()
+                        .split(';')
+                        .shift();
 
-            data.keys.forEach((key) => {
-                keyDetails.set(key.redeemedKeyVal, {
-                    app: key.steamAppId,
-                    title: key.humanName,
+            try {
+                data = JSON.parse(data);
+
+                data.keys.forEach((key) => {
+                    keyDetails.set(key.redeemedKeyVal, {
+                        app: key.steamAppId,
+                        title: key.humanName,
+                    });
                 });
-            });
-        } catch (e) {
-            // no key details
+            } catch (e) {
+                // no key details
+            }
         }
     },
     dailyindiegame() {
