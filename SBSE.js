@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.8.0
+// @version      1.8.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -860,6 +860,24 @@ const siteHandlers = {
         // insert textarea
         $('#library-contain').eq(0).before($box);
 
+        // support for new password protected gift page
+        const $node = $('#gift-contents');
+
+        if ($node.length > 0) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    Array.from(mutation.addedNodes).forEach((addedNode) => {
+                        if (addedNode.id === 'library-contain') {
+                            $node.prepend($box);
+                            observer.disconnect();
+                        }
+                    });
+                });
+            });
+
+            observer.observe($node[0], { childList: true });
+        }
+
         // inject css
         GM_addStyle(`
             .SBSE_container { margin-top: 10px; }
@@ -947,24 +965,6 @@ const siteHandlers = {
             const title = `IndieGala ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
             bundleSitesBoxHandler.export(extractKeys(), title);
         });
-
-        // support for new password protected gift page
-        const $node = $('#gift-contents');
-
-        if ($node.length > 0) {
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((addedNode) => {
-                        if (addedNode.id === 'library-contain') {
-                            $('#library-contain').eq(0).before($box);
-                            observer.disconnect();
-                        }
-                    });
-                });
-            });
-
-            observer.observe($node[0], { childList: true });
-        }
     },
     bundlestars(firstCalled) {
         const cache = siteCache.bundlestars;
@@ -1090,7 +1090,7 @@ const siteHandlers = {
         if (firstCalled) {
             new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
-                    mutation.removedNodes.forEach((removedNode) => {
+                    Array.from(mutation.removedNodes).forEach((removedNode) => {
                         if (removedNode.id === 'loading-bar-spinner') siteHandlers.bundlestars();
                     });
                 });
@@ -1110,7 +1110,7 @@ const siteHandlers = {
         if ($keyManager.length > 0) {
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((addedNode) => {
+                    Array.from(mutation.addedNodes).forEach((addedNode) => {
                         if (addedNode.className === 'header') {
                             atDownload = false;
 
@@ -1501,7 +1501,7 @@ const siteHandlers = {
         // append mark all as used button
         new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((addedNode) => {
+                Array.from(mutation.addedNodes).forEach((addedNode) => {
                     const $orderMeta = $(addedNode).find('.order-meta');
 
                     if ($orderMeta.length > 0) {
