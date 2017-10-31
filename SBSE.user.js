@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.7.3
+// @version      1.7.4
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -747,7 +747,7 @@ const bundleSitesBox = () => {
             padding-top: 5px;
             box-sizing: border-box;
         }
-        .SBSE_container button, .SBSE_container a {
+        .SBSE_container > div > button, .SBSE_container > div > a {
             width: 120px;
             position: relative;
             margin-right: 10px;
@@ -757,7 +757,7 @@ const bundleSitesBox = () => {
             cursor: pointer;
             transition: all 0.5s;
         }
-        .SBSE_container a {
+        .SBSE_container > div > a {
             display: inline-block;
             text-align: center;
         }
@@ -781,7 +781,7 @@ const bundleSitesBox = () => {
 
     // spinner button affect
     GM_addStyle(`
-        .SBSE_container button:before {
+        .SBSE_container > div > button:before {
             content: '';
             position: absolute;
             margin-top: 5px;
@@ -799,12 +799,12 @@ const bundleSitesBox = () => {
             animation-name: rotate;
             animation-timing-function: linear;
         }
-        .SBSE_container button.narrow.working {
+        .SBSE_container > div > button.narrow.working {
             width: 100px;
             padding-right: 40px;
             transition: all 0.5s;
         }
-        .SBSE_container button.working:before {
+        .SBSE_container > div > button.working:before {
             transition-delay: 0.5s;
             transition-duration: 1s;
             opacity: 1;
@@ -859,8 +859,8 @@ const siteHandlers = {
         GM_addStyle(`
             .SBSE_container { margin-top: 10px; }
             .SBSE_container > textarea { border: 1px solid #CC001D; }
-            .SBSE_container button, .SBSE_BtnExport { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
-            .SBSE_BtnExport:hover { color: white; }
+            .SBSE_container > div > button, .SBSE_container > div > a { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
+            .SBSE_container > div > a:hover { color: white; }
         `);
 
         // dom source
@@ -1003,10 +1003,10 @@ const siteHandlers = {
             GM_addStyle(`
                 .SBSE_container { border: 1px solid #424242; color: #999999; }
                 .SBSE_container > textarea { background-color: #303030; color: #DDD; }
-                .SBSE_container button, .SBSE_container a { width: 80px; }
-                .SBSE_container button, .SBSE_container select, .SBSE_container a { border: 1px solid transparent; background-color: #262626; color: #DEDEDE; }
-                .SBSE_container button:hover, .SBSE_container select:hover, .SBSE_container a:hover { color: #A8A8A8; }
-                .SBSE_container a { text-decoration: none; }
+                .SBSE_container > div > button, .SBSE_container > div > a { width: 80px; }
+                .SBSE_container > div > button, .SBSE_container select, .SBSE_container > div > a { border: 1px solid transparent; background-color: #262626; color: #DEDEDE; }
+                .SBSE_container > div > button:hover, .SBSE_container select:hover, .SBSE_container > div > a:hover { color: #A8A8A8; }
+                .SBSE_container > div > a { text-decoration: none; }
                 .SBSE_container label { color: #DEDEDE; }
                 .SBSE_container select { max-width:120px; height: 30px; }
                 .SBSE_container select, .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
@@ -1014,7 +1014,7 @@ const siteHandlers = {
             `);
 
             // narrow buttons
-            $('.SBSE_container button').addClass('narrow');
+            $('.SBSE_container > div > button').addClass('narrow');
 
             // insert bundlestars select
             $('.SBSE_container > div').append(`
@@ -1100,7 +1100,7 @@ const siteHandlers = {
                 text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
                 border-radius: 5px;
             }
-            .SBSE_container button, .SBSE_container a {
+            .SBSE_container > div > button, .SBSE_container > div > a {
                 width: 70px;
                 border: 1px solid #808080;
                 border-radius: 3px;
@@ -1111,7 +1111,7 @@ const siteHandlers = {
         `);
 
         // narrow buttons
-        $('.SBSE_container button').addClass('narrow');
+        $('.SBSE_container > div > button').addClass('narrow');
 
         // append checkbox for owned game
         $('#SBSE_BtnSettings').before($(`<label><input type="checkbox" class="SBSE_ChkSkipOwned">${text.checkboxSkipOwned}</label>`));
@@ -1198,7 +1198,7 @@ const siteHandlers = {
                 .SBSE_container > textarea {
                     border: 1px solid #000;
                 }
-                .SBSE_container button {
+                .SBSE_container > div > button {
                     border: none;
                     background-color: #FD5E0F;
                     color: rgb(49, 49, 49);
@@ -1369,14 +1369,14 @@ const siteHandlers = {
                 border-radius: 5px;
             }
             .SBSE_container > div { text-align: left; }
-            .SBSE_container button, .SBSE_container a {
+            .SBSE_container > div > button, .SBSE_container > div > a {
                 width: 80px;
                 border: 1px solid transparent;
                 border-radius: 5px;
                 background-color: #EEE;
                 box-shadow: 0 0 1px 1px rgba(204,204,204,0.5);
             }
-            .SBSE_BtnExport, .SBSE_container a:hover {
+            .SBSE_container > div > a:hover {
                 text-decoration: none;
                 color: black;
             }
@@ -1391,7 +1391,7 @@ const siteHandlers = {
         `);
 
         // narrow buttons
-        $('.SBSE_container button').addClass('narrow');
+        $('.SBSE_container > div > button').addClass('narrow');
 
         const extractKeys = () => {
             const keys = [];
@@ -1444,8 +1444,8 @@ const siteHandlers = {
         $('#SBSE_BtnSettings').before($(`<label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>`));
 
         // add buttons style via groupees's class
-        $('.SBSE_container button').addClass('btn btn-default');
-        $('.SBSE_container a').addClass('btn btn-default');
+        $('.SBSE_container > div > button').addClass('btn btn-default');
+        $('.SBSE_container > div > a').addClass('btn btn-default');
 
         // append mark all as used button
         new MutationObserver(mutations => {
@@ -1527,12 +1527,12 @@ const siteHandlers = {
             // inject css
             GM_addStyle(`
                 .SBSE_container > textarea { border: 1px solid #AAAAAA; }
-                .SBSE_container button, .SBSE_BtnExport {
+                .SBSE_container > div > button, .SBSE_container > div > a {
                     border: 1px solid #d3d3d3;
                     background: #e6e6e6 url(images/ui-bg_glass_75_e6e6e6_1x400.png) 50% 50% repeat-x;
                     color: #555555;
                 }
-                .SBSE_container button:hover, .SBSE_BtnExport:hover {
+                .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
                     border-color: #999999;
                     background: #dadada url(images/ui-bg_glass_75_dadada_1x400.png) 50% 50% repeat-x;
                     color: #212121;
@@ -1541,7 +1541,7 @@ const siteHandlers = {
             `);
 
             // remove event from agiso
-            $('.SBSE_container button').click(e => {
+            $('.SBSE_container > div > button').click(e => {
                 e.preventDefault();
             });
 
