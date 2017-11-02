@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.9.0
+// @version      1.9.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -1031,23 +1031,21 @@ const siteHandlers = {
                     <span>${text.selectConnector}</span>
                     <select class="selectFrom"></select>
                 `);
-                /*
-                                // button click
-                                $('.SBSE_BtnReveal').click(() => {
-                                    const handler = ($games, callback) => {
-                                        const game = $games.shift();
-                
-                                        if (game) {
-                                            if (!game.closest('.ng-hide')) {
-                                                game.click();
-                                                setTimeout(handler.bind(null, $games, callback), 300);
-                                            } else handler($games, callback);
-                                        } else setTimeout(callback, 500);
-                                    };
-                
-                                    bundleSitesBoxHandler.reveal(handler, selectGames('.order-item'));
-                                });
-                */
+
+                // button click
+                $('.SBSE_BtnReveal').click(() => {
+                    const handler = ($games, callback) => {
+                        const game = $games.shift();
+
+                        if (game) {
+                            game.click();
+                            setTimeout(handler.bind(null, $games, callback), 300);
+                        } else setTimeout(callback, 500);
+                    };
+
+                    bundleSitesBoxHandler.reveal(handler, selectGames('button'));
+                });
+
                 $('.SBSE_BtnRetrieve').click(() => {
                     bundleSitesBoxHandler.retrieve(extractKeys());
                 });
