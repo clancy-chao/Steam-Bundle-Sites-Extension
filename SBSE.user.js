@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.8.1
+// @version      1.9.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -12,6 +12,7 @@
 // @include      https://www.indiegala.com/profile*
 // @include      https://www.indiegala.com/game*
 // @include      http*://*bundlestars.com/*
+// @include      https://www.fanatical.com/*
 // @include      https://www.humblebundle.com/downloads*
 // @include      https://www.humblebundle.com/home/*
 // @include      http*://*dailyindiegame.com/*
@@ -173,7 +174,7 @@ const i18n = {
         checkboxJoinKeys: '合併',
         checkboxSkipUsed: '跳過已使用',
         checkboxSkipOwned: '跳過已擁有',
-        BSselectConnector: '至',
+        selectConnector: '至',
         markAllAsUsed: '標記全部已使用'
     },
     schinese: {
@@ -226,7 +227,7 @@ const i18n = {
         checkboxJoinKeys: '合并',
         checkboxSkipUsed: '跳过已使用',
         checkboxSkipOwned: '跳过已拥有',
-        BSselectConnector: '至',
+        selectConnector: '至',
         markAllAsUsed: '标记全部已使用'
     },
     english: {
@@ -279,7 +280,7 @@ const i18n = {
         checkboxJoinKeys: 'Join',
         checkboxSkipUsed: 'Skip Used',
         checkboxSkipOwned: 'Skip Owned',
-        BSselectConnector: 'to',
+        selectConnector: 'to',
         markAllAsUsed: 'Mark All as Used'
     }
 };
@@ -846,6 +847,9 @@ const bundleSitesBox = () => {
     return $container;
 };
 const siteCache = {
+    fanatical: {
+        doms: []
+    },
     bundlestars: {
         doms: [document]
     }
@@ -962,6 +966,141 @@ const siteHandlers = {
             bundleSitesBoxHandler.export(extractKeys(), title);
         });
     },
+    fanatical() {
+        const cache = siteCache.fanatical;
+        const selectGames = selector => {
+            let $results = $();
+            let from = parseInt($('.SBSE_container .selectFrom').val(), 10);
+            let to = parseInt($('.SBSE_container .selectTo').val(), 10);
+
+            if ($.isNumeric(from) && $.isNumeric(to)) {
+                if (from === 0 && to > 0) from = 1;
+                if (from > 0 && to === 0) to = cache.doms.length - 1;
+
+                for (let i = Math.min(from, to); i <= Math.max(from, to); i += 1) {
+                    $results = $results.add($(cache.doms[i]).find(selector));
+                }
+            }
+
+            return $results;
+        };
+        const extractKeys = () => {
+            const keys = [];
+
+            selectGames('input').each((index, input) => {
+                const $input = $(input);
+
+                keys.push({
+                    key: $input.val(),
+                    title: $input.closest('dd').prev().text().trim()
+                });
+            });
+
+            return keys;
+        };
+        const insertBox = () => {
+            const $anchor = $('h3:contains(Order Keys)');
+
+            if ($('.SBSE_container').length === 0 && $anchor.length > 0) {
+                // insert textarea
+                $anchor.eq(0).before(bundleSitesBox());
+
+                // inject css
+                GM_addStyle(`
+                    .SBSE_container { margin-top: 10px; nborder: 1px solid #424242; color: #999999; }
+                    .SBSE_container > textarea { background-color: #303030; color: #DDD; }
+                    .SBSE_container > div > button, .SBSE_container > div > a { width: 80px; }
+                    .SBSE_container > div > button, .SBSE_container select, .SBSE_container > div > a { border: 1px solid transparent; background-color: #262626; color: #DEDEDE; }
+                    .SBSE_container > div > button:hover, .SBSE_container select:hover, .SBSE_container > div > a:hover { color: #A8A8A8; }
+                    .SBSE_container > div > a { text-decoration: none; }
+                    .SBSE_container label { color: #DEDEDE; }
+                    .SBSE_container select { max-width:120px; height: 30px; }
+                    .SBSE_container select, .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
+                    .SBSE_container span { margin-top: 5px; }
+                `);
+
+                // narrow buttons
+                $('.SBSE_container > div > button').addClass('narrow');
+
+                // dodge from master css selector
+                $('.SBSE_container > div > a').attr('href', '');
+
+                // insert bundlestars select
+                $('.SBSE_container > div').append(`
+                    <select class="selectTo"></select>
+                    <span>${text.selectConnector}</span>
+                    <select class="selectFrom"></select>
+                `);
+                /*
+                                // button click
+                                $('.SBSE_BtnReveal').click(() => {
+                                    const handler = ($games, callback) => {
+                                        const game = $games.shift();
+                
+                                        if (game) {
+                                            if (!game.closest('.ng-hide')) {
+                                                game.click();
+                                                setTimeout(handler.bind(null, $games, callback), 300);
+                                            } else handler($games, callback);
+                                        } else setTimeout(callback, 500);
+                                    };
+                
+                                    bundleSitesBoxHandler.reveal(handler, selectGames('.order-item'));
+                                });
+                */
+                $('.SBSE_BtnRetrieve').click(() => {
+                    bundleSitesBoxHandler.retrieve(extractKeys());
+                });
+                $('.SBSE_BtnExport').click(() => {
+                    const $bundleTitle = $('h5');
+                    const title = `Fanatical - ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
+
+                    bundleSitesBoxHandler.export(extractKeys(), title);
+                });
+            }
+
+            // setup select
+            const $selects = $('.SBSE_container select');
+
+            $selects.empty();
+            $selects.append(new Option('All', 0));
+
+            // individual games
+            $anchor.parent().children('dl').each((index, dl) => {
+                $selects.append(new Option($(dl).children().eq(1).text(), cache.doms.push(dl) - 1));
+            });
+
+            // bundles
+            $anchor.parent().find('h5').each((index, bundle) => {
+                const $bundle = $(bundle);
+                const $tiers = $bundle.parent().find('h6');
+                const bundleTitle = $bundle.text();
+
+                if ($tiers.length > 0) {
+                    $tiers.each((i, tier) => {
+                        const tierTitle = $(tier).text().trim();
+
+                        $selects.append(new Option(`${bundleTitle} ${tierTitle}`, cache.doms.push(tier.parentNode) - 1));
+                    });
+                } else {
+                    $selects.append(new Option(bundleTitle, cache.doms.push(bundle.parentNode) - 1));
+                }
+            });
+        };
+
+        new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                Array.from(mutation.addedNodes).forEach(addedNode => {
+                    const $node = $(addedNode);
+
+                    if (!!$node.children('dl').length || !!$node.children('div').children('dl').length || addedNode.tagName === 'DL') {
+                        cache.doms = [addedNode];
+                        insertBox();
+                    }
+                });
+            });
+        }).observe($('#root')[0], { childList: true, subtree: true });
+    },
     bundlestars(firstCalled) {
         const cache = siteCache.bundlestars;
         const $anchor = $('h2:contains(Order Keys)');
@@ -1020,7 +1159,7 @@ const siteHandlers = {
             // insert bundlestars select
             $('.SBSE_container > div').append(`
                 <select class="selectTo"></select>
-                <span>${text.BSselectConnector}</span>
+                <span>${text.selectConnector}</span>
                 <select class="selectFrom"></select>
             `);
 
