@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.9.3
+// @version      1.9.4
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -32,9 +32,7 @@
 // @noframes
 // ==/UserScript==
 
-/* global GM_xmlhttpRequest, GM_setValue, GM_getValue, GM_addStyle, GM_getResourceText,
-   swal, g_AccountID, g_sessionID, g_oSuggestParams,
-   window, document, location, fetch, localStorage, MutationObserver, Option */
+/* global swal, g_AccountID, g_sessionID, g_oSuggestParams */
 
 // setup jQuery
 const $ = jQuery.noConflict(true);
@@ -51,11 +49,15 @@ GM_addStyle(`
         height: 200px;
         text-align: left;
         white-space: pre-wrap;
-    }
+    }/*
+    .SBSE_owned .sr-key-heading > span::after {
+        content: "☑";
+        color: #9ccc65;
+    }*/
 `);
 
 // load up
-const regKey = /((?:([A-Z0-9])(?!\2{4})){5}-){2,5}[A-Z0-9]{5}/g;
+const regKey = /(?:(?:([A-Z0-9])(?!\1{4})){5}-){2,5}[A-Z0-9]{5}/g;
 const eol = "\r\n";
 
 const has = Object.prototype.hasOwnProperty;
@@ -154,6 +156,8 @@ const i18n = {
         settingsTitle: '設定',
         settingsAutoUpdateSessionID: '自動更新SessionID',
         settingsSessionID: '我的SessionID',
+        settingsSyncLibrary: '同步遊戲庫資料',
+        settingsSyncLibraryButton: '同步',
         settingsLanguage: '語言',
         settingsPreselectIncludeTitle: '預選包括遊戲名',
         settingsTitleComesLast: '遊戲名置後',
@@ -176,6 +180,8 @@ const i18n = {
         checkboxSkipOwned: '跳過已擁有',
         selectConnector: '至',
         markAllAsUsed: '標記全部已使用',
+        syncSuccessTitle: '同步成功',
+        syncSuccess: '成功同步Steam 遊戲庫資料',
     },
     schinese: {
         name: '简体中文',
@@ -207,6 +213,8 @@ const i18n = {
         settingsTitle: '设置',
         settingsAutoUpdateSessionID: '自动更新SessionID',
         settingsSessionID: '我的SessionID',
+        settingsSyncLibrary: '同步游戏库资料',
+        settingsSyncLibraryButton: '同步',
         settingsLanguage: '语言',
         settingsPreselectIncludeTitle: '预选包括游戏名',
         settingsTitleComesLast: '游戏名置后',
@@ -229,6 +237,8 @@ const i18n = {
         checkboxSkipOwned: '跳过已拥有',
         selectConnector: '至',
         markAllAsUsed: '标记全部已使用',
+        syncSuccessTitle: '同步成功',
+        syncSuccess: '成功同步Steam 游戏库资料',
     },
     english: {
         name: 'English',
@@ -260,6 +270,8 @@ const i18n = {
         settingsTitle: 'Settings',
         settingsAutoUpdateSessionID: 'Auto Update SessionID',
         settingsSessionID: 'Your sessionID',
+        settingsSyncLibrary: 'Sync Library Data',
+        settingsSyncLibraryButton: 'Sync',
         settingsLanguage: 'Language',
         settingsPreselectIncludeTitle: 'Pre-select Include Title',
         settingsTitleComesLast: 'Title Comes Last',
@@ -282,6 +294,8 @@ const i18n = {
         checkboxSkipOwned: 'Skip Owned',
         selectConnector: 'to',
         markAllAsUsed: 'Mark All as Used',
+        syncSuccessTitle: 'Sync Successful',
+        syncSuccess: 'Successfully sync Steam library data',
     },
 };
 let text = has.call(i18n, config.get('language')) ? i18n[config.get('language')] : i18n.english;
@@ -368,6 +382,32 @@ const getSessionID = () => {
         },
     });
 };
+const syncLibrary = (notify = true) => {
+    GM_xmlhttpRequest({
+        method: 'GET',
+        url: `http://store.steampowered.com/dynamicstore/userdata/t=${Math.random()}`,
+        onload: (res) => {
+            if (res.status === 200) {
+                const data = JSON.parse(res.response);
+
+                if (data.rgOwnedApps.length > 0) owned.app = data.rgOwnedApps;
+                if (data.rgOwnedPackages.length > 0) owned.sub = data.rgOwnedPackages;
+                owned.lastSync = Date.now();
+
+                localStorage.setItem('SBSE_owned', JSON.stringify(owned));
+
+                if (notify) {
+                    swal({
+                        title: text.syncSuccessTitle,
+                        text: text.syncSuccess,
+                        type: 'success',
+                        timer: 3000,
+                    });
+                }
+            }
+        },
+    });
+};
 const settings = {
     construct() {
         const panelHTML = `
@@ -386,6 +426,12 @@ const settings = {
                         <td class="name">${text.settingsSessionID}</td>
                         <td class="value">
                             <input type="text" class="sessionID" value="${config.get('sessionID')}">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="name">${text.settingsSyncLibrary}</td>
+                        <td class="value">
+                            <button class="syncLibrary">${text.settingsSyncLibraryButton}</button>
                         </td>
                     </tr>
                     <tr>
@@ -475,6 +521,9 @@ const settings = {
 
             setTimeout(swal.hideLoading, 500);
         });
+
+        // sync library
+        $panel.find('.syncLibrary').click(syncLibrary);
 
         // language
         Object.keys(i18n).forEach((language) => {
@@ -1031,14 +1080,14 @@ const siteHandlers = {
 
                 // dodge from master css selector
                 $('.SBSE_container > div > a').attr('href', '');
-/*
+                /*
                 // insert bundlestars select
                 $('.SBSE_container > div').append(`
                     <select class="selectTo"></select>
                     <span>${text.selectConnector}</span>
                     <select class="selectFrom"></select>
                 `);
-*/
+                */
                 // button click
                 $('.SBSE_BtnReveal').click(() => {
                     const handler = ($games, callback) => {
@@ -1062,7 +1111,7 @@ const siteHandlers = {
 
                     bundleSitesBoxHandler.export(extractKeys(), title);
                 });
-/*
+                /*
                 // setup select
                 const $selects = $('.SBSE_container select');
 
@@ -1239,12 +1288,65 @@ const siteHandlers = {
         }
     },
     humblebundle() {
-        const $box = bundleSitesBox();
         let atDownload = true;
+        const $box = bundleSitesBox();
+        const setupKeyDetails = ($node) => {
+            const $script = $('.steam-keyredeemer-container').next();
+
+            if ($script.length > 0) {
+                let data = $script.text()
+                    .split('var data = ')
+                    .pop()
+                    .split(';')
+                    .shift();
+
+                try {
+                    data = JSON.parse(data);
+
+                    data.keys.forEach((key) => {
+                        keyDetails.set(key.redeemedKeyVal, {
+                            app: key.steamAppId,
+                            title: key.humanName,
+                        });
+
+                        // apply owned effect on game title
+                        const appID = parseInt(key.steamAppId, 10);
+
+                        if (appID && owned.app.includes(appID)) {
+                            $node.find(`.sr-key:has(.sr-key-heading > span:contains(${key.humanName}))`).parent().addClass('SBSE_owned');
+                        }
+                    });
+                } catch (e) {
+                    // no key details
+                }
+            }
+        };
+        const extractKeys = () => {
+            const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
+            const keys = [];
+            const selectors = [
+                '.sr-redeemed-bubble .keyfield-text', // redeem page selector
+                'tr:has(.hb-steam) .redeemed > .keyfield-value', // home page selector
+            ];
+
+            if (skipOwned) selectors[0] = `div:not(.SBSE_owned) > .sr-key ${selectors[0]}`;
+
+            $(selectors.join()).each((index, element) => {
+                const $game = $(element);
+                const $heading = atDownload
+                    ? $game.closest('[class^=sr-key]').prev().children().eq(0)
+                    : $game.closest('td').prev('.game-name').find('h4');
+
+                keys.push({
+                    key: $game.text().trim(),
+                    title: $heading.text().trim(),
+                });
+            });
+
+            return keys;
+        };
 
         // insert textarea
-        $('#steam-tab').closest('.whitebox').eq(0).before($box);
-
         // insert at /home/*
         const $keyManager = $('.js-key-manager-holder');
 
@@ -1265,6 +1367,27 @@ const siteHandlers = {
             });
 
             observer.observe($keyManager[0], { childList: true });
+        // insert at download page
+        } else {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    Array.from(mutation.addedNodes).forEach((addedNode) => {
+                        const $node = $(addedNode);
+
+                        if ($node.hasClass('sr-widget') && $node.closest('.keytab').length > 0) {
+                            $node.closest('.whitebox-redux').before($box);
+                            setupKeyDetails($node);
+
+                            observer.disconnect();
+                        }
+                    });
+                });
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+            });
         }
 
         // inject css
@@ -1301,44 +1424,33 @@ const siteHandlers = {
             $(`<label><input type="checkbox" class="SBSE_ChkSkipOwned">${text.checkboxSkipOwned}</label>`),
         );
 
-        const extractKeys = () => {
-            const keys = [];
-
-            $('.sr-redeemed-bubble .keyfield-text, tr:has(.hb-steam) .redeemed > .keyfield-value').each((index, element) => {
-                const $game = $(element);
-                const $heading = atDownload
-                                    ? $game.closest('[class^=sr-key]').prev().children().eq(0)
-                                    : $game.closest('td').prev('.game-name').find('h4');
-
-                keys.push({
-                    key: $game.text().trim(),
-                    title: $heading.text().trim(),
-                });
-            });
-
-            return keys;
-        };
-
         // button click
         $box.find('.SBSE_BtnReveal').click(() => {
+            const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
             const handler = ($games, callback) => {
                 const game = $games.shift();
 
                 if (game) {
                     game.click();
+                    setTimeout(handler.bind(null, $games, callback), 300); /*
                     setTimeout(() => {
                         const $popup = $('.sr-warning-modal-buttons');
-                        const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
                         const selector = skipOwned ? '.sr-warning-modal-cancel-button' : '.sr-warning-modal-confirm-button';
 
                         if ($popup.length > 0) $popup.find(selector).click();
 
                         setTimeout(handler.bind(null, $games, callback), 300);
-                    }, 300);
+                    }, 300);*/
                 } else callback();
             };
+            const selectors = [
+                '.sr-unredeemed-steam-button', // redeem page selector
+                'div.keyfield[title="Reveal your Steam key"]', // home page selector
+            ];
 
-            bundleSitesBoxHandler.reveal(handler, $('.sr-unredeemed-steam-button, div[title="Reveal your Steam key"]'));
+            if (skipOwned) selectors[0] = `div:not(.SBSE_owned) > .sr-key ${selectors[0]}`;
+
+            bundleSitesBoxHandler.reveal(handler, selectors.join());
         });
         $box.find('.SBSE_BtnRetrieve').click(() => {
             bundleSitesBoxHandler.retrieve(extractKeys());
@@ -1349,30 +1461,6 @@ const siteHandlers = {
 
             bundleSitesBoxHandler.export(extractKeys(), title);
         });
-
-        // setup key details
-        const $script = $('.steam-keyredeemer-container').next();
-
-        if ($script.length > 0) {
-            let data = $script.text()
-                        .split('var data = ')
-                        .pop()
-                        .split(';')
-                        .shift();
-
-            try {
-                data = JSON.parse(data);
-
-                data.keys.forEach((key) => {
-                    keyDetails.set(key.redeemedKeyVal, {
-                        app: key.steamAppId,
-                        title: key.humanName,
-                    });
-                });
-            } catch (e) {
-                // no key details
-            }
-        }
     },
     dailyindiegame() {
         const pathname = location.pathname;
@@ -1795,23 +1883,7 @@ const init = () => {
 
             // update owned every 10 min
             const updateTimer = 10 * 60 * 1000;
-            if (!owned.lastUpdate || owned.lastUpdate < (Date.now() - updateTimer)) {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: `http://store.steampowered.com/dynamicstore/userdata/t=${Math.random()}`,
-                    onload: (res) => {
-                        if (res.status === 200) {
-                            const data = JSON.parse(res.response);
-
-                            owned.app = data.rgOwnedApps;
-                            owned.sub = data.rgOwnedPackages;
-                            owned.lastUpdate = Date.now();
-
-                            localStorage.setItem('SBSE_owned', JSON.stringify(owned));
-                        }
-                    },
-                });
-            }
+            if (!owned.lastSync || owned.lastSync < (Date.now() - updateTimer)) syncLibrary(false);
         }
     }
 };
