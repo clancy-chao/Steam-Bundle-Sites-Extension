@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.9.4
+// @version      1.9.5
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -973,7 +973,7 @@ const siteHandlers = {
                 if (game) {
                     const $game = $(game);
                     const code = $game.attr('id').split('_').pop();
-                    const appID = $game.attr('onclick').match(/steampowered\.com\/app\/(\d+)/)[1];
+                    const id = $game.attr('onclick').match(/steampowered\.com\/(app|sub)\/(\d+)/)[2];
 
                     $.ajax({
                         method: 'GET',
@@ -982,7 +982,7 @@ const siteHandlers = {
                         data: {
                             code,
                             cache: false,
-                            productId: appID
+                            productId: id
                         },
                         beforeSend() {
                             $(`#permbutton_${code}, #fetchlink_${code}, #info_key_${code}`).hide();
@@ -1420,7 +1420,7 @@ const siteHandlers = {
 
             if (skipOwned) selectors[0] = `div:not(.SBSE_owned) > .sr-key ${selectors[0]}`;
 
-            bundleSitesBoxHandler.reveal(handler, selectors.join());
+            bundleSitesBoxHandler.reveal(handler, $(selectors.join()));
         });
         $box.find('.SBSE_BtnRetrieve').click(() => {
             bundleSitesBoxHandler.retrieve(extractKeys());
