@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.9.5
+// @version      1.9.6
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -91,6 +91,7 @@ const config = {
         if (!has.call(this.data, 'titleComesLast')) this.data.titleComesLast = false;
         if (!has.call(this.data, 'preselectJoinKeys')) this.data.preselectJoinKeys = false;
         if (!has.call(this.data, 'joinKeysASFStyle')) this.data.joinKeysASFStyle = true;
+        if (!has.call(this.data, 'activateAllKeys')) this.data.activateAllKeys = false;
     },
 };
 const keyDetails = {
@@ -163,6 +164,7 @@ const i18n = {
         settingsTitleComesLast: '遊戲名置後',
         settingsPreselectJoinKeys: '預選合併序號',
         settingsJoinKeysASFStyle: '合併ASF 格式序號',
+        settingsActivateAllKeys: '不跳過、啟動所有序號',
         DIGEasyBuyPurchase: '購買',
         DIGEasyBuySelectAll: '全選',
         DIGEasyBuySelectCancel: '取消',
@@ -220,6 +222,7 @@ const i18n = {
         settingsTitleComesLast: '游戏名置后',
         settingsPreselectJoinKeys: '预选合并激活码',
         settingsJoinKeysASFStyle: '合并ASF 格式激活码',
+        settingsActivateAllKeys: '不跳过、激活所有激活码',
         DIGEasyBuyPurchase: '购买',
         DIGEasyBuySelectAll: '全选',
         DIGEasyBuySelectCancel: '取消',
@@ -277,6 +280,7 @@ const i18n = {
         settingsTitleComesLast: 'Title Comes Last',
         settingsPreselectJoinKeys: 'Pre-select Join Keys',
         settingsJoinKeysASFStyle: 'Join Keys w/ ASF Style',
+        settingsActivateAllKeys: 'No skip & activate all keys',
         DIGEasyBuyPurchase: 'Purchase',
         DIGEasyBuySelectAll: 'Select All',
         DIGEasyBuySelectCancel: 'Cancel',
@@ -476,6 +480,15 @@ const settings = {
                             </label>
                         </td>
                     </tr>
+                    <tr>
+                        <td class="name">${text.settingsActivateAllKeys}</td>
+                        <td class="value">
+                            <label class="switch">
+                                <input type="checkbox" class="activateAllKeys">
+                                <span class="slider"></span>
+                            </label>
+                        </td>
+                    </tr>
                 </table>
             </div>
         `;
@@ -613,7 +626,7 @@ const activateHandler = {
 
                 // next key
                 self.activateKey(callback);
-            } else if (keyDetails.isOwned(key)) {
+            } else if (keyDetails.isOwned(key) && !config.get('activateAllKeys')) {
                 const detail = keyDetails.get(key);
                 const itemDetail = `${detail.app || detail.sub}, ${detail.title}`;
 
