@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.9.6
+// @version      1.10.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -28,6 +28,7 @@
 // @grant        GM_getValue
 // @grant        GM_addStyle
 // @grant        GM_getResourceText
+// @grant        unsafeWindow
 // @run-at       document-start
 // @noframes
 // ==/UserScript==
@@ -45,15 +46,9 @@ GM_addStyle(GM_getResourceText('SweetAlert2CSS'));
 
 // inject script css
 GM_addStyle(`
-    pre.SBSE_errorMsg {
-        height: 200px;
-        text-align: left;
-        white-space: pre-wrap;
-    }/*
-    .SBSE_owned .sr-key-heading > span::after {
-        content: "☑";
-        color: #9ccc65;
-    }*/
+    .SBSE_hide { display: none; }
+    pre.SBSE_errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
+    /*.SBSE_owned .sr-key-heading > span::after { content: "☑"; color: #9ccc65; }*/
 `);
 
 // load up
@@ -168,8 +163,14 @@ const i18n = {
         DIGEasyBuyPurchase: '購買',
         DIGEasyBuySelectAll: '全選',
         DIGEasyBuySelectCancel: '取消',
+        DIGEasyBuyHideOwned: '隱藏已擁有',
+        DIGEasyBuyShowOwned: '顯示已擁有',
+        DIGEasyBuyLoadAllPages: '加載所有頁',
+        DIGEasyBuyLoading: '加載第%page%頁中',
+        DIGEasyBuyLoadingComplete: '加載完成',
         DIGButtonPurchasing: '購買中',
         DIGInsufficientFund: '餘額不足，準備回到帳號頁',
+        DIGMarketSearchResult: '目前市集上架中',
         buttonReveal: '刮開',
         buttonRetrieve: '提取',
         buttonActivate: '啟動',
@@ -180,6 +181,7 @@ const i18n = {
         checkboxJoinKeys: '合併',
         checkboxSkipUsed: '跳過已使用',
         checkboxSkipOwned: '跳過已擁有',
+        checkboxMarketListings: '上架於市集',
         selectConnector: '至',
         markAllAsUsed: '標記全部已使用',
         syncSuccessTitle: '同步成功',
@@ -226,8 +228,14 @@ const i18n = {
         DIGEasyBuyPurchase: '购买',
         DIGEasyBuySelectAll: '全选',
         DIGEasyBuySelectCancel: '取消',
+        DIGEasyBuyHideOwned: '隐藏已拥有',
+        DIGEasyBuyShowOwned: '显示已拥有',
+        DIGEasyBuyLoadAllPages: '加载所有页',
+        DIGEasyBuyLoading: '加载第%page%页中',
+        DIGEasyBuyLoadingComplete: '加载完成',
         DIGButtonPurchasing: '购买中',
         DIGInsufficientFund: '余额不足，准备回到账号页',
+        DIGMarketSearchResult: '目前市集上架中',
         buttonReveal: '刮开',
         buttonRetrieve: '提取',
         buttonActivate: '激活',
@@ -238,6 +246,7 @@ const i18n = {
         checkboxJoinKeys: '合并',
         checkboxSkipUsed: '跳过已使用',
         checkboxSkipOwned: '跳过已拥有',
+        checkboxMarketListings: '上架于市集',
         selectConnector: '至',
         markAllAsUsed: '标记全部已使用',
         syncSuccessTitle: '同步成功',
@@ -284,8 +293,14 @@ const i18n = {
         DIGEasyBuyPurchase: 'Purchase',
         DIGEasyBuySelectAll: 'Select All',
         DIGEasyBuySelectCancel: 'Cancel',
+        DIGEasyBuyHideOwned: 'Hide Owned',
+        DIGEasyBuyShowOwned: 'Show Owned',
+        DIGEasyBuyLoadAllPages: 'Load All Pages',
+        DIGEasyBuyLoading: 'Loading page %page%',
+        DIGEasyBuyLoadingComplete: 'Loaded',
         DIGButtonPurchasing: 'Purchassing',
         DIGInsufficientFund: 'Insufficient fund, returning to account page',
+        DIGMarketSearchResult: 'Currently listing in marketplace',
         buttonReveal: 'Reveal',
         buttonRetrieve: 'Retrieve',
         buttonActivate: 'Activate',
@@ -296,6 +311,7 @@ const i18n = {
         checkboxJoinKeys: 'Join',
         checkboxSkipUsed: 'Skip Used',
         checkboxSkipOwned: 'Skip Owned',
+        checkboxMarketListings: 'Market Listings',
         selectConnector: 'to',
         markAllAsUsed: 'Mark All as Used',
         syncSuccessTitle: 'Sync Successful',
@@ -306,25 +322,11 @@ let text = has.call(i18n, config.get('language')) ? i18n[config.get('language')]
 
 // inject settings panel css
 GM_addStyle(`
-    .SBSE_settings .name {
-        text-align: right;
-        vertical-align: top;
-    }
-    .SBSE_settings .value {
-        text-align: left;
-    }
-    .SBSE_settings .value > * {
-        height: 30px;
-        margin: 0 20px 10px;
-    }
-    .SBSE_settings .switch {
-        position: relative;
-        display: inline-block;
-        width: 60px;
-    }
-    .SBSE_settings .switch input {
-        display: none;
-    }
+    .SBSE_settings .name { text-align: right; vertical-align: top; }
+    .SBSE_settings .value { text-align: left; }
+    .SBSE_settings .value > * { height: 30px; margin: 0 20px 10px; }
+    .SBSE_settings .switch { position: relative; display: inline-block; width: 60px; }
+    .SBSE_settings .switch input { display: none; }
     .SBSE_settings .slider {
         position: absolute;
         cursor: pointer;
@@ -345,20 +347,10 @@ GM_addStyle(`
         background-color: white;
         transition: 0.4s;
     }
-    .SBSE_settings input:checked + .slider {
-        background-color: #2196F3;
-    }
-    .SBSE_settings input:focus + .slider {
-        box-shadow: 0 0 1px #2196F3;
-    }
-    .SBSE_settings input:checked + .slider:before {
-        transform: translateX(30px);
-    }
-    .SBSE_settings > span {
-        display: inline-block;
-        cursor: pointer;
-        color: white;
-    }
+    .SBSE_settings input:checked + .slider { background-color: #2196F3; }
+    .SBSE_settings input:focus + .slider { box-shadow: 0 0 1px #2196F3; }
+    .SBSE_settings input:checked + .slider:before { transform: translateX(30px); }
+    .SBSE_settings > span { display: inline-block; cursor: pointer; color: white; }
 `);
 
 // functions
@@ -811,11 +803,7 @@ const bundleSitesBox = () => {
             resize: none;
             outline: none;
         }
-        .SBSE_container > div {
-            width: 100%;
-            padding-top: 5px;
-            box-sizing: border-box;
-        }
+        .SBSE_container > div { width: 100%; padding-top: 5px; box-sizing: border-box; }
         .SBSE_container > div > button, .SBSE_container > div > a {
             width: 120px;
             position: relative;
@@ -826,10 +814,7 @@ const bundleSitesBox = () => {
             cursor: pointer;
             transition: all 0.5s;
         }
-        .SBSE_container > div > a {
-            display: inline-block;
-            text-align: center;
-        }
+        .SBSE_container > div > a { display: inline-block; text-align: center; }
         .SBSE_container label { margin-right: 10px; }
         #SBSE_BtnSettings {
             width: 20px;
@@ -1479,18 +1464,10 @@ const siteHandlers = {
         const pathname = location.pathname;
 
         if (pathname.includes('/account_page')) {
-            // insert textarea
-            $('#TableKeys').eq(0).before(bundleSitesBox());
-
             // inject css
             GM_addStyle(`
-                .SBSE_container {
-                    padding: 5px;
-                    border: 1px solid #424242;
-                }
-                .SBSE_container > textarea {
-                    border: 1px solid #000;
-                }
+                .SBSE_container { padding: 5px; border: 1px solid #424242; }
+                .SBSE_container > textarea { border: 1px solid #000; }
                 .SBSE_container > div > button {
                     border: none;
                     background-color: #FD5E0F;
@@ -1503,11 +1480,12 @@ const siteHandlers = {
 
             const extractKeys = () => {
                 const keys = [];
+                const marketListings = !!$('.SBSE_ChkMarketListings:checked').length;
 
                 $('#TableKeys tr').each((index, tr) => {
                     const $tds = $(tr).children();
 
-                    if (tr.textContent.includes('-')) {
+                    if ($tds.eq(4).text().includes('-') && (!$tds.eq(6).text().includes('Cancel trade') || marketListings)) {
                         keys.push({
                             key: $tds.eq(4).text().trim(),
                             title: $tds.eq(2).text().trim(),
@@ -1517,6 +1495,15 @@ const siteHandlers = {
 
                 return keys;
             };
+
+            // insert textarea
+            const $box = bundleSitesBox();
+            $('#TableKeys').eq(0).before($box);
+
+            // append checkbox for market keys
+            $box.find('#SBSE_BtnSettings').before(
+                $(`<label><input type="checkbox" class="SBSE_ChkMarketListings">${text.checkboxMarketListings}</label>`),
+            );
 
             // button click
             $('.SBSE_BtnReveal').click(() => {
@@ -1540,24 +1527,66 @@ const siteHandlers = {
                 bundleSitesBoxHandler.retrieve(extractKeys());
             });
             $('.SBSE_BtnExport').remove();
-        } else if (pathname === '/account_digstore.html' || pathname === '/account_trades.html') {
+        } else if (pathname === '/account_digstore.html' ||
+                   pathname === '/account_trades.html' ||
+                   pathname === '/account_tradesXT.html') {
             // DIG EasyBuy
             GM_addStyle(`
-                .DIGEasyBuy button { padding: 4px 8px; outline: none; }
+                .DIGEasyBuy button { padding: 4px 8px; outline: none; cursor: pointer; }
                 .DIGEasyBuy_checked { background-color: #222; }
+                .DIGEasyBuy_hideOwned tr.SBSE_owned { display: none; }
             `);
 
+            // setup row data & event
+            const easyBuySetup = (i, element) => {
+                const $game = $(element);
+                const $row = $game.closest('tr');
+
+                $row.attr('data-id', $game.attr('href').replace(/\D/g, ''));
+                $row.attr('data-price', parseInt($row.find('td:contains(DIG Points)').text(), 10) || 0);
+                $row.click(() => {
+                    $row.toggleClass('DIGEasyBuy_checked');
+                });
+                $row.addClass('DIGEasyBuy_row');
+            };
+
+            $('a[href^="account_buy"]').each(easyBuySetup);
+
+            // check if owned
+            const check = (i, a) => {
+                const data = a.pathname.slice(1).split('/');
+                const type = data[0];
+                const id = parseInt(data[1], 10);
+
+                if (owned[type].includes(id)) $(a).closest('tr').addClass('SBSE_owned');
+            };
+
+            $('tr a[href*="steampowered"]').each(check);
+
+            // append menu buttons
             const $target = $('#form3').closest('tr').children().eq(0);
             const $DIGEasyBuy = $(`
                 <div class="DIGEasyBuy">
                     <button class="DIGButtonPurchase DIG3_Orange_15_Form">${text.DIGEasyBuyPurchase}</button>
                     <button class="DIGButtonSelectAll DIG3_Orange_15_Form">${text.DIGEasyBuySelectAll}</button>
+                    <button class="DIGButtonHideOwned DIG3_Orange_15_Form">${text.DIGEasyBuyHideOwned}</button>
                 </div>
             `);
 
-            $target
-                .empty()
-                .append($DIGEasyBuy);
+            if ($target.children().length > 0) {
+                const $tr = $('<tr/>');
+
+                $tr.append($target.clone());
+                $target.parent().before($tr);
+            }
+
+            $target.empty().append($DIGEasyBuy);
+
+            if (pathname === '/account_tradesXT.html') {
+                $DIGEasyBuy.append(`
+                    <button class="DIGButtonLoadAllPages DIG3_Orange_15_Form">${text.DIGEasyBuyLoadAllPages}</button>
+                `);
+            }
 
             // bind button event
             $('.DIGButtonPurchase').click((e) => {
@@ -1588,7 +1617,7 @@ const siteHandlers = {
                                     referrer: `${location.origin}/account_buy_${id}.html`,
                                 };
 
-                                if (pathname === '/account_trades.html') {
+                                if (pathname === '/account_trades.html' || pathname === '/account_tradesXT.html') {
                                     url = `${location.origin}/account_buytrade_${id}.html`;
                                     requestInit.body = `gameid=${id}&send=Purchase`;
                                     requestInit.referrer = url;
@@ -1630,21 +1659,118 @@ const siteHandlers = {
                 $self.data('state', state);
                 $self.text(state ? text.DIGEasyBuySelectCancel : text.DIGEasyBuySelectAll);
             });
+            $('.DIGButtonHideOwned').click((e) => {
+                const $self = $(e.delegateTarget);
+                const state = !$self.data('state');
 
-            // setup row data & event
-            $('a[href^="account_buy"]').each((index, element) => {
-                const $game = $(element);
-                const $row = $game.closest('tr');
-
-                $row.data({
-                    id: $game.attr('href').replace(/\D/g, ''),
-                    price: parseInt($game.closest('td').prev().text(), 10) || 0,
-                });
-                $row.click(() => {
-                    $row.toggleClass('DIGEasyBuy_checked');
-                });
-                $row.addClass('DIGEasyBuy_row');
+                $('#TableKeys').toggleClass('DIGEasyBuy_hideOwned', state);
+                $self.data('state', state);
+                $self.text(state ? text.DIGEasyBuyShowOwned : text.DIGEasyBuyHideOwned);
             });
+            $('.DIGButtonLoadAllPages').click((e) => {
+                // auto load all pages at marketplace
+                const $self = $(e.delegateTarget);
+                const $tbody = $('#TableKeys > tbody');
+                const load = async (page, retry = 0) => {
+                    $self.text(text.DIGEasyBuyLoading.replace('%page%', page));
+
+                    const url = `${location.origin}/account_tradesXT_${page}.html`;
+                    const res = await fetch(url, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                    });
+
+                    if (res.ok) {
+                        const $result = $(await res.text()).find('#TableKeys tr.DIG3_14_Gray');
+
+                        $result.find('a[href*="steampowered"]').each(check);
+                        $result.find('a[href^="account_buy"]').each(easyBuySetup);
+
+                        if ($result.length > 0) {
+                            $tbody.append($result);
+                            load((page + 1));
+                        } else $self.text(text.DIGEasyBuyLoadingComplete);
+                    } else if (retry < 3) load(page, (retry + 1));
+                    else load((page + 1));
+                };
+
+                load(1);
+                $self.prop('disabled', true);
+            });
+        // extension for creating trade at market place
+        } else if (pathname === '/account_createtrade.html') {
+            const $form = $('#form_createtrade');
+
+            // create trade page
+            if ($form.length > 0) {
+                // trim input field
+                const $gameTitle = $form.find('input[name="typeahead"]');
+
+                $gameTitle.blur(() => {
+                    unsafeWindow.jQuery('input.typeahead').typeahead('setQuery', $gameTitle.val().trim());
+                });
+                $form.find('input[name="STEAMkey"]').blur((e) => {
+                    const $self = $(e.delegateTarget);
+                    const key = $self.val().match(regKey);
+
+                    if (key) $self.val(key[0]);
+                });
+
+                // search for current market price when click dropdown menu
+                const $searchResult = $('<div/>');
+
+                $gameTitle.closest('table').after($searchResult);
+                $searchResult.before(`<h3>${text.DIGMarketSearchResult}</h3>`);
+
+                $('.tt-dropdown-menu').click(async () => {
+                    const res = await fetch(`${location.origin}/account_tradesXT.html`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `search=${encodeURIComponent($gameTitle.val()).replace(/%20/g, '+')}&button=SEARCH`,
+                        credentials: 'same-origin',
+                    });
+
+                    $searchResult.empty();
+                    if (res.ok) {
+                        const $result = $(await res.text()).find('#TableKeys');
+
+                        $searchResult.append($result);
+                    } else {
+                        $searchResult.append('No result');
+                    }
+                });
+            // result page
+            } else {
+                GM_addStyle(`
+                    .check.icon {
+                        color: #5cb85c;
+                        margin: 12px 0 5px 9px;
+                        width: 42px;
+                        height: 24px;
+                        border-bottom: solid 3px currentColor;
+                        border-left: solid 3px currentColor;
+                        transform: rotate(-45deg);
+                    }
+                    .remove.icon { color: #d9534f; margin-left: 9px; margin-top: 30px; }
+                    .remove.icon:before, .remove.icon:after {
+                        content: '';
+                        position: absolute;
+                        width: 45px;
+                        height: 3px;
+                        background-color: currentColor;
+                        transform: rotate(45deg);
+                    }
+                    .remove.icon:after { transform: rotate(-45deg); }
+                `);
+
+                const $anchor = $('td.DIG3_14_Gray > table:first-child');
+                const IsSucceed = !!$('td.DIG3_14_Gray:contains("The game key has been added to the DIG MarketPlace.")').length;
+
+                if (IsSucceed) $anchor.after('<div class="check icon"></div>');
+                else $anchor.after('<div class="remove icon"></div>');
+            }
         }
     },
     ccyycn() {
