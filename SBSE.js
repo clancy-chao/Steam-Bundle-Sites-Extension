@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.10.0
+// @version      1.11.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -17,7 +17,7 @@
 // @include      https://www.humblebundle.com/home/*
 // @include      http*://*dailyindiegame.com/*
 // @include      http*://bundle.ccyycn.com/order/*
-// @include      https://groupees.com/purchases
+// @include      https://groupees.com/profile/purchases/*
 // @include      http*://*agiso.com/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.6.6/sweetalert2.min.js
@@ -1671,27 +1671,28 @@ const siteHandlers = {
                 // auto load all pages at marketplace
                 const $self = $(e.delegateTarget);
                 const $tbody = $('#TableKeys > tbody');
-                const load = async (page, retry = 0) => {
+                const load = (page, retry = 0) => {
                     $self.text(text.DIGEasyBuyLoading.replace('%page%', page));
 
-                    const url = `${location.origin}/account_tradesXT_${page}.html`;
-                    const res = await fetch(url, {
+                    fetch(`${location.origin}/account_tradesXT_${page}.html`, {
                         method: 'GET',
                         credentials: 'same-origin',
-                    });
-
-                    if (res.ok) {
-                        const $result = $(await res.text()).find('#TableKeys tr.DIG3_14_Gray');
-
-                        $result.find('a[href*="steampowered"]').each(check);
-                        $result.find('a[href^="account_buy"]').each(easyBuySetup);
+                    }).then((res) => {
+                        if (res.ok) return res.text();
+                        throw new Error('Network response was not ok.');
+                    }).then((html) => {
+                        const $result = $(html).find('#TableKeys tr.DIG3_14_Gray');
 
                         if ($result.length > 0) {
+                            $result.find('a[href*="steampowered"]').each(check);
+                            $result.find('a[href^="account_buy"]').each(easyBuySetup);
                             $tbody.append($result);
                             load((page + 1));
                         } else $self.text(text.DIGEasyBuyLoadingComplete);
-                    } else if (retry < 3) load(page, (retry + 1));
-                    else load((page + 1));
+                    }).catch(() => {
+                        if (retry < 3) load(page, (retry + 1));
+                        else load((page + 1));
+                    });
                 };
 
                 load(1);
@@ -1705,15 +1706,20 @@ const siteHandlers = {
             if ($form.length > 0) {
                 // trim input field
                 const $gameTitle = $form.find('input[name="typeahead"]');
+                const $steamKey = $form.find('input[name="STEAMkey"]');
 
                 $gameTitle.blur(() => {
                     unsafeWindow.jQuery('input.typeahead').typeahead('setQuery', $gameTitle.val().trim());
                 });
-                $form.find('input[name="STEAMkey"]').blur((e) => {
+                $steamKey.blur((e) => {
                     const $self = $(e.delegateTarget);
                     const key = $self.val().match(regKey);
 
                     if (key) $self.val(key[0]);
+                });
+                $steamKey.attr({
+                    size: 50,
+                    maxlength: 50,
                 });
 
                 // search for current market price when click dropdown menu
@@ -1722,24 +1728,19 @@ const siteHandlers = {
                 $gameTitle.closest('table').after($searchResult);
                 $searchResult.before(`<h3>${text.DIGMarketSearchResult}</h3>`);
 
-                $('.tt-dropdown-menu').click(async () => {
-                    const res = await fetch(`${location.origin}/account_tradesXT.html`, {
+                $('.tt-dropdown-menu').click(() => {
+                    $searchResult.empty();
+                    fetch(`${location.origin}/account_tradesXT.html`, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: `search=${encodeURIComponent($gameTitle.val()).replace(/%20/g, '+')}&button=SEARCH`,
                         credentials: 'same-origin',
+                    }).then((res) => {
+                        if (res.ok) return res.text();
+                        throw new Error('Network response was not ok.');
+                    }).then((html) => {
+                        $searchResult.append($(html).find('#TableKeys'));
                     });
-
-                    $searchResult.empty();
-                    if (res.ok) {
-                        const $result = $(await res.text()).find('#TableKeys');
-
-                        $searchResult.append($result);
-                    } else {
-                        $searchResult.append('No result');
-                    }
                 });
             // result page
             } else {
@@ -1851,24 +1852,60 @@ const siteHandlers = {
     },
     groupees() {
         // insert textarea
-        $('.container > div').eq(1).before(bundleSitesBox());
+        $('.table-products').before(bundleSitesBox());
 
         // inject css
         GM_addStyle(`
-            .SBSE_container { margin-bottom: 20px; }
-            .SBSE_container > textarea { background-color: #EEE; border-radius: 3px; }
-            .SBSE_container > div > button, .SBSE_container > div > a { outline: none !important; }
-            #SBSE_BtnSettings { margin-top: 8px; }
+            .SBSE_container > textarea, .SBSE_container > div > button, .SBSE_container > div > a {
+                background: transparent;
+                border: 1px solid #8cc53f;
+                border-radius: 3px;
+                color: #8cc53f;
+                transition: all 0.8s ease;
+            }
+            .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
+                background-color: #8cc53f;
+                color: white;
+                text-decoration: none;
+            }
+            img.product-cover { display: none; }
         `);
+
+        // load details
+        $('img[src*="steam.svg"]').each(async (index, ele) => {
+            $.ajax({
+                url: $(ele).closest('tr').find('.item-link').attr('href'),
+                data: { v: 1 },
+                dataType: 'script',
+            });
+        });
+
+        const extractKeys = () => {
+            const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
+            const keys = [];
+
+            $('.key-block input.code').each((index, element) => {
+                const $game = $(element);
+                const used = !!$game.closest('.key-block').find('.key-status:contains(used)').length;
+
+                if ($game.val().includes('-') && (!used || (used && !skipUsed))) {
+                    keys.push({
+                        key: $game.val(),
+                        title: $game.closest('tr').prev().children('td').eq(2)
+                            .text()
+                            .trim(),
+                    });
+                }
+            });
+
+            return keys;
+        };
 
         // append checkbox for used-key
         $('#SBSE_BtnSettings').before(
             $(`<label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>`),
         );
-
-        // add buttons style via groupees's class
-        $('.SBSE_container > div > button, .SBSE_container > div > a').addClass('btn btn-default');
-
+        /*
         // append mark all as used button
         new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
@@ -1888,26 +1925,7 @@ const siteHandlers = {
                 });
             });
         }).observe($('#profile_content')[0], { childList: true });
-
-        const extractKeys = () => {
-            const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
-            const keys = [];
-
-            $('.expanded .code').each((index, element) => {
-                const $game = $(element);
-                const used = $game.closest('li').find('.usage').prop('checked');
-
-                if (!used || (used && !skipUsed)) {
-                    keys.push({
-                        key: $game.val(),
-                        title: $game.closest('.details').find('h3').text().trim(),
-                    });
-                }
-            });
-
-            return keys;
-        };
-
+*/
         // button click
         $('.SBSE_BtnReveal').click(() => {
             const handler = ($games, callback) => {
@@ -1924,21 +1942,21 @@ const siteHandlers = {
 
             $reveals.click();
             setTimeout(() => {
-                bundleSitesBoxHandler.reveal(handler, $('.expanded .reveal'));
+                bundleSitesBoxHandler.reveal(handler, $('.btn-reveal-key'));
             }, timer);
         });
         $('.SBSE_BtnRetrieve').click(() => {
             bundleSitesBoxHandler.retrieve(extractKeys());
         });
         $('.SBSE_BtnExport').click(() => {
-            const bundleTitle = `Groupees - ${$('.expanded .caption').text()}`;
+            const bundleTitle = `Groupees - ${$('h2').text()}`;
 
             bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
         });
 
         // bind custom event
         $(document).on('activated', (e, key, result) => {
-            if (result.success === 1) $(`li.key:has(input[value=${key}]) .usage`).click();
+            if (result.success === 1) $(`.btn-steam-redeem[href*=${key}]`).next('.key-usage-toggler').click();
         });
     },
     agiso() {
