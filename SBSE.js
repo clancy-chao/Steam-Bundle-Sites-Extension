@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.11.0
+// @version      1.11.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -17,6 +17,7 @@
 // @include      https://www.humblebundle.com/home/*
 // @include      http*://*dailyindiegame.com/*
 // @include      http*://bundle.ccyycn.com/order/*
+// @include      https://groupees.com/purchases
 // @include      https://groupees.com/profile/purchases/*
 // @include      http*://*agiso.com/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js
@@ -1851,113 +1852,182 @@ const siteHandlers = {
         });
     },
     groupees() {
-        // insert textarea
-        $('.table-products').before(bundleSitesBox());
+        if (location.pathname.startsWith('/profile/')) {
+            // insert textarea
+            $('.table-products').before(bundleSitesBox());
 
-        // inject css
-        GM_addStyle(`
-            .SBSE_container > textarea, .SBSE_container > div > button, .SBSE_container > div > a {
-                background: transparent;
-                border: 1px solid #8cc53f;
-                border-radius: 3px;
-                color: #8cc53f;
-                transition: all 0.8s ease;
-            }
-            .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
-                background-color: #8cc53f;
-                color: white;
-                text-decoration: none;
-            }
-            img.product-cover { display: none; }
-        `);
-
-        // load details
-        $('img[src*="steam.svg"]').each(async (index, ele) => {
-            $.ajax({
-                url: $(ele).closest('tr').find('.item-link').attr('href'),
-                data: { v: 1 },
-                dataType: 'script',
-            });
-        });
-
-        const extractKeys = () => {
-            const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
-            const keys = [];
-
-            $('.key-block input.code').each((index, element) => {
-                const $game = $(element);
-                const used = !!$game.closest('.key-block').find('.key-status:contains(used)').length;
-
-                if ($game.val().includes('-') && (!used || (used && !skipUsed))) {
-                    keys.push({
-                        key: $game.val(),
-                        title: $game.closest('tr').prev().children('td').eq(2)
-                            .text()
-                            .trim(),
-                    });
+            // inject css
+            GM_addStyle(`
+                .SBSE_container > textarea, .SBSE_container > div > button, .SBSE_container > div > a {
+                    background: transparent;
+                    border: 1px solid #8cc53f;
+                    border-radius: 3px;
+                    color: #8cc53f;
+                    transition: all 0.8s ease;
                 }
+                .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
+                    background-color: #8cc53f;
+                    color: white;
+                    text-decoration: none;
+                }
+                img.product-cover { display: none; }
+            `);
+
+            // load details
+            $('img[src*="steam.svg"]').each(async (index, ele) => {
+                $.ajax({
+                    url: $(ele).closest('tr').find('.item-link').attr('href'),
+                    data: { v: 1 },
+                    dataType: 'script',
+                });
             });
 
-            return keys;
-        };
+            const extractKeys = () => {
+                const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
+                const keys = [];
 
-        // append checkbox for used-key
-        $('#SBSE_BtnSettings').before(
-            $(`<label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>`),
-        );
-        /*
-        // append mark all as used button
-        new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                Array.from(mutation.addedNodes).forEach((addedNode) => {
-                    const $orderMeta = $(addedNode).find('.order-meta');
+                $('.key-block input.code').each((index, element) => {
+                    const $game = $(element);
+                    const used = !!$game.closest('.key-block').find('.key-status:contains(used)').length;
 
-                    if ($orderMeta.length > 0) {
-                        $orderMeta.after(
-                            $(`<button class="btn btn-default" style="margin-right: 10px;"><b>${text.markAllAsUsed}</b></button>`).click(() => {
+                    if ($game.val().includes('-') && (!used || (used && !skipUsed))) {
+                        keys.push({
+                            key: $game.val(),
+                            title: $game.closest('tr').prev().children('td').eq(2)
+                                .text()
+                                .trim(),
+                        });
+                    }
+                });
+
+                return keys;
+            };
+
+            // append checkbox for used-key
+            $('#SBSE_BtnSettings').before(
+                $(`<label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>`),
+            );
+
+            // button click
+            $('.SBSE_BtnReveal').click(() => {
+                const handler = ($games, callback) => {
+                    const game = $games.shift();
+
+                    if (game) {
+                        game.click();
+                        setTimeout(handler.bind(null, $games, callback), 300);
+                    } else callback();
+                };
+
+                const $reveals = $('.product:has(img[title*=Steam]) .reveal-product');
+                const timer = $reveals.length > 0 ? 1500 : 0;
+
+                $reveals.click();
+                setTimeout(() => {
+                    bundleSitesBoxHandler.reveal(handler, $('.btn-reveal-key'));
+                }, timer);
+            });
+            $('.SBSE_BtnRetrieve').click(() => {
+                bundleSitesBoxHandler.retrieve(extractKeys());
+            });
+            $('.SBSE_BtnExport').click(() => {
+                const bundleTitle = `Groupees - ${$('h2').text()}`;
+
+                bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
+            });
+
+            // bind custom event
+            $(document).on('activated', (e, key, result) => {
+                if (result.success === 1) $(`.btn-steam-redeem[href*=${key}]`).next('.key-usage-toggler').click();
+            });
+        } else {
+            // insert textarea
+            $('.container > div').eq(1).before(bundleSitesBox());
+
+            // inject css
+            GM_addStyle(`
+                .SBSE_container { margin-bottom: 20px; }
+                .SBSE_container > textarea { background-color: #EEE; border-radius: 3px; }
+                .SBSE_container > div > button, .SBSE_container > div > a { outline: none !important; }
+                #SBSE_BtnSettings { margin-top: 8px; }
+            `);
+
+            // append checkbox for used-key
+            $('#SBSE_BtnSettings').before($(`<label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>`));
+
+            // add buttons style via groupees's class
+            $('.SBSE_container > div > button, .SBSE_container > div > a').addClass('btn btn-default');
+
+            // append mark all as used button
+            new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    Array.from(mutation.addedNodes).forEach((addedNode) => {
+                        const $orderMeta = $(addedNode).find('.order-meta');
+
+                        if ($orderMeta.length > 0) {
+                            $orderMeta.after($(`<button class="btn btn-default" style="margin-right: 10px;"><b>${text.markAllAsUsed}</b></button>`).click(() => {
                                 $('.expanded .usage').each((i, checkbox) => {
                                     if (!checkbox.checked) checkbox.click();
                                 });
-                            }),
-                        );
-                        $orderMeta.parent().addClass('showOrderMeta');
+                            }));
+                            $orderMeta.parent().addClass('showOrderMeta');
+                        }
+                    });
+                });
+            }).observe($('#profile_content')[0], { childList: true });
+
+            const extractKeys = () => {
+                const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
+                const keys = [];
+
+                $('.expanded .code').each((index, element) => {
+                    const $game = $(element);
+                    const used = $game.closest('li').find('.usage').prop('checked');
+
+                    if (!used || (used && !skipUsed)) {
+                        keys.push({
+                            key: $game.val(),
+                            title: $game.closest('.details').find('h3').text().trim(),
+                        });
                     }
                 });
-            });
-        }).observe($('#profile_content')[0], { childList: true });
-*/
-        // button click
-        $('.SBSE_BtnReveal').click(() => {
-            const handler = ($games, callback) => {
-                const game = $games.shift();
 
-                if (game) {
-                    game.click();
-                    setTimeout(handler.bind(null, $games, callback), 300);
-                } else callback();
+                return keys;
             };
 
-            const $reveals = $('.product:has(img[title*=Steam]) .reveal-product');
-            const timer = $reveals.length > 0 ? 1500 : 0;
+            // button click
+            $('.SBSE_BtnReveal').click(() => {
+                const handler = ($games, callback) => {
+                    const game = $games.shift();
 
-            $reveals.click();
-            setTimeout(() => {
-                bundleSitesBoxHandler.reveal(handler, $('.btn-reveal-key'));
-            }, timer);
-        });
-        $('.SBSE_BtnRetrieve').click(() => {
-            bundleSitesBoxHandler.retrieve(extractKeys());
-        });
-        $('.SBSE_BtnExport').click(() => {
-            const bundleTitle = `Groupees - ${$('h2').text()}`;
+                    if (game) {
+                        game.click();
+                        setTimeout(handler.bind(null, $games, callback), 300);
+                    } else callback();
+                };
 
-            bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
-        });
+                const $reveals = $('.product:has(img[title*=Steam]) .reveal-product');
+                const timer = $reveals.length > 0 ? 1500 : 0;
 
-        // bind custom event
-        $(document).on('activated', (e, key, result) => {
-            if (result.success === 1) $(`.btn-steam-redeem[href*=${key}]`).next('.key-usage-toggler').click();
-        });
+                $reveals.click();
+                setTimeout(() => {
+                    bundleSitesBoxHandler.reveal(handler, $('.expanded .reveal'));
+                }, timer);
+            });
+            $('.SBSE_BtnRetrieve').click(() => {
+                bundleSitesBoxHandler.retrieve(extractKeys());
+            });
+            $('.SBSE_BtnExport').click(() => {
+                const bundleTitle = `Groupees - ${$('.expanded .caption').text()}`;
+
+                bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
+            });
+
+            // bind custom event
+            $(document).on('activated', (e, key, result) => {
+                if (result.success === 1) $(`li.key:has(input[value=${key}]) .usage`).click();
+            });
+        }
     },
     agiso() {
         const keys = unique($('body').text().match(regKey));
