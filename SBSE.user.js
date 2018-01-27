@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.11.1
+// @version      1.12.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -24,6 +24,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.6.6/sweetalert2.min.js
 // @resource     SweetAlert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.6.6/sweetalert2.min.css
 // @connect      store.steampowered.com
+// @connect      www.google.com
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -47,7 +48,6 @@ GM_addStyle(GM_getResourceText('SweetAlert2CSS'));
 
 // inject script css
 GM_addStyle(`
-    .SBSE_hide { display: none; }
     pre.SBSE_errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
     /*.SBSE_owned .sr-key-heading > span::after { content: "☑"; color: #9ccc65; }*/
 `);
@@ -172,6 +172,8 @@ const i18n = {
         DIGButtonPurchasing: '購買中',
         DIGInsufficientFund: '餘額不足，準備回到帳號頁',
         DIGMarketSearchResult: '目前市集上架中',
+        DIGRateAllPositive: '全部好評',
+        DIGClickToHideThisRow: '隱藏此上架遊戲',
         buttonReveal: '刮開',
         buttonRetrieve: '提取',
         buttonActivate: '啟動',
@@ -237,6 +239,8 @@ const i18n = {
         DIGButtonPurchasing: '购买中',
         DIGInsufficientFund: '余额不足，准备回到账号页',
         DIGMarketSearchResult: '目前市集上架中',
+        DIGRateAllPositive: '全部好评',
+        DIGClickToHideThisRow: '隐藏此上架游戏',
         buttonReveal: '刮开',
         buttonRetrieve: '提取',
         buttonActivate: '激活',
@@ -302,6 +306,8 @@ const i18n = {
         DIGButtonPurchasing: 'Purchassing',
         DIGInsufficientFund: 'Insufficient fund, returning to account page',
         DIGMarketSearchResult: 'Currently listing in marketplace',
+        DIGRateAllPositive: 'Mark All Positive',
+        DIGClickToHideThisRow: 'Hide this game from listings',
         buttonReveal: 'Reveal',
         buttonRetrieve: 'Retrieve',
         buttonActivate: 'Activate',
@@ -1432,6 +1438,7 @@ const siteHandlers = {
         });
     },
     dailyindiegame() {
+        const MPHideList = JSON.parse(GM_getValue('SBSE_DIGMPHideList') || '[]');
         const pathname = location.pathname;
 
         if (pathname.includes('/account_page')) {
@@ -1496,12 +1503,40 @@ const siteHandlers = {
                 bundleSitesBoxHandler.retrieve(extractKeys());
             });
             $('.SBSE_BtnExport').remove();
+
+            // rate all positive
+            const $awaitRatings = $('a[href^="account_page_0_ratepositive"]');
+
+            if ($awaitRatings.length > 0) {
+                $('#TableKeys td:contains(Rate TRADE)').text(text.DIGRateAllPositive).css('cursor', 'pointer').click(() => {
+                    $awaitRatings.each((index, a) => {
+                        fetch(a.href, {
+                            method: 'GET',
+                            credentials: 'same-origin'
+                        }).then(res => {
+                            if (res.ok) {
+                                $(a).parent('td').html('<span class="DIG3_14_Orange">Positive</span>');
+                            }
+                        });
+                    });
+                });
+            }
         } else if (pathname === '/account_digstore.html' || pathname === '/account_trades.html' || pathname === '/account_tradesXT.html') {
             // DIG EasyBuy
             GM_addStyle(`
+                .DIGEasyBuy_row { height: 30px; }
                 .DIGEasyBuy button { padding: 4px 8px; outline: none; cursor: pointer; }
                 .DIGEasyBuy_checked { background-color: #222; }
-                .DIGEasyBuy_hideOwned tr.SBSE_owned { display: none; }
+                .DIGEasyBuy_hideOwned tr.SBSE_hide { display: none; }
+                .DIGEasyBuy_hideOwned tr.SBSE_hide + .SBSE_searchResults { display: none; }
+                .SBSE_searchResults td { padding: 0 }
+                .SBSE_searchResults iframe {
+                    width: 100%;
+                    height: 300px;
+                    display: none;
+                    background-color: white;
+                    border: none;
+                }
             `);
 
             // setup row data & event
@@ -1519,13 +1554,81 @@ const siteHandlers = {
 
             $('a[href^="account_buy"]').each(easyBuySetup);
 
-            // check if owned
+            // check if owned / manually hid
             const check = (i, a) => {
+                const $a = $(a);
+                const $tr = $a.closest('tr');
                 const data = a.pathname.slice(1).split('/');
-                const type = data[0];
-                const id = parseInt(data[1], 10);
+                const appID = parseInt(data[1], 10);
+                const id = parseInt($tr.attr('data-id'), 10);
 
-                if (owned[type].includes(id)) $(a).closest('tr').addClass('SBSE_owned');
+                if (owned[data[0]].includes(appID)) $tr.addClass('SBSE_owned SBSE_hide');
+                if (MPHideList.includes(id)) $tr.addClass('SBSE_hide');
+
+                // append manual hide feature
+                $tr.children().eq(0).attr('title', text.DIGClickToHideThisRow).click(e => {
+                    e.stopPropagation();
+
+                    if (id > 0) {
+                        MPHideList.push(id);
+                        GM_setValue('SBSE_DIGMPHideList', JSON.stringify(MPHideList));
+
+                        $tr.addClass('SBSE_hide');
+                    }
+                });
+
+                // no appID found, pre-load Google search result
+                if (appID === -1 && !MPHideList.includes(id)) {
+                    const $game = $a.find('span');
+                    const gameTitle = encodeURIComponent($game.text().trim()).replace(/%20/g, '+');
+                    const map = {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#039;'
+                    };
+
+                    GM_xmlhttpRequest({
+                        method: 'GET',
+                        url: `https://www.google.com/search?q=steam+${gameTitle}`,
+                        onload: res => {
+                            let html = res.responseText;
+
+                            // inset style
+                            const index = html.indexOf('</head>');
+                            const style = `
+                                <style>
+                                    body { overflow-x: hidden; }
+                                    .sfbgx, #sfcnt, #searchform, #top_nav, #appbar, #taw { display: none; }
+                                    #center_col { margin-left: 0 !important; }
+                                </style>
+                            `;
+                            html = html.slice(0, index) + style + html.slice(index);
+
+                            // stripe script tags
+                            html = html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+
+                            // manipulate urls
+                            html = html.replace(/\/images\//g, 'https://www.google.com/images/').replace(/\/url\?/g, 'https://www.google.com/url?');
+
+                            $tr.after(`
+                                <tr class="SBSE_searchResults">
+                                    <td colspan="11"><iframe sandbox="allow-scripts" srcdoc='${html.replace(/[&<>"']/g, m => map[m])}'></frame></td>
+                                </tr>
+                            `);
+                        }
+                    });
+
+                    $game.unwrap('a').css({
+                        cursor: 'pointer',
+                        color: 'red'
+                    }).click(e => {
+                        e.stopPropagation();
+
+                        $tr.next('.SBSE_searchResults').find('iframe').slideToggle('fast');
+                    });
+                }
             };
 
             $('tr a[href*="steampowered"]').each(check);
@@ -1650,8 +1753,8 @@ const siteHandlers = {
                         const $result = $(html).find('#TableKeys tr.DIG3_14_Gray');
 
                         if ($result.length > 0) {
-                            $result.find('a[href*="steampowered"]').each(check);
                             $result.find('a[href^="account_buy"]').each(easyBuySetup);
+                            $result.find('a[href*="steampowered"]').each(check);
                             $tbody.append($result);
                             load(page + 1);
                         } else $self.text(text.DIGEasyBuyLoadingComplete);
