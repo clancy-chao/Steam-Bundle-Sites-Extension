@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.12.0
+// @version      1.13.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -21,8 +21,8 @@
 // @include      https://groupees.com/profile/purchases/*
 // @include      http*://*agiso.com/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.6.6/sweetalert2.min.js
-// @resource     SweetAlert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/6.6.6/sweetalert2.min.css
+// @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.9.2/sweetalert2.min.js
+// @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.9.2/sweetalert2.min.css
 // @connect      store.steampowered.com
 // @connect      www.google.com
 // @grant        GM_xmlhttpRequest
@@ -35,7 +35,7 @@
 // @noframes
 // ==/UserScript==
 
-/* global swal, g_AccountID, g_sessionID, g_oSuggestParams */
+/* global swal */
 
 // setup jQuery
 const $ = jQuery.noConflict(true);
@@ -44,12 +44,11 @@ $.fn.pop = [].pop;
 $.fn.shift = [].shift;
 
 // inject swal css
-GM_addStyle(GM_getResourceText('SweetAlert2CSS'));
+GM_addStyle(GM_getResourceText('sweetalert2CSS'));
 
 // inject script css
 GM_addStyle(`
     pre.SBSE_errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
-    /*.SBSE_owned .sr-key-heading > span::after { content: "☑"; color: #9ccc65; }*/
 `);
 
 // load up
@@ -118,6 +117,774 @@ const keyDetails = {
         return false;
     },
 };
+const ISO2 = {
+    name: {
+        tchinese: {
+            AD: '安道爾',
+            AE: '阿拉伯聯合大公國',
+            AF: '阿富汗',
+            AG: '安地卡及巴布達',
+            AI: '安圭拉',
+            AL: '阿爾巴尼亞',
+            AM: '亞美尼亞',
+            AO: '安哥拉',
+            AQ: '南極洲',
+            AR: '阿根廷',
+            AS: '美屬薩摩亞',
+            AT: '奧地利',
+            AU: '澳大利亞',
+            AW: '阿魯巴',
+            AX: '奧蘭',
+            AZ: '亞塞拜然',
+            BA: '波士尼亞與赫塞哥維納',
+            BB: '巴貝多',
+            BD: '孟加拉',
+            BE: '比利時',
+            BF: '布吉納法索',
+            BG: '保加利亞',
+            BH: '巴林',
+            BI: '蒲隆地',
+            BJ: '貝南',
+            BL: '聖巴泰勒米',
+            BM: '百慕達',
+            BN: '汶萊',
+            BO: '玻利維亞',
+            BQ: '波奈',
+            BR: '巴西',
+            BS: '巴哈馬',
+            BT: '不丹',
+            BV: '布威島',
+            BW: '波札那',
+            BY: '白俄羅斯',
+            BZ: '貝里斯',
+            CA: '加拿大',
+            CC: '科科斯（基林）群島',
+            CD: '剛果民主共和國',
+            CF: '中非共和國',
+            CG: '剛果共和國',
+            CH: '瑞士',
+            CI: '象牙海岸',
+            CK: '庫克群島',
+            CL: '智利',
+            CM: '喀麥隆',
+            CN: '中國',
+            CO: '哥倫比亞',
+            CR: '哥斯大黎加',
+            CS: '塞爾維亞與蒙特內哥羅',
+            CU: '古巴',
+            CV: '維德角',
+            CW: '古拉索',
+            CX: '聖誕島',
+            CY: '賽普勒斯',
+            CZ: '捷克',
+            DE: '德國',
+            DJ: '吉布地',
+            DK: '丹麥',
+            DM: '多米尼克',
+            DO: '多明尼加',
+            DZ: '阿爾及利亞',
+            EC: '厄瓜多',
+            EE: '愛沙尼亞',
+            EG: '埃及',
+            EH: '西撒哈拉',
+            ER: '厄利垂亞',
+            ES: '西班牙',
+            ET: '衣索比亞',
+            FI: '芬蘭',
+            FJ: '斐濟',
+            FK: '福克蘭群島',
+            FM: '密克羅尼西亞聯邦',
+            FO: '法羅群島',
+            FR: '法國',
+            GA: '加彭',
+            GB: '英國',
+            GD: '格瑞那達',
+            GE: '喬治亞',
+            GF: '法屬圭亞那',
+            GG: '根西',
+            GH: '迦納',
+            GI: '直布羅陀',
+            GL: '格陵蘭',
+            GM: '甘比亞',
+            GN: '幾內亞',
+            GP: '瓜德羅普',
+            GQ: '赤道幾內亞',
+            GR: '希臘',
+            GS: '南喬治亞與南桑威奇',
+            GT: '瓜地馬拉',
+            GU: '關島',
+            GW: '幾內亞比索',
+            GY: '蓋亞那',
+            HK: '香港',
+            HM: '赫德島和麥克唐納群島',
+            HN: '宏都拉斯',
+            HR: '克羅埃西亞',
+            HT: '海地',
+            HU: '匈牙利',
+            ID: '印尼',
+            IE: '愛爾蘭',
+            IL: '以色列',
+            IM: '曼島',
+            IN: '印度',
+            IO: '英屬印度洋領地',
+            IQ: '伊拉克',
+            IR: '伊朗',
+            IS: '冰島',
+            IT: '義大利',
+            JE: '澤西',
+            JM: '牙買加',
+            JO: '約旦',
+            JP: '日本',
+            KE: '肯亞',
+            KG: '吉爾吉斯',
+            KH: '柬埔寨',
+            KI: '吉里巴斯',
+            KM: '葛摩',
+            KN: '聖克里斯多福及尼維斯',
+            KP: '北韓',
+            KR: '南韓',
+            KW: '科威特',
+            KY: '開曼群島',
+            KZ: '哈薩克',
+            LA: '寮國',
+            LB: '黎巴嫩',
+            LC: '聖露西亞',
+            LI: '列支敦斯登',
+            LK: '斯里蘭卡',
+            LR: '賴比瑞亞',
+            LS: '賴索托',
+            LT: '立陶宛',
+            LU: '盧森堡',
+            LV: '拉脫維亞',
+            LY: '利比亞',
+            MA: '摩洛哥',
+            MC: '摩納哥',
+            MD: '摩爾多瓦',
+            ME: '蒙特內哥羅',
+            MF: '法屬聖馬丁',
+            MG: '馬達加斯加',
+            MH: '馬紹爾群島',
+            MK: '馬其頓共和國',
+            ML: '馬利',
+            MM: '緬甸',
+            MN: '蒙古',
+            MO: '澳門',
+            MP: '北馬里亞納群島',
+            MQ: '馬丁尼克',
+            MR: '茅利塔尼亞',
+            MS: '蒙哲臘',
+            MT: '馬爾他',
+            MU: '模里西斯',
+            MV: '馬爾地夫',
+            MW: '馬拉威',
+            MX: '墨西哥',
+            MY: '馬來西亞',
+            MZ: '莫三比克',
+            NA: '納米比亞',
+            NC: '新喀里多尼亞',
+            NE: '尼日',
+            NF: '諾福克島',
+            NG: '奈及利亞',
+            NI: '尼加拉瓜',
+            NL: '荷蘭',
+            NO: '挪威',
+            NP: '尼泊爾',
+            NR: '諾魯',
+            NU: '紐埃',
+            NZ: '紐西蘭',
+            OM: '阿曼',
+            PA: '巴拿馬',
+            PE: '秘魯',
+            PF: '法屬玻里尼西亞',
+            PG: '巴布亞紐幾內亞',
+            PH: '菲律賓',
+            PK: '巴基斯坦',
+            PL: '波瀾',
+            PM: '聖皮耶與密克隆群島',
+            PN: '皮特肯群島',
+            PR: '波多黎各',
+            PS: '巴勒斯坦',
+            PT: '葡萄牙',
+            PW: '帛琉',
+            PY: '巴拉圭',
+            QA: '卡達',
+            RE: '留尼旺',
+            RO: '羅馬尼亞',
+            RS: '塞爾維亞',
+            RU: '俄羅斯',
+            RW: '盧安達',
+            SA: '沙烏地阿拉伯',
+            SB: '索羅門群島',
+            SC: '塞席爾',
+            SD: '蘇丹',
+            SE: '瑞典',
+            SG: '新加坡',
+            SH: '聖赫勒拿、亞森欣與垂斯坦昆哈',
+            SI: '斯洛維尼亞',
+            SJ: '斯瓦巴和揚馬延',
+            SK: '斯洛伐克',
+            SL: '獅子山共和國',
+            SM: '聖馬利諾',
+            SN: '塞內加爾',
+            SO: '索馬利亞',
+            SR: '蘇利南',
+            SS: '南蘇丹',
+            ST: '聖多美普林西比',
+            SV: '薩爾瓦多',
+            SX: '荷屬聖馬丁',
+            SY: '敘利亞',
+            SZ: '史瓦濟蘭',
+            TC: '土克凱可群島',
+            TD: '查德',
+            TF: '法屬南部和南極領地',
+            TG: '多哥',
+            TH: '泰國',
+            TJ: '塔吉克',
+            TK: '托克勞',
+            TL: '東帝汶',
+            TM: '土庫曼',
+            TN: '突尼西亞',
+            TO: '東加',
+            TR: '土耳其',
+            TT: '千里達及托巴哥',
+            TV: '吐瓦魯',
+            TW: '臺灣',
+            TZ: '坦尚尼亞',
+            UA: '烏克蘭',
+            UG: '烏干達',
+            UM: '美國本土外小島嶼',
+            US: '美國',
+            UY: '烏拉圭',
+            UZ: '烏茲別克',
+            VA: '聖座',
+            VC: '聖文森及格瑞那丁',
+            VE: '委內瑞拉',
+            VG: '英屬維京群島',
+            VI: '美屬維京群島',
+            VN: '越南',
+            VU: '萬那杜',
+            WF: '瓦利斯和富圖納',
+            WS: '薩摩亞',
+            XK: '科索沃',
+            YE: '葉門',
+            YT: '馬約特',
+            ZA: '南非',
+            ZM: '尚比亞',
+            ZW: '辛巴威',
+        },
+        schinese: {
+            AD: '安道尔',
+            AE: '阿拉伯联合酋长国',
+            AF: '阿富汗',
+            AG: '安提瓜和巴布达',
+            AI: '安圭拉',
+            AL: '阿尔巴尼亚',
+            AM: '亚美尼亚',
+            AO: '安哥拉',
+            AQ: '南极洲',
+            AR: '阿根廷',
+            AS: '美属萨摩亚',
+            AT: '奥地利',
+            AU: '澳大利亚',
+            AW: '阿鲁巴',
+            AX: '奥兰群岛',
+            AZ: '阿塞拜疆',
+            BA: '波斯尼亚和黑塞哥维那',
+            BB: '巴巴多斯',
+            BD: '孟加拉',
+            BE: '比利时',
+            BF: '布基纳法索',
+            BG: '保加利亚',
+            BH: '巴林',
+            BI: '布隆迪',
+            BJ: '贝宁',
+            BL: '圣巴托洛缪岛',
+            BM: '百慕大',
+            BN: '文莱',
+            BO: '玻利维亚',
+            BQ: '博奈尔',
+            BR: '巴西',
+            BS: '巴哈马',
+            BT: '不丹',
+            BV: '布韦岛',
+            BW: '博兹瓦纳',
+            BY: '白俄罗斯',
+            BZ: '伯利兹',
+            CA: '加拿大',
+            CC: '科科斯（基林）群岛',
+            CD: '刚果（金）',
+            CF: '中非共和国',
+            CG: '刚果（布）',
+            CH: '瑞士',
+            CI: '科特迪瓦',
+            CK: '库克群岛',
+            CL: '智利',
+            CM: '喀麦隆',
+            CN: '中国',
+            CO: '哥伦比亚',
+            CR: '哥斯达黎加',
+            CS: '塞尔维亚和黑山',
+            CU: '古巴',
+            CV: '佛得角',
+            CW: '库拉索',
+            CX: '圣诞岛',
+            CY: '塞浦路斯',
+            CZ: '捷克',
+            DE: '德国',
+            DJ: '吉布提',
+            DK: '丹麦',
+            DM: '多米尼克',
+            DO: '多米尼加',
+            DZ: '阿尔及利亚',
+            EC: '厄瓜多尔',
+            EE: '爱沙尼亚',
+            EG: '埃及',
+            EH: '西撒哈拉',
+            ER: '厄立特里亚',
+            ES: '西班牙',
+            ET: '埃塞俄比亚',
+            FI: '芬兰',
+            FJ: '斐济',
+            FK: '福克兰群岛',
+            FM: '密克罗尼西亚',
+            FO: '法罗群岛',
+            FR: '法国',
+            GA: '加蓬',
+            GB: '英国',
+            GD: '格林纳达',
+            GE: '格鲁吉亚',
+            GF: '法属圭亚那',
+            GG: '根西',
+            GH: '加纳',
+            GI: '直布罗陀',
+            GL: '格陵兰',
+            GM: '冈比亚',
+            GN: '几内亚',
+            GP: '瓜德鲁普',
+            GQ: '赤道几内亚',
+            GR: '希腊',
+            GS: '南乔治亚岛和南桑威奇群岛',
+            GT: '危地马拉',
+            GU: '关岛',
+            GW: '几内亚比绍',
+            GY: '圭亚那',
+            HK: '香港',
+            HM: '赫德岛和麦克唐纳群岛',
+            HN: '洪都拉斯',
+            HR: '克罗地亚',
+            HT: '海地',
+            HU: '匈牙利',
+            ID: '印尼',
+            IE: '爱尔兰',
+            IL: '以色列',
+            IM: '马恩岛',
+            IN: '印度',
+            IO: '英属印度洋领地',
+            IQ: '伊拉克',
+            IR: '伊朗',
+            IS: '冰岛',
+            IT: '意大利',
+            JE: '泽西岛',
+            JM: '牙买加',
+            JO: '约旦',
+            JP: '日本',
+            KE: '肯尼亚',
+            KG: '吉尔吉斯',
+            KH: '柬埔寨',
+            KI: '基里巴斯',
+            KM: '科摩罗',
+            KN: '圣基茨和尼维斯',
+            KP: '朝鲜',
+            KR: '韩国',
+            KW: '科威特',
+            KY: '开曼群岛',
+            KZ: '哈萨克斯坦',
+            LA: '老挝',
+            LB: '黎巴嫩',
+            LC: '圣卢西亚',
+            LI: '列支敦士登',
+            LK: '斯里兰卡',
+            LR: '利比里亚',
+            LS: '莱索托',
+            LT: '立陶宛',
+            LU: '卢森堡',
+            LV: '拉脱维亚',
+            LY: '利比亚',
+            MA: '摩洛哥',
+            MC: '摩纳哥',
+            MD: '摩尔多瓦',
+            ME: '黑山',
+            MF: '法属圣马丁',
+            MG: '马达加斯加',
+            MH: '马绍尔群岛',
+            MK: '马其顿',
+            ML: '马里',
+            MM: '缅甸',
+            MN: '蒙古',
+            MO: '澳门',
+            MP: '北马里亚纳群岛',
+            MQ: '马提尼克',
+            MR: '毛里塔尼亚',
+            MS: '蒙塞拉特',
+            MT: '马耳他',
+            MU: '毛里求斯',
+            MV: '马尔代夫',
+            MW: '马拉维',
+            MX: '墨西哥',
+            MY: '马来西亚',
+            MZ: '莫桑比克',
+            NA: '纳米比亚',
+            NC: '新喀里多尼亚',
+            NE: '尼日尔',
+            NF: '诺福克岛',
+            NG: '尼日利',
+            NI: '尼加拉瓜',
+            NL: '荷兰',
+            NO: '挪威',
+            NP: '尼泊尔',
+            NR: '瑙鲁',
+            NU: '纽埃',
+            NZ: '新西兰',
+            OM: '阿曼',
+            PA: '巴拿马',
+            PE: '秘鲁',
+            PF: '法属波利尼西亚a',
+            PG: '巴布亚新几内亚',
+            PH: '菲律宾',
+            PK: '巴基斯坦',
+            PL: '波兰',
+            PM: '圣皮埃尔和密克隆',
+            PN: '皮特凯恩群岛',
+            PR: '波多黎各',
+            PS: '巴勒斯坦',
+            PT: '葡萄牙',
+            PW: '帕劳',
+            PY: '巴拉圭',
+            QA: '卡塔尔',
+            RE: '留尼旺島',
+            RO: '罗马尼亚',
+            RS: '塞尔维亚',
+            RU: '俄罗斯',
+            RW: '卢旺达',
+            SA: '沙特阿拉伯',
+            SB: '所罗门群岛',
+            SC: '塞舌尔',
+            SD: '苏丹',
+            SE: '瑞典',
+            SG: '新加坡',
+            SH: '圣赫勒拿、阿森松与特斯坦达库尼亚',
+            SI: '斯洛文尼',
+            SJ: '斯瓦尔巴群岛和扬马延岛',
+            SK: '斯洛伐克',
+            SL: '塞拉利昂',
+            SM: '圣马力诺',
+            SN: '塞内加尔',
+            SO: '索马里',
+            SR: '苏里南',
+            SS: '南苏丹',
+            ST: '圣多美和普林西比',
+            SV: '萨尔瓦多',
+            SX: '荷属圣马丁',
+            SY: '叙利亚',
+            SZ: '斯威士兰',
+            TC: '特克斯和凯科斯群岛',
+            TD: '乍得',
+            TF: '法属南部领土',
+            TG: '多哥',
+            TH: '泰国',
+            TJ: '塔吉克斯坦',
+            TK: '托克劳',
+            TL: '东帝汶',
+            TM: '土库曼斯坦',
+            TN: '突尼斯',
+            TO: '汤加',
+            TR: '土耳其',
+            TT: '特立尼达和多巴哥',
+            TV: '图瓦卢',
+            TW: '台湾',
+            TZ: '坦桑尼亚',
+            UA: '乌克兰',
+            UG: '乌干达',
+            UM: '美国本土外小岛屿',
+            US: '美国',
+            UY: '乌拉圭',
+            UZ: '乌兹别克斯坦',
+            VA: '圣座',
+            VC: '圣文森特和格林纳丁斯',
+            VE: '委内瑞拉',
+            VG: '英属维尔京群岛',
+            VI: '美属维尔京群岛',
+            VN: '越南',
+            VU: '瓦努阿图',
+            WF: '瓦利斯和富图纳群岛',
+            WS: '萨摩亚',
+            XK: '科索沃',
+            YE: '也门',
+            YT: '马约特',
+            ZA: '南非',
+            ZM: '赞比亚',
+            ZW: '津巴布韦',
+        },
+        english: {
+            AD: 'Andorra',
+            AE: 'United Arab Emirates',
+            AF: 'Afghanistan',
+            AG: 'Antigua and Barbuda',
+            AI: 'Anguilla',
+            AL: 'Albania',
+            AM: 'Armenia',
+            AO: 'Angola',
+            AQ: 'Antarctica',
+            AR: 'Argentina',
+            AS: 'American Samoa',
+            AT: 'Austria',
+            AU: 'Australia',
+            AW: 'Aruba',
+            AX: 'Aland Islands',
+            AZ: 'Azerbaijan',
+            BA: 'Bosnia and Herzegovina',
+            BB: 'Barbados',
+            BD: 'Bangladesh',
+            BE: 'Belgium',
+            BF: 'Burkina Faso',
+            BG: 'Bulgaria',
+            BH: 'Bahrain',
+            BI: 'Burundi',
+            BJ: 'Benin',
+            BL: 'Saint Barthélemy',
+            BM: 'Bermuda',
+            BN: 'Brunei',
+            BO: 'Bolivia',
+            BQ: 'Bonaire',
+            BR: 'Brazil',
+            BS: 'Bahamas',
+            BT: 'Bhutan',
+            BV: 'Bouvet Island',
+            BW: 'Botswana',
+            BY: 'Belarus',
+            BZ: 'Belize',
+            CA: 'Canada',
+            CC: 'Cocos (Keeling) Islands',
+            CD: 'East Congo',
+            CF: 'Central African Republic',
+            CG: 'West Congo',
+            CH: 'Switzerland',
+            CI: 'Ivory Coast',
+            CK: 'Cook Islands',
+            CL: 'Chile',
+            CM: 'Cameroon',
+            CN: 'China',
+            CO: 'Colombia',
+            CR: 'Costa Rica',
+            CS: 'Serbia and Montenegro',
+            CU: 'Cuba',
+            CV: 'Cabo Verde',
+            CW: 'Curaçao',
+            CX: 'Christmas Island',
+            CY: 'Cyprus',
+            CZ: 'Czechia',
+            DE: 'Germany',
+            DJ: 'Djibouti',
+            DK: 'Denmark',
+            DM: 'Dominica',
+            DO: 'Dominican Republic',
+            DZ: 'Algeria',
+            EC: 'Ecuador',
+            EE: 'Estonia',
+            EG: 'Egypt',
+            EH: 'Western Sahara',
+            ER: 'Eritrea',
+            ES: 'Spain',
+            ET: 'Ethiopia',
+            FI: 'Finland',
+            FJ: 'Fiji',
+            FK: 'Falkland Islands',
+            FM: 'Micronesia',
+            FO: 'Faroe Islands',
+            FR: 'France',
+            GA: 'Gabon',
+            GB: 'United Kingdom',
+            GD: 'Grenada',
+            GE: 'Georgia',
+            GF: 'French Guiana',
+            GG: 'Guernsey',
+            GH: 'Ghana',
+            GI: 'Gibraltar',
+            GL: 'Greenland',
+            GM: 'Gambia',
+            GN: 'Guinea',
+            GP: 'Guadeloupe',
+            GQ: 'Equatorial Guinea',
+            GR: 'Greece',
+            GS: 'South Georgia and the South Sandwich Islands',
+            GT: 'Guatemala',
+            GU: 'Guam',
+            GW: 'Guinea-Bissau',
+            GY: 'Guyana',
+            HK: 'Hong Kong',
+            HM: 'Heard Island and McDonald Islands',
+            HN: 'Honduras',
+            HR: 'Croatia',
+            HT: 'Haiti',
+            HU: 'Hungary',
+            ID: 'Indonesia',
+            IE: 'Ireland',
+            IL: 'Israel',
+            IM: 'Isle of Man',
+            IN: 'India',
+            IO: 'British Indian Ocean Territory',
+            IQ: 'Iraq',
+            IR: 'Iran',
+            IS: 'Iceland',
+            IT: 'Italy',
+            JE: 'Jersey',
+            JM: 'Jamaica',
+            JO: 'Jordan',
+            JP: 'Japan',
+            KE: 'Kenya',
+            KG: 'Kyrgyzstan',
+            KH: 'Cambodia',
+            KI: 'Kiribati',
+            KM: 'Comoros',
+            KN: 'Saint Kitts and Nevis',
+            KP: 'North Korea',
+            KR: 'South Korea',
+            KW: 'Kuwait',
+            KY: 'Cayman Islands',
+            KZ: 'Kazakhstan',
+            LA: 'Lao',
+            LB: 'Lebanon',
+            LC: 'Saint Lucia',
+            LI: 'Liechtenstein',
+            LK: 'Sri Lanka',
+            LR: 'Liberia',
+            LS: 'Lesotho',
+            LT: 'Lithuania',
+            LU: 'Luxembourg',
+            LV: 'Latvia',
+            LY: 'Libya',
+            MA: 'Morocco',
+            MC: 'Monaco',
+            MD: 'Moldova',
+            ME: 'Montenegro',
+            MF: 'Saint Martin (French part)',
+            MG: 'Madagascar',
+            MH: 'Marshall Islands',
+            MK: 'Macedonia',
+            ML: 'Mali',
+            MM: 'Myanmar',
+            MN: 'Mongolia',
+            MO: 'Macao',
+            MP: 'Northern Mariana Islands',
+            MQ: 'Martinique',
+            MR: 'Mauritania',
+            MS: 'Montserrat',
+            MT: 'Malta',
+            MU: 'Mauritius',
+            MV: 'Maldives',
+            MW: 'Malawi',
+            MX: 'Mexico',
+            MY: 'Malaysia',
+            MZ: 'Mozambique',
+            NA: 'Namibia',
+            NC: 'New Caledonia',
+            NE: 'Niger',
+            NF: 'Norfolk Island',
+            NG: 'Nigeria',
+            NI: 'Nicaragua',
+            NL: 'Netherlands',
+            NO: 'Norway',
+            NP: 'Nepal',
+            NR: 'Nauru',
+            NU: 'Niue',
+            NZ: 'New Zealand',
+            OM: 'Oman',
+            PA: 'Panama',
+            PE: 'Peru',
+            PF: 'French Polynesia',
+            PG: 'Papua New Guinea',
+            PH: 'Philippines',
+            PK: 'Pakistan',
+            PL: 'Poland',
+            PM: 'Saint Pierre and Miquelon',
+            PN: 'Pitcairn',
+            PR: 'Puerto Rico',
+            PS: 'Palestine',
+            PT: 'Portugal',
+            PW: 'Palau',
+            PY: 'Paraguay',
+            QA: 'Qatar',
+            RE: 'Reunion',
+            RO: 'Romania',
+            RS: 'Serbia',
+            RU: 'Russia',
+            RW: 'Rwanda',
+            SA: 'Saudi Arabia',
+            SB: 'Solomon Islands',
+            SC: 'Seychelles',
+            SD: 'Sudan',
+            SE: 'Sweden',
+            SG: 'Singapore',
+            SH: 'Saint Helena, Ascension and Tristan da Cunha',
+            SI: 'Slovenia',
+            SJ: 'Svalbard and Jan Mayen',
+            SK: 'Slovakia',
+            SL: 'Sierra Leone',
+            SM: 'San Marino',
+            SN: 'Senegal',
+            SO: 'Somalia',
+            SR: 'Suriname',
+            SS: 'South Sudan',
+            ST: 'Sao Tome and Principe',
+            SV: 'El Salvador',
+            SX: 'Sint Maarten (Dutch part)',
+            SY: 'Syria',
+            SZ: 'Swaziland',
+            TC: 'Turks and Caicos Islands',
+            TD: 'Chad',
+            TF: 'French Southern Territories',
+            TG: 'Togo',
+            TH: 'Thailand',
+            TJ: 'Tajikistan',
+            TK: 'Tokelau',
+            TL: 'Timor-Leste',
+            TM: 'Turkmenistan',
+            TN: 'Tunisia',
+            TO: 'Tonga',
+            TR: 'Turkey',
+            TT: 'Trinidad and Tobago',
+            TV: 'Tuvalu',
+            TW: 'Taiwan',
+            TZ: 'Tanzania',
+            UA: 'Ukraine',
+            UG: 'Uganda',
+            UM: 'United States Minor Outlying Islands',
+            US: 'United States',
+            UY: 'Uruguay',
+            UZ: 'Uzbekistan',
+            VA: 'Holy See',
+            VC: 'Saint Vincent and the Grenadines',
+            VE: 'Venezuela',
+            VG: 'Virgin Islands, British',
+            VI: 'Virgin Islands, U.S.',
+            VN: 'Viet Nam',
+            VU: 'Vanuatu',
+            WF: 'Wallis and Futuna',
+            WS: 'Samoa',
+            XK: 'Kosovo',
+            YE: 'Yemen',
+            YT: 'Mayotte',
+            ZA: 'South Africa',
+            ZM: 'Zambia',
+            ZW: 'Zimbabwe',
+        },
+    },
+    get(code, language) {
+        const data = this.name[(language || config.get('language') || 'english')];
+
+        return has.call(data, code) ? data[code] : code;
+    },
+};
 
 config.init();
 
@@ -161,6 +928,11 @@ const i18n = {
         settingsPreselectJoinKeys: '預選合併序號',
         settingsJoinKeysASFStyle: '合併ASF 格式序號',
         settingsActivateAllKeys: '不跳過、啟動所有序號',
+        HBAlreadyOwned: '遊戲已擁有',
+        HBRedeemAlreadyOwned: '確定刮開 %title% Steam 序號？',
+        HBActivationRestrictions: '啟動限制',
+        HBDisallowedCountries: '限制以下地區啟動',
+        HBExclusiveCountries: '僅限以下地區啟動',
         DIGEasyBuyPurchase: '購買',
         DIGEasyBuySelectAll: '全選',
         DIGEasyBuySelectCancel: '取消',
@@ -228,6 +1000,11 @@ const i18n = {
         settingsPreselectJoinKeys: '预选合并激活码',
         settingsJoinKeysASFStyle: '合并ASF 格式激活码',
         settingsActivateAllKeys: '不跳过、激活所有激活码',
+        HBAlreadyOwned: '游戏已拥有',
+        HBRedeemAlreadyOwned: '确定刮开 %title% Steam 激活码？',
+        HBActivationRestrictions: '激活限制',
+        HBDisallowedCountries: '限制以下地区激活',
+        HBExclusiveCountries: '仅限以下地区激活',
         DIGEasyBuyPurchase: '购买',
         DIGEasyBuySelectAll: '全选',
         DIGEasyBuySelectCancel: '取消',
@@ -295,6 +1072,11 @@ const i18n = {
         settingsPreselectJoinKeys: 'Pre-select Join Keys',
         settingsJoinKeysASFStyle: 'Join Keys w/ ASF Style',
         settingsActivateAllKeys: 'No skip & activate all keys',
+        HBAlreadyOwned: 'Game Already Owned',
+        HBRedeemAlreadyOwned: 'Are you sure to redeem %title% Steam Key?',
+        HBActivationRestrictions: 'Activation Restrictions',
+        HBDisallowedCountries: 'Cannot be activated in the following regions',
+        HBExclusiveCountries: 'Can only be activated in the following regions',
         DIGEasyBuyPurchase: 'Purchase',
         DIGEasyBuySelectAll: 'Select All',
         DIGEasyBuySelectCancel: 'Cancel',
@@ -1295,36 +2077,38 @@ const siteHandlers = {
     humblebundle() {
         let atDownload = true;
         const $box = bundleSitesBox();
-        const setupKeyDetails = ($node) => {
-            const $script = $('.steam-keyredeemer-container').next();
+        const fetchKey = ($node, machineName, callback) => {
+            fetch('https://www.humblebundle.com/humbler/redeemkey', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    Origin: 'https://www.humblebundle.com',
+                    Referer: location.href,
+                },
+                body: `gift=false&keytype=${machineName}&key=${unsafeWindow.gamekeys[0]}&keyindex=0`,
+                credentials: 'same-origin',
+            }).then((res) => {
+                if (res.ok) return res.json();
+                throw new Error('Network response was not ok.');
+            }).then((d) => {
+                if (d.success) {
+                    $node.closest('.sr-unredeemed').replaceWith(`
+                        <div class="sr-redeemed">
+                            <div class="sr-redeemed">
+                                <div class="sr-redeemed-bubble js-sr-redeemed-bubble ">
+                                    <div class="keyfield-text">${d.key}</div>
+                                    <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
+                                        <div class="steam-redeem-text">Redeem</div>
+                                        <span class="tooltiptext">Redeem on Steam</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                } else swal(text.failTitle, JSON.stringify(d), 'error');
 
-            if ($script.length > 0) {
-                let data = $script.text()
-                    .split('var data = ')
-                    .pop()
-                    .split(';')
-                    .shift();
-
-                try {
-                    data = JSON.parse(data);
-
-                    data.keys.forEach((key) => {
-                        keyDetails.set(key.redeemedKeyVal, {
-                            app: key.steamAppId,
-                            title: key.humanName,
-                        });
-
-                        // apply owned effect on game title
-                        const appID = parseInt(key.steamAppId, 10);
-
-                        if (appID && owned.app.includes(appID)) {
-                            $node.find(`.sr-key:has(.sr-key-heading > span:contains(${key.humanName}))`).parent().addClass('SBSE_owned');
-                        }
-                    });
-                } catch (e) {
-                    // no key details
-                }
-            }
+                if (typeof callback === 'function') callback();
+            });
         };
         const extractKeys = () => {
             const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
@@ -1350,11 +2134,10 @@ const siteHandlers = {
 
             return keys;
         };
+        const $keyManager = $('.js-key-manager-holder');
 
         // insert textarea
         // insert at /home/*
-        const $keyManager = $('.js-key-manager-holder');
-
         if ($keyManager.length > 0) {
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
@@ -1381,7 +2164,56 @@ const siteHandlers = {
 
                         if ($node.hasClass('sr-widget') && $node.closest('.keytab').length > 0) {
                             $node.closest('.whitebox-redux').before($box);
-                            setupKeyDetails($node);
+
+                            // fetch key data
+                            const $script = $('.steam-keyredeemer-container').next();
+
+                            if ($script.length > 0) {
+                                let data = $script.text()
+                                    .split('var data = ')
+                                    .pop()
+                                    .split(';')
+                                    .shift();
+
+                                try {
+                                    data = JSON.parse(data);
+
+                                    data.keys.forEach((key) => {
+                                        keyDetails.set(key.redeemedKeyVal, {
+                                            app: key.steamAppId,
+                                            title: key.humanName,
+                                        });
+
+                                        const $heading = $node.find(`.sr-key-heading:has(span[data-machine-name=${key.machineName}])`);
+
+                                        // apply owned effect on game title
+                                        const appID = parseInt(key.steamAppId, 10);
+
+                                        if (appID && owned.app.includes(appID)) $heading.parent().parent().addClass('SBSE_owned');
+
+                                        // activation restrictions
+                                        let html = '';
+                                        const disallowed = key.disallowedCountries.map(c => ISO2.get(c));
+                                        const exclusive = key.exclusiveCountries.map(c => ISO2.get(c));
+                                        const humanName = $heading.text().trim();
+                                        const separator = config.get('language').includes('chinese') ? '、' : ', ';
+
+                                        if (disallowed.length > 0) html += `<p>${text.HBDisallowedCountries}<br>${disallowed.join(separator)}</p>`;
+                                        if (exclusive.length > 0) html += `<p>${text.HBExclusiveCountries}<br>${exclusive.join(separator)}</p>`;
+                                        if (disallowed.length > 0 || exclusive.length > 0) {
+                                            $(`<span class="SBSE_activationRestrictions">${text.HBActivationRestrictions}</span>`).click(() => {
+                                                swal({
+                                                    title: `${humanName}<br>${text.HBActivationRestrictions}`,
+                                                    html,
+                                                    type: 'info',
+                                                });
+                                            }).insertBefore($heading.parent().parent());
+                                        }
+                                    });
+                                } catch (e) {
+                                    // no key details
+                                }
+                            }
 
                             observer.disconnect();
                         }
@@ -1419,6 +2251,20 @@ const siteHandlers = {
             }
             .SBSE_container > div > button.narrow.working { width: 76px; padding-right: 36px; }
             #SBSE_BtnSettings { position: absolute; right: 0; }
+            .SBSE_owned .sr-unredeemed-steam-button {
+                background-color: #F3F3F3;
+                background: linear-gradient(to top, #E8E8E8, #F6F6F6);
+            }
+            .SBSE_owned .sr-unredeemed-steam-button * { opacity: 0.37; }
+            .SBSE_owned .sr-key-heading > span:last-child::after {
+                content: '\\f085';
+                font-family: hb-icons;
+                color: #17A1E5;
+            }
+            .SBSE_activationRestrictions {
+                float: right;
+                cursor: pointer;
+            }
         `);
 
         // narrow buttons
@@ -1426,7 +2272,7 @@ const siteHandlers = {
 
         // append checkbox for owned game
         $box.find('#SBSE_BtnSettings').before(
-            $(`<label><input type="checkbox" class="SBSE_ChkSkipOwned">${text.checkboxSkipOwned}</label>`),
+            $(`<label><input type="checkbox" class="SBSE_ChkSkipOwned" checked>${text.checkboxSkipOwned}</label>`),
         );
 
         // button click
@@ -1436,16 +2282,21 @@ const siteHandlers = {
                 const game = $games.shift();
 
                 if (game) {
-                    game.click();
-                    setTimeout(handler.bind(null, $games, callback), 300); /*
-                    setTimeout(() => {
-                        const $popup = $('.sr-warning-modal-buttons');
-                        const selector = skipOwned ? '.sr-warning-modal-cancel-button' : '.sr-warning-modal-confirm-button';
+                    const $game = $(game);
+                    const isOwned = !!$game.closest('.SBSE_owned').length;
+                    const machineName = $game.closest('.sr-key').find('.js-admin-edit').data('machine-name');
 
-                        if ($popup.length > 0) $popup.find(selector).click();
+                    if (skipOwned && isOwned) handler($games, callback);
+                    else if (atDownload && machineName) {
+                        fetchKey($game, machineName, () => {
+                            handler($games, callback);
+                        });
+                    } else {
+                        game.click();
+                        $('.sr-warning-modal-confirm-button').click();
 
-                        setTimeout(handler.bind(null, $games, callback), 300);
-                    }, 300);*/
+                        setTimeout(handler.bind(null, $games, callback), 200);
+                    }
                 } else callback();
             };
             const selectors = [
@@ -1466,6 +2317,33 @@ const siteHandlers = {
 
             bundleSitesBoxHandler.export(extractKeys(), title);
         });
+
+        // override default popups
+        document.addEventListener('click', (e) => {
+            const $target = $(e.target).closest('.sr-unredeemed-steam-button');
+
+            if ($target.length > 0) {
+                e.stopPropagation();
+
+                const $heading = $target.closest('.sr-key').find('.sr-key-heading');
+                const machineName = $heading.find('.js-admin-edit').data('machine-name');
+                const humanName = $heading.text().trim();
+                const isOwned = !!$target.closest('.SBSE_owned').length;
+
+                if (machineName) {
+                    if (isOwned) {
+                        swal({
+                            title: text.HBAlreadyOwned,
+                            text: text.HBRedeemAlreadyOwned.replace('%title%', humanName),
+                            type: 'question',
+                            showCancelButton: true,
+                        }).then((result) => {
+                            if (result.value) fetchKey($target, machineName);
+                        });
+                    } else fetchKey($target, machineName);
+                }
+            }
+        }, true);
     },
     dailyindiegame() {
         const MPHideList = JSON.parse(GM_getValue('SBSE_DIGMPHideList') || '[]');
@@ -2181,10 +3059,10 @@ const siteHandlers = {
 const init = () => {
     if (location.hostname === 'store.steampowered.com') {
         // save sessionID
-        if (g_AccountID > 0) {
+        if (unsafeWindow.g_AccountID > 0) {
             const currentID = config.get('sessionID');
-            const sessionID = g_sessionID || '';
-            const language = g_oSuggestParams.l || 'english';
+            const sessionID = unsafeWindow.g_sessionID || '';
+            const language = unsafeWindow.g_oSuggestParams.l || 'english';
 
             if (!config.get('language')) config.set('language', language);
             if (sessionID.length > 0) {
