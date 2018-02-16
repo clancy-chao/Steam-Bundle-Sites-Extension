@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.13.0
+// @version      1.13.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2576,7 +2576,7 @@ const siteHandlers = {
             // bind button event
             $('.DIGButtonPurchase').click((e) => {
                 let bought = 0;
-                let balance = parseInt($('a[href^="account_transac"]').closest('div').text().slice(12), 10) || 0;
+                let balance = parseFloat($('a[href^="account_transac"]').parent('div').text().slice(19)) || 0;
                 const $self = $(e.delegateTarget);
                 const $checked = $('.DIGEasyBuy_checked');
                 const handler = (callback) => {
