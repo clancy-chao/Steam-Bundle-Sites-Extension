@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.13.1
+// @version      1.14.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -25,6 +25,15 @@
 // @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.9.2/sweetalert2.min.css
 // @connect      store.steampowered.com
 // @connect      www.google.com
+// @connect      www.google.com.tw
+// @connect      www.google.com.au
+// @connect      www.google.co.jp
+// @connect      www.google.co.nz
+// @connect      www.google.co.uk
+// @connect      www.google.ca
+// @connect      www.google.de
+// @connect      www.google.it
+// @connect      www.google.fr
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -58,7 +67,7 @@ const eol = "\r\n";
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
 
-const owned = JSON.parse(localStorage.getItem('SBSE_owned') || '{}');
+const steam = JSON.parse(localStorage.getItem('SBSE_steam') || '{}');
 const activated = {
     data: JSON.parse(GM_getValue('SBSE_activated') || '[]'),
     push(key) {
@@ -111,8 +120,8 @@ const keyDetails = {
     isOwned(key) {
         const detail = this.data[key];
 
-        if (detail && owned.app.includes(detail.app)) return true;
-        if (detail && owned.sub.includes(detail.sub)) return true;
+        if (detail && steam.owned.app.includes(detail.app)) return true;
+        if (detail && steam.owned.sub.includes(detail.sub)) return true;
 
         return false;
     },
@@ -961,6 +970,10 @@ const i18n = {
         markAllAsUsed: '標記全部已使用',
         syncSuccessTitle: '同步成功',
         syncSuccess: '成功同步Steam 遊戲庫資料',
+        syncFailTitle: '同步失敗',
+        syncFail: '失敗同步Steam 遊戲庫資料',
+        visitSteam: '前往Steam',
+        lastSyncTime: '已於%seconds% 秒前同步收藏庫',
     },
     schinese: {
         name: '简体中文',
@@ -1033,6 +1046,10 @@ const i18n = {
         markAllAsUsed: '标记全部已使用',
         syncSuccessTitle: '同步成功',
         syncSuccess: '成功同步Steam 游戏库资料',
+        syncFailTitle: '同步失败',
+        syncFail: '失败同步Steam 游戏库资料',
+        visitSteam: '前往Steam',
+        lastSyncTime: '已于%seconds% 秒前同步游戏库',
     },
     english: {
         name: 'English',
@@ -1105,6 +1122,10 @@ const i18n = {
         markAllAsUsed: 'Mark All as Used',
         syncSuccessTitle: 'Sync Successful',
         syncSuccess: 'Successfully sync Steam library data',
+        syncFailTitle: 'Sync failed',
+        syncFail: 'Failed to sync Steam library data',
+        visitSteam: 'Visit Steam',
+        lastSyncTime: 'Library data synced %seconds% seconds ago',
     },
 };
 let text = has.call(i18n, config.get('language')) ? i18n[config.get('language')] : i18n.english;
@@ -1172,14 +1193,24 @@ const syncLibrary = (notify = true) => {
         method: 'GET',
         url: `http://store.steampowered.com/dynamicstore/userdata/t=${Math.random()}`,
         onload: (res) => {
-            if (res.status === 200) {
+            try {
                 const data = JSON.parse(res.response);
 
-                if (data.rgOwnedApps.length > 0) owned.app = data.rgOwnedApps;
-                if (data.rgOwnedPackages.length > 0) owned.sub = data.rgOwnedPackages;
-                owned.lastSync = Date.now();
+                if (data.rgOwnedApps.length === 0 || data.rgOwnedPackages.length === 0) throw Error('Empty library data');
 
-                localStorage.setItem('SBSE_owned', JSON.stringify(owned));
+                if (!has.call(steam, 'owned')) steam.owned = {};
+                if (!has.call(steam, 'wished')) steam.wished = {};
+                if (!has.call(steam, 'ignored')) steam.ignored = {};
+
+                steam.owned.app = data.rgOwnedApps;
+                steam.owned.sub = data.rgOwnedPackages;
+                steam.wished.app = data.rgWishlist;
+                steam.wished.sub = [];
+                steam.ignored.app = data.rgIgnoredApps;
+                steam.ignored.sub = data.rgIgnoredPackages;
+                steam.lastSync = Date.now();
+
+                localStorage.setItem('SBSE_steam', JSON.stringify(steam));
 
                 if (notify) {
                     swal({
@@ -1189,6 +1220,16 @@ const syncLibrary = (notify = true) => {
                         timer: 3000,
                     });
                 }
+            } catch (e) {
+                swal({
+                    title: text.syncFailTitle,
+                    text: text.syncFail,
+                    type: 'error',
+                    confirmButtonText: text.visitSteam,
+                    showCancelButton: true,
+                }).then((result) => {
+                    if (result.value === true) window.open('http://store.steampowered.com/');
+                });
             }
         },
     });
@@ -2189,7 +2230,7 @@ const siteHandlers = {
                                         // apply owned effect on game title
                                         const appID = parseInt(key.steamAppId, 10);
 
-                                        if (appID && owned.app.includes(appID)) $heading.parent().parent().addClass('SBSE_owned');
+                                        if (appID && steam.owned.app.includes(appID)) $heading.parent().parent().addClass('SBSE_owned');
 
                                         // activation restrictions
                                         let html = '';
@@ -2350,6 +2391,9 @@ const siteHandlers = {
         const pathname = location.pathname;
 
         if (pathname.includes('/account_page')) {
+            // force sync library
+            syncLibrary(false);
+
             // inject css
             GM_addStyle(`
                 .SBSE_container { padding: 5px; border: 1px solid #424242; }
@@ -2449,6 +2493,9 @@ const siteHandlers = {
                     background-color: white;
                     border: none;
                 }
+                .SBSE_owned a[href*="steam"] .DIG3_14_Gray { color: #9ccc65; }
+                .SBSE_wished a[href*="steam"] .DIG3_14_Gray { color: #29b6f6; }
+                .SBSE_ignored a[href*="steam"] .DIG3_14_Gray { text-decoration: line-through;}
             `);
 
             // setup row data & event
@@ -2471,10 +2518,12 @@ const siteHandlers = {
                 const $a = $(a);
                 const $tr = $a.closest('tr');
                 const data = a.pathname.slice(1).split('/');
-                const appID = parseInt(data[1], 10);
+                const steamID = parseInt(data[1], 10);
                 const id = parseInt($tr.attr('data-id'), 10);
 
-                if (owned[data[0]].includes(appID)) $tr.addClass('SBSE_owned SBSE_hide');
+                if (steam.owned[data[0]].includes(steamID)) $tr.addClass('SBSE_owned SBSE_hide');
+                if (steam.wished[data[0]].includes(steamID)) $tr.addClass('SBSE_wished');
+                if (steam.ignored[data[0]].includes(steamID)) $tr.addClass('SBSE_ignored');
                 if (MPHideList.includes(id)) $tr.addClass('SBSE_hide');
 
                 // append manual hide feature
@@ -2490,7 +2539,7 @@ const siteHandlers = {
                 });
 
                 // no appID found, pre-load Google search result
-                if (appID === -1 && !MPHideList.includes(id)) {
+                if (steamID === -1 && !MPHideList.includes(id)) {
                     const $game = $a.find('span');
                     const gameTitle = encodeURIComponent($game.text().trim()).replace(/%20/g, '+');
                     const map = {
@@ -2572,6 +2621,13 @@ const siteHandlers = {
                     <button class="DIGButtonLoadAllPages DIG3_Orange_15_Form">${text.DIGEasyBuyLoadAllPages}</button>
                 `);
             }
+
+            // append sync time and event
+            const seconds = Math.round((Date.now() - steam.lastSync) / 1000);
+
+            $DIGEasyBuy.append(`
+                <span> ${text.lastSyncTime.replace('%seconds%', seconds)}</span>
+            `);
 
             // bind button event
             $('.DIGButtonPurchase').click((e) => {
@@ -3092,9 +3148,9 @@ const init = () => {
         if (has.call(siteHandlers, site)) {
             siteHandlers[site](true);
 
-            // update owned every 10 min
+            // update steam library every 10 min
             const updateTimer = 10 * 60 * 1000;
-            if (!owned.lastSync || owned.lastSync < (Date.now() - updateTimer)) syncLibrary(false);
+            if (!steam.lastSync || steam.lastSync < (Date.now() - updateTimer)) syncLibrary(false);
         }
     }
 };
