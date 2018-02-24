@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.14.0
+// @version      1.14.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2695,8 +2695,9 @@ const siteHandlers = {
             $('.DIGButtonSelectAll').click((e) => {
                 const $self = $(e.delegateTarget);
                 const state = !$self.data('state');
+                const selector = $('.DIGEasyBuy_hideOwned').length > 0 ? '.DIGEasyBuy_row:not(.SBSE_hide)' : '.DIGEasyBuy_row';
 
-                $('.DIGEasyBuy_row').toggleClass('DIGEasyBuy_checked', state);
+                $(selector).toggleClass('DIGEasyBuy_checked', state);
                 $self.data('state', state);
                 $self.text(state ? text.DIGEasyBuySelectCancel : text.DIGEasyBuySelectAll);
             });
