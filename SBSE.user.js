@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.14.1
+// @version      1.14.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2138,14 +2138,14 @@ const siteHandlers = {
         const extractKeys = () => {
             const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
             const keys = [];
-            const selectors = ['.sr-redeemed-bubble .keyfield-text', // redeem page selector
+            const selectors = ['.key-redeemer .keyfield.redeemed > .keyfield-value', // redeem page selector
             'tr:has(.hb-steam) .redeemed > .keyfield-value'];
 
-            if (skipOwned) selectors[0] = `div:not(.SBSE_owned) > .sr-key ${selectors[0]}`;
+            if (skipOwned) selectors[0] = '.key-redeemer:not(.SBSE_owned) .keyfield.redeemed > .keyfield-value';
 
             $(selectors.join()).each((index, element) => {
                 const $game = $(element);
-                const $heading = atDownload ? $game.closest('[class^=sr-key]').prev().children().eq(0) : $game.closest('td').prev('.game-name').find('h4');
+                const $heading = atDownload ? $game.closest('.container').prev().children().eq(0) : $game.closest('td').prev('.game-name').find('h4');
 
                 keys.push({
                     key: $game.text().trim(),
@@ -2183,7 +2183,7 @@ const siteHandlers = {
                     Array.from(mutation.addedNodes).forEach(addedNode => {
                         const $node = $(addedNode);
 
-                        if ($node.hasClass('sr-widget') && $node.closest('.keytab').length > 0) {
+                        if ($node.hasClass('key-list')) {
                             $node.closest('.whitebox-redux').before($box);
 
                             // fetch key data
@@ -2313,10 +2313,10 @@ const siteHandlers = {
                     }
                 } else callback();
             };
-            const selectors = ['.sr-unredeemed-steam-button', // redeem page selector
+            const selectors = ['.key-redeemer .keyfield', // redeem page selector
             'div.keyfield[title="Reveal your Steam key"]'];
 
-            if (skipOwned) selectors[0] = `div:not(.SBSE_owned) > .sr-key ${selectors[0]}`;
+            if (skipOwned) selectors[0] = '.key-redeemer:not(.SBSE_owned) .keyfield';
 
             bundleSitesBoxHandler.reveal(handler, $(selectors.join()));
         });
