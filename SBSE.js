@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.14.2
+// @version      1.14.3
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2155,21 +2155,21 @@ const siteHandlers = {
             const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
             const keys = [];
             const selectors = [
-                '.key-redeemer .keyfield.redeemed > .keyfield-value', // redeem page selector
+                '.key-redeemer .keyfield-value', // redeem page selector
                 'tr:has(.hb-steam) .redeemed > .keyfield-value', // home page selector
             ];
 
-            if (skipOwned) selectors[0] = '.key-redeemer:not(.SBSE_owned) .keyfield.redeemed > .keyfield-value';
+            if (skipOwned) selectors[0] = '.key-redeemer:not(.SBSE_owned) .keyfield-value';
 
             $(selectors.join()).each((index, element) => {
                 const $game = $(element);
-                const $heading = atDownload
-                    ? $game.closest('.container').prev().children().eq(0)
-                    : $game.closest('td').prev('.game-name').find('h4');
+                const title = atDownload
+                    ? $game.closest('.key-redeemer').attr('data-humanName')
+                    : $game.closest('td').prev('.game-name').find('h4').text().trim();
 
                 keys.push({
                     key: $game.text().trim(),
-                    title: $heading.text().trim(),
+                    title,
                 });
             });
 
@@ -2200,61 +2200,70 @@ const siteHandlers = {
         } else {
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
-                    Array.from(mutation.addedNodes).forEach((addedNode) => {
+                    Array.from(mutation.addedNodes).forEach(async (addedNode) => {
                         const $node = $(addedNode);
 
                         if ($node.hasClass('key-list')) {
                             $node.closest('.whitebox-redux').before($box);
 
+                            // fetch game heading & wrap heading
+                            $node.find('.heading-text > h4').each((i, heading) => {
+                                heading.parentElement.title = heading.innerText.trim();
+                                $(heading.firstChild).wrap('<span/>');
+                            });
+
                             // fetch key data
-                            const $script = $('.steam-keyredeemer-container').next();
+                            const gameKey = unsafeWindow.gamekeys[0];
+                            let json = GM_getValue(gameKey, '');
 
-                            if ($script.length > 0) {
-                                let data = $script.text()
-                                    .split('var data = ')
-                                    .pop()
-                                    .split(';')
-                                    .shift();
+                            if (json.length === 0) {
+                                const res = await fetch(`https://www.humblebundle.com/api/v1/order/${gameKey}?all_tpkds=true`, {
+                                    method: 'GET',
+                                    credentials: 'same-origin',
+                                });
 
-                                try {
-                                    data = JSON.parse(data);
-
-                                    data.keys.forEach((key) => {
-                                        keyDetails.set(key.redeemedKeyVal, {
-                                            app: key.steamAppId,
-                                            title: key.humanName,
-                                        });
-
-                                        const $heading = $node.find(`.sr-key-heading:has(span[data-machine-name=${key.machineName}])`);
-
-                                        // apply owned effect on game title
-                                        const appID = parseInt(key.steamAppId, 10);
-
-                                        if (appID && steam.owned.app.includes(appID)) $heading.parent().parent().addClass('SBSE_owned');
-
-                                        // activation restrictions
-                                        let html = '';
-                                        const disallowed = key.disallowedCountries.map(c => ISO2.get(c));
-                                        const exclusive = key.exclusiveCountries.map(c => ISO2.get(c));
-                                        const humanName = $heading.text().trim();
-                                        const separator = config.get('language').includes('chinese') ? '、' : ', ';
-
-                                        if (disallowed.length > 0) html += `<p>${text.HBDisallowedCountries}<br>${disallowed.join(separator)}</p>`;
-                                        if (exclusive.length > 0) html += `<p>${text.HBExclusiveCountries}<br>${exclusive.join(separator)}</p>`;
-                                        if (disallowed.length > 0 || exclusive.length > 0) {
-                                            $(`<span class="SBSE_activationRestrictions">${text.HBActivationRestrictions}</span>`).click(() => {
-                                                swal({
-                                                    title: `${humanName}<br>${text.HBActivationRestrictions}`,
-                                                    html,
-                                                    type: 'info',
-                                                });
-                                            }).insertBefore($heading.parent().parent());
-                                        }
-                                    });
-                                } catch (e) {
-                                    // no key details
-                                }
+                                json = await res.text();
                             }
+
+                            const data = JSON.parse(json);
+
+                            data.tpkd_dict.all_tpks.forEach((game) => {
+                                keyDetails.set(game.redeemed_key_val, {
+                                    app: game.steam_app_id,
+                                    title: game.human_name,
+                                });
+
+                                const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[title="${game.human_name}"])`);
+
+                                // store data
+                                $keyRedeemer.attr({
+                                    'data-machineName': game.machine_name,
+                                    'data-humanName': game.human_name,
+                                });
+
+                                // apply owned effect on game title
+                                const appID = parseInt(game.steam_app_id, 10);
+
+                                if (appID && steam.owned.app.includes(appID)) $keyRedeemer.addClass('SBSE_owned');
+
+                                // activation restrictions
+                                let html = '';
+                                const disallowed = game.disallowed_countries.map(c => ISO2.get(c));
+                                const exclusive = game.exclusive_countries.map(c => ISO2.get(c));
+                                const separator = config.get('language').includes('chinese') ? '、' : ', ';
+
+                                if (disallowed.length > 0) html += `<p>${text.HBDisallowedCountries}<br>${disallowed.join(separator)}</p>`;
+                                if (exclusive.length > 0) html += `<p>${text.HBExclusiveCountries}<br>${exclusive.join(separator)}</p>`;
+                                if (disallowed.length > 0 || exclusive.length > 0) {
+                                    $(`<span class="SBSE_activationRestrictions">${text.HBActivationRestrictions}</span>`).click(() => {
+                                        swal({
+                                            title: `${game.human_name}<br>${text.HBActivationRestrictions}`,
+                                            html,
+                                            type: 'info',
+                                        });
+                                    }).insertBefore($keyRedeemer.find('.heading-text > h4'));
+                                }
+                            });
 
                             observer.disconnect();
                         }
@@ -2296,16 +2305,12 @@ const siteHandlers = {
                 background-color: #F3F3F3;
                 background: linear-gradient(to top, #E8E8E8, #F6F6F6);
             }
-            .SBSE_owned .sr-unredeemed-steam-button * { opacity: 0.37; }
-            .SBSE_owned .sr-key-heading > span:last-child::after {
+            .SBSE_owned .heading-text h4 > span:not(.steam-owned):last-child::after {
                 content: '\\f085';
                 font-family: hb-icons;
                 color: #17A1E5;
             }
-            .SBSE_activationRestrictions {
-                float: right;
-                cursor: pointer;
-            }
+            .SBSE_activationRestrictions { float: right; cursor: pointer; }
         `);
 
         // narrow buttons
@@ -2325,7 +2330,7 @@ const siteHandlers = {
                 if (game) {
                     const $game = $(game);
                     const isOwned = !!$game.closest('.SBSE_owned').length;
-                    const machineName = $game.closest('.sr-key').find('.js-admin-edit').data('machine-name');
+                    const machineName = $game.closest('.key-redeemer').attr('data-machineName');
 
                     if (skipOwned && isOwned) handler($games, callback);
                     else if (atDownload && machineName) {
@@ -2361,15 +2366,15 @@ const siteHandlers = {
 
         // override default popups
         document.addEventListener('click', (e) => {
-            const $target = $(e.target).closest('.sr-unredeemed-steam-button');
+            const $target = $(e.target).closest('.keyfield');
 
             if ($target.length > 0) {
                 e.stopPropagation();
 
-                const $heading = $target.closest('.sr-key').find('.sr-key-heading');
-                const machineName = $heading.find('.js-admin-edit').data('machine-name');
-                const humanName = $heading.text().trim();
-                const isOwned = !!$target.closest('.SBSE_owned').length;
+                const $keyRedeemer = $target.closest('.key-redeemer');
+                const machineName = $keyRedeemer.attr('data-machineName');
+                const humanName = $keyRedeemer.attr('data-humanName');
+                const isOwned = $keyRedeemer.hasClass('SBSE_owned');
 
                 if (machineName) {
                     if (isOwned) {
