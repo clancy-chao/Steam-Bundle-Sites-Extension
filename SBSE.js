@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.14.3
+// @version      1.14.4
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2126,24 +2126,21 @@ const siteHandlers = {
                     Origin: 'https://www.humblebundle.com',
                     Referer: location.href,
                 },
-                body: `gift=false&keytype=${machineName}&key=${unsafeWindow.gamekeys[0]}&keyindex=0`,
+                body: `keytype=${machineName}&key=${unsafeWindow.gamekeys[0]}&keyindex=0`,
                 credentials: 'same-origin',
             }).then((res) => {
                 if (res.ok) return res.json();
                 throw new Error('Network response was not ok.');
             }).then((d) => {
                 if (d.success) {
-                    $node.closest('.sr-unredeemed').replaceWith(`
-                        <div class="sr-redeemed">
-                            <div class="sr-redeemed">
-                                <div class="sr-redeemed-bubble js-sr-redeemed-bubble ">
-                                    <div class="keyfield-text">${d.key}</div>
-                                    <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
-                                        <div class="steam-redeem-text">Redeem</div>
-                                        <span class="tooltiptext">Redeem on Steam</span>
-                                    </a>
-                                </div>
-                            </div>
+                    $node.closest('.container').html(`
+                        <div title="${d.key}" class="keyfield redeemed">
+                            <div class="keyfield-value">${d.key}</div>
+                            <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
+                                <div class="steam-redeem-text">Redeem</div>
+                                <span class="tooltiptext">Redeem on Steam</span>
+                            </a>
+                            <div class="spinner"></div>
                         </div>
                     `);
                 } else swal(text.failTitle, JSON.stringify(d), 'error');
@@ -2368,7 +2365,7 @@ const siteHandlers = {
         document.addEventListener('click', (e) => {
             const $target = $(e.target).closest('.keyfield');
 
-            if ($target.length > 0) {
+            if ($target.length > 0 && !$target.hasClass('redeemed')) {
                 e.stopPropagation();
 
                 const $keyRedeemer = $target.closest('.key-redeemer');
