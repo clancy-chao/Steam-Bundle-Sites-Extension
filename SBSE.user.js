@@ -3,7 +3,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.14.4
+// @version      1.14.5
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2144,11 +2144,11 @@ const siteHandlers = {
 
             $(selectors.join()).each((index, element) => {
                 const $game = $(element);
-                const title = atDownload ? $game.closest('.key-redeemer').attr('data-humanName') : $game.closest('td').prev('.game-name').find('h4').text().trim();
+                const title = atDownload ? $game.closest('.key-redeemer').find('h4').contents().eq(0) : $game.closest('td').prev('.game-name').find('h4');
 
                 keys.push({
                     key: $game.text().trim(),
-                    title
+                    title: title.text().trim()
                 });
             });
 
