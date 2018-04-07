@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.15.0
+// @version      1.15.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2269,7 +2269,7 @@ const siteHandlers = {
                 });
 
                 // game page
-                if (location.href.includes('/game/')) {
+                if (location.href.includes('/game/') || location.href.includes('/dlc/')) {
                     let discount = 1;
 
                     if (has.call(APIData, 'current_discount') &&
@@ -2312,7 +2312,8 @@ const siteHandlers = {
 
                     if (currentURL.includes('/orders/')) insertBox();
                     if (currentURL.includes('/bundle/') ||
-                        currentURL.includes('/game/')
+                        currentURL.includes('/game/') ||
+                        currentURL.includes('/dlc/')
                     ) fetchAPIData(productHandler);
                 });
             });
