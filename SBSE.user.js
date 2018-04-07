@@ -3,7 +3,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.14.5
+// @version      1.15.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -36,6 +36,8 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @connect      www.google.de
 // @connect      www.google.it
 // @connect      www.google.fr
+// @connect      api.fanatical.com
+// @connect      www.ecb.europa.eu
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -69,9 +71,9 @@ const eol = "\r\n";
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
 
-const steam = JSON.parse(localStorage.getItem('SBSE_steam') || '{}');
+const steam = JSON.parse(localStorage.getItem('SBSE_steam', '{}'));
 const activated = {
-    data: JSON.parse(GM_getValue('SBSE_activated') || '[]'),
+    data: JSON.parse(GM_getValue('SBSE_activated', '[]')),
     push(key) {
         this.data.push(key);
         GM_setValue('SBSE_activated', JSON.stringify(this.data));
@@ -81,7 +83,7 @@ const activated = {
     }
 };
 const config = {
-    data: JSON.parse(GM_getValue('SBSE_config') || '{}'),
+    data: JSON.parse(GM_getValue('SBSE_config', '{}')),
     set(key, value, callback = null) {
         this.data[key] = value;
         GM_setValue('SBSE_config', JSON.stringify(this.data));
@@ -896,8 +898,145 @@ const ISO2 = {
         return has.call(data, code) ? data[code] : code;
     }
 };
+const xe = {
+    exchangeRate: JSON.parse(GM_getValue('SBSE_xe', '{}')),
+    currencies: {
+        AUD: {
+            english: 'Australian Dollar',
+            tchinese: '澳幣',
+            schinese: '澳元',
+            symbol: 'AU$'
+        },
+        CAD: {
+            english: 'Canadian Dollar',
+            tchinese: '加幣',
+            schinese: '加元',
+            symbol: 'CA$'
+        },
+        CNY: {
+            english: 'Chinese Yuan',
+            tchinese: '人民幣',
+            schinese: '人民币',
+            symbol: 'CN¥'
+        },
+        EUR: {
+            english: 'Euro',
+            tchinese: '歐元',
+            schinese: '欧元',
+            symbol: '€'
+        },
+        GBP: {
+            english: 'Great Britain Pound',
+            tchinese: '英鎊',
+            schinese: '英镑',
+            symbol: '£'
+        },
+        HKD: {
+            english: 'Hong Kong Dollar',
+            tchinese: '港幣',
+            schinese: '港元',
+            symbol: 'HK$'
+        },
+        JPY: {
+            english: 'Japanese Yen',
+            tchinese: '日圓',
+            schinese: '日元',
+            symbol: 'JP¥'
+        },
+        KRW: {
+            english: 'South Korean Won',
+            tchinese: '韓圓',
+            schinese: '韩币',
+            symbol: '₩'
+        },
+        MYR: {
+            english: 'Malaysian Ringgit',
+            tchinese: '令吉',
+            schinese: '林吉特',
+            symbol: 'RM'
+        },
+        NTD: {
+            english: 'New Taiwan Dollar',
+            tchinese: '台幣',
+            schinese: '台币',
+            symbol: 'NT$'
+        },
+        NZD: {
+            english: 'New Zealand Dollar',
+            tchinese: '紐幣',
+            schinese: '新西兰元',
+            symbol: 'NZ$'
+        },
+        RUB: {
+            english: 'Russian Ruble',
+            tchinese: '盧布',
+            schinese: '卢布',
+            symbol: 'руб'
+        },
+        USD: {
+            english: 'United States Dollar',
+            tchinese: '美元',
+            schinese: '美元',
+            symbol: 'US$'
+        }
+    },
+    get() {
+        const self = this;
+
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: 'http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml',
+            onload: res => {
+                if (res.status === 200) {
+                    try {
+                        const exchangeRate = {
+                            lastUpdate: Date.now(),
+                            rates: {}
+                        };
+
+                        res.response.split("\n").forEach(line => {
+                            if (line.includes('currency=')) {
+                                const currency = line.split('currency=\'').pop().slice(0, 3);
+                                const rate = line.trim().split('rate=\'').pop().slice(0, -3);
+
+                                exchangeRate.rates[currency] = parseFloat(rate);
+                            }
+                        });
+
+                        exchangeRate.rates.EUR = 1;
+                        exchangeRate.rates.NTD = exchangeRate.rates.HKD * 3.75;
+
+                        self.exchangeRate = exchangeRate;
+                        GM_setValue('SBSE_xe', JSON.stringify(exchangeRate));
+                    } catch (e) {
+                        swal('Parsing Failed', 'An error occured when parsing exchange rate data, please reload to try again', 'error');
+                    }
+                } else {
+                    swal('Loading Failed', 'Unable to fetch exchange rate data, please reload to try again', 'error');
+                }
+            }
+        });
+    },
+    update(targetCurrency = 'USD') {
+        $('.SBSE_price').each((i, ele) => {
+            const originalCurrency = ele.dataset.currency;
+            const originalValue = parseInt(ele.dataset.value, 10);
+            const originalRate = this.exchangeRate.rates[originalCurrency];
+            const targetRate = this.exchangeRate.rates[targetCurrency];
+            const exchangedValue = originalValue / originalRate * targetRate;
+
+            $(ele).text(this.currencies[targetCurrency].symbol + (exchangedValue / 100).toFixed(2));
+        });
+    },
+    init() {
+        const updateTimer = 12 * 60 * 60 * 1000;
+
+        if (Object.keys(this.exchangeRate).length === 0 || this.exchangeRate.lastUpdate < Date.now() - updateTimer) this.get();
+    }
+};
 
 config.init();
+xe.init();
 
 // text
 const i18n = {
@@ -1197,7 +1336,7 @@ const syncLibrary = (notify = true) => {
             try {
                 const data = JSON.parse(res.response);
 
-                if (data.rgOwnedApps.length === 0 || data.rgOwnedPackages.length === 0) throw Error('Empty library data');
+                if (data.rgOwnedApps.length === 0 || data.rgOwnedPackages.length === 0) throw new Error('Empty library data');
 
                 if (!has.call(steam, 'owned')) steam.owned = {};
                 if (!has.call(steam, 'wished')) steam.wished = {};
@@ -1864,15 +2003,57 @@ const siteHandlers = {
         }
         return $results;
         };*/
+        let APIData = null;
+        const fetchAPIData = (() => {
+            var _ref = _asyncToGenerator(function* (s, c) {
+                let slug = s;
+                let callback = c;
+                if (typeof s === 'function') {
+                    callback = s;
+                    slug = location.href.split('/').pop();
+                }
+
+                let JSONString = GM_getValue(`Fanatical-${slug}`, '');
+
+                if (JSONString.length === 0) {
+                    const res = yield fetch(`https://api.fanatical.com/api/products/${slug}`);
+
+                    if (res.ok) {
+                        JSONString = yield res.text();
+
+                        GM_setValue(`Fanatical-${slug}`, JSONString);
+                    } else JSONString = '{}';
+                }
+
+                APIData = JSON.parse(JSONString);
+
+                if (typeof callback === 'function') callback();
+            });
+
+            return function fetchAPIData(_x, _x2) {
+                return _ref.apply(this, arguments);
+            };
+        })();
         const extractKeys = () => {
             const keys = [];
 
-            $('.account-content dl input').each((index, input) => {
-                const $input = $(input);
+            $('.account-content dl:has(input)').each((index, dl) => {
+                const $dl = $(dl);
+                const key = $(dl).find('input').val();
+                const title = $dl.attr('data-title') || $dl.find('dd').eq(1).text().trim();
+                const app = $dl.attr('data-appID');
+
+                // append key details
+                if (app.length > 0) {
+                    keyDetails.set(key, {
+                        title,
+                        app
+                    });
+                }
 
                 keys.push({
-                    key: $input.val(),
-                    title: $input.closest('dd').prev().text().trim()
+                    key,
+                    title
                 });
             });
 
@@ -1935,6 +2116,45 @@ const siteHandlers = {
 
                     bundleSitesBoxHandler.export(extractKeys(), title);
                 });
+
+                // append Steam ID
+                const observer = new MutationObserver(mutations => {
+                    mutations.forEach(mutation => {
+                        Array.from(mutation.addedNodes).forEach(addedNode => {
+                            const title = $(addedNode).find('h5').eq(0).text();
+                            const slug = title.trim().toLowerCase().replace(/ /g, '-');
+
+                            if (slug.length > 0) {
+                                observer.disconnect();
+                                fetchAPIData(slug, () => {
+                                    if (Object.keys(APIData).length > 0) {
+                                        const matchGame = data => {
+                                            if (has.call(data, 'steam') && data.steam.id) {
+                                                const $gameTitle = $(`dd > div.d-flex.flex-column:contains(${data.name})`);
+
+                                                $gameTitle.contents().filter((i, n) => n.nodeType === 3).wrap(`<a href="http:www.steampowered.com/app/${data.steam.id}/"></a>`);
+                                                $gameTitle.closest('dl').attr({
+                                                    'data-title': data.name,
+                                                    'data-appID': data.steam.id
+                                                });
+                                            }
+                                        };
+
+                                        matchGame(APIData);
+                                        APIData.bundles.forEach(tier => {
+                                            tier.games.forEach(matchGame);
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    });
+                });
+
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
                 /*
                 // setup select
                 const $selects = $('.SBSE_container select');
@@ -1966,11 +2186,115 @@ const siteHandlers = {
                 });*/
             }
         };
+        const productHandler = () => {
+            if (Object.keys(APIData).length > 0) {
+                GM_addStyle(`
+                    .cardBlock { width: 100%; padding: 0 .875rem 0 .875rem; }
+                    .cardBlock > div { padding: 1rem; }
+                    .cardBlock .currencyToggler {
+                        width: 100%;
+                        height: 40px;
+                        margin-bottom: 10px;
+                        font-size: 20px;
+                        border-radius: 3px;
+                    }
+                    .starDeal { padding: 1rem; }
+                    .starDeal > div { display: flex; align-items: center; justify-content: space-evenly; }
+                    .starDeal .currencyToggler {
+                        width: 300px;
+                        height: 40px;
+                        font-size: 20px;
+                        border-radius: 3px;
+                    }
+                    .pricingDetail { background-color: transparent; }
+                    .pricingDetail th { padding-top: 10px; }
+                    .pricingDetail .cheapest { border-bottom: 1px solid #ff9800; font-weight: bold; }
+                `);
+
+                const language = config.get('language');
+                const $priceExt = $(`
+                    <div class="cardBlock">
+                        <div>
+                            <select class="currencyToggler"></select>
+                            <table class="pricingDetail"></table>
+                        </div>
+                    </div>
+                `);
+                const $currencyToggler = $priceExt.find('.currencyToggler');
+                const $pricingDetail = $priceExt.find('.pricingDetail');
+                const selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'CNY');
+                const isStarDeal = !!$('.stardeal-purchase-info').length;
+
+                if (isStarDeal) $priceExt.toggleClass('cardBlock starDeal');
+
+                Object.keys(xe.currencies).forEach(currency => {
+                    const selected = currency === selectedCurrency ? ' selected' : '';
+
+                    $currencyToggler.append($(`<option value="${currency}"${selected}>${xe.currencies[currency][language]}</option>`));
+                });
+
+                $currencyToggler.change(() => {
+                    xe.update($currencyToggler.val());
+                    GM_setValue('SBSE_selectedCurrency', $currencyToggler.val());
+                });
+
+                // bundle page
+                APIData.bundles.forEach((tier, index) => {
+                    if (APIData.bundles.length > 1) $pricingDetail.append(`<tr><th colspan="2">Tier ${index + 1}</th></tr>`);
+                    Object.keys(tier.price).forEach(currency => {
+                        const value = tier.price[currency];
+
+                        $pricingDetail.append(`
+                            <tr class="tier${index + 1}">
+                                <td>${xe.currencies[currency].symbol + value / 100}</td>
+                                <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
+                            </tr>
+                        `);
+                    });
+                });
+
+                // game page
+                if (location.href.includes('/game/')) {
+                    let discount = 1;
+
+                    if (has.call(APIData, 'current_discount') && new Date(APIData.current_discount.until).getTime() > Date.now()) discount = 1 - APIData.current_discount.percent;
+
+                    if (isStarDeal) discount = 1 - $('.discount-percent').text().replace(/\D/g, '') / 100;
+
+                    Object.keys(APIData.price).forEach(currency => {
+                        const value = (APIData.price[currency] * discount).toFixed(2);
+
+                        $pricingDetail.append(`
+                            <tr class="tier1">
+                                <td>${xe.currencies[currency].symbol + (value / 100).toFixed(2)}</td>
+                                <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
+                            </tr>
+                        `);
+                    });
+                }
+
+                $('.product-commerce-container').append($priceExt);
+                $('.stardeal-purchase-info').after($priceExt);
+                xe.update(selectedCurrency);
+
+                // highlight the cheapest
+                for (let i = 1; i < 10; i += 1) {
+                    const $prices = $(`.tier${i} .SBSE_price`);
+
+                    if ($prices.length === 0) break;
+
+                    $($prices.toArray().sort((a, b) => a.textContent.replace(/\D/g, '') - b.textContent.replace(/\D/g, '')).shift()).closest('tr').addClass('cheapest');
+                }
+            }
+        };
 
         new MutationObserver(mutations => {
             mutations.forEach(mutation => {
-                Array.from(mutation.addedNodes).forEach(addedNode => {
-                    if (addedNode.tagName === 'META' && addedNode.name === 'twitter:title') insertBox();
+                Array.from(mutation.addedNodes).filter(node => node.matches('[property="og:url"]')).forEach(() => {
+                    const currentURL = location.href;
+
+                    if (currentURL.includes('/orders/')) insertBox();
+                    if (currentURL.includes('/bundle/') || currentURL.includes('/game/')) fetchAPIData(productHandler);
                 });
             });
         }).observe($('head')[0], { childList: true });
@@ -2180,7 +2504,7 @@ const siteHandlers = {
             const observer = new MutationObserver(mutations => {
                 mutations.forEach(mutation => {
                     Array.from(mutation.addedNodes).forEach((() => {
-                        var _ref = _asyncToGenerator(function* (addedNode) {
+                        var _ref2 = _asyncToGenerator(function* (addedNode) {
                             const $node = $(addedNode);
 
                             if ($node.hasClass('key-list')) {
@@ -2253,8 +2577,8 @@ const siteHandlers = {
                             }
                         });
 
-                        return function (_x) {
-                            return _ref.apply(this, arguments);
+                        return function (_x3) {
+                            return _ref2.apply(this, arguments);
                         };
                     })());
                 });
@@ -2895,7 +3219,7 @@ const siteHandlers = {
 
             // load details
             $('img[src*="steam.svg"]').each((() => {
-                var _ref2 = _asyncToGenerator(function* (index, ele) {
+                var _ref3 = _asyncToGenerator(function* (index, ele) {
                     $.ajax({
                         url: $(ele).closest('tr').find('.item-link').attr('href'),
                         data: { v: 1 },
@@ -2903,8 +3227,8 @@ const siteHandlers = {
                     });
                 });
 
-                return function (_x2, _x3) {
-                    return _ref2.apply(this, arguments);
+                return function (_x4, _x5) {
+                    return _ref3.apply(this, arguments);
                 };
             })());
 
