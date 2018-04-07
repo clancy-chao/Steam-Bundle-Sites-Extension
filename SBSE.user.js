@@ -3,7 +3,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.15.0
+// @version      1.15.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2254,7 +2254,7 @@ const siteHandlers = {
                 });
 
                 // game page
-                if (location.href.includes('/game/')) {
+                if (location.href.includes('/game/') || location.href.includes('/dlc/')) {
                     let discount = 1;
 
                     if (has.call(APIData, 'current_discount') && new Date(APIData.current_discount.until).getTime() > Date.now()) discount = 1 - APIData.current_discount.percent;
@@ -2294,7 +2294,7 @@ const siteHandlers = {
                     const currentURL = location.href;
 
                     if (currentURL.includes('/orders/')) insertBox();
-                    if (currentURL.includes('/bundle/') || currentURL.includes('/game/')) fetchAPIData(productHandler);
+                    if (currentURL.includes('/bundle/') || currentURL.includes('/game/') || currentURL.includes('/dlc/')) fetchAPIData(productHandler);
                 });
             });
         }).observe($('head')[0], { childList: true });
