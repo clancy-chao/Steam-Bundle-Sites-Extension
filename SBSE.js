@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.15.1
+// @version      1.15.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -23,6 +23,7 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.9.2/sweetalert2.min.js
 // @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.9.2/sweetalert2.min.css
+// @resource     currencyFlags https://cdnjs.cloudflare.com/ajax/libs/currency-flags/1.5.0/currency-flags.min.css
 // @connect      store.steampowered.com
 // @connect      www.google.com
 // @connect      www.google.com.tw
@@ -54,8 +55,9 @@ const $ = jQuery.noConflict(true);
 $.fn.pop = [].pop;
 $.fn.shift = [].shift;
 
-// inject swal css
+// inject external css styles
 GM_addStyle(GM_getResourceText('sweetalert2CSS'));
+GM_addStyle(GM_getResourceText('currencyFlags'));
 
 // inject script css
 GM_addStyle(`
@@ -1001,11 +1003,20 @@ const xe = {
                             }
                         });
 
-                        exchangeRate.rates.EUR = 1;
-                        exchangeRate.rates.NTD = exchangeRate.rates.HKD * 3.75;
+                        // get NTD
+                        GM_xmlhttpRequest({
+                            method: 'GET',
+                            url: 'https://www.google.com/search?q=1+EUR+%3D+NTD',
+                            onload: (searchRes) => {
+                                const rate = parseFloat(searchRes.response.split('<div class="vk_ans vk_bk">').pop().slice(0, 7).trim());
+                                const NTDRate = isNaN(rate) ? exchangeRate.rates.HKD * 3.75 : rate;
 
-                        self.exchangeRate = exchangeRate;
-                        GM_setValue('SBSE_xe', JSON.stringify(exchangeRate));
+                                exchangeRate.rates.NTD = NTDRate;
+                                exchangeRate.rates.EUR = 1;
+                                self.exchangeRate = exchangeRate;
+                                GM_setValue('SBSE_xe', JSON.stringify(exchangeRate));
+                            },
+                        });
                     } catch (e) {
                         swal(
                             'Parsing Failed',
@@ -1877,14 +1888,6 @@ const bundleSitesBox = () => {
 
     return $container;
 };
-const siteCache = {
-    fanatical: {
-        doms: ['.account-content'],
-    },
-    bundlestars: {
-        doms: [document],
-    },
-};
 const siteHandlers = {
     indiegala() {
         const $box = bundleSitesBox();
@@ -1997,26 +2000,7 @@ const siteHandlers = {
             bundleSitesBoxHandler.export(extractKeys(), title);
         });
     },
-    fanatical() { /*
-        const cache = siteCache.fanatical;
-        const selectGames = (selector) => {
-            let $results = $();
-            let from = parseInt($('.SBSE_container .selectFrom').val(), 10);
-            let to = parseInt($('.SBSE_container .selectTo').val(), 10);
-
-            if ($.isNumeric(from) && $.isNumeric(to)) {
-                if (from === 0 && to > 0) from = 1;
-                if (from > 0 && to === 0) to = cache.doms.length - 1;
-
-                for (let i = Math.min(from, to); i <= Math.max(from, to); i += 1) {
-                    $results = $results.add(
-                        $(cache.doms[i]).find(selector),
-                    );
-                }
-            }
-
-            return $results;
-        };*/
+    fanatical() {
         let APIData = null;
         const fetchAPIData = async (s, c) => {
             let slug = s;
@@ -2163,40 +2147,6 @@ const siteHandlers = {
                     childList: true,
                     subtree: true,
                 });
-                /*
-                // setup select
-                const $selects = $('.SBSE_container select');
-
-                $selects.empty();
-                $selects.append(new Option('All', 0));
-
-                // individual games
-                $anchor.parent().children('dl').each((index, dl) => {
-                    $selects.append(
-                        new Option($(dl).children().eq(1).text(), cache.doms.push(dl) - 1),
-                    );
-                });
-
-                // bundles
-                $anchor.parent().find('h5').each((index, bundle) => {
-                    const $bundle = $(bundle);
-                    const $tiers = $bundle.parent().find('h6');
-                    const bundleTitle = $bundle.text();
-
-                    if ($tiers.length > 0) {
-                        $tiers.each((i, tier) => {
-                            const tierTitle = $(tier).text().trim();
-
-                            $selects.append(
-                                new Option(`${bundleTitle} ${tierTitle}`, cache.doms.push(tier.parentNode) - 1),
-                            );
-                        });
-                    } else {
-                        $selects.append(
-                            new Option(bundleTitle, cache.doms.push(bundle.parentNode) - 1),
-                        );
-                    }
-                });*/
             }
         };
         const productHandler = () => {
@@ -2222,6 +2172,7 @@ const siteHandlers = {
                     .pricingDetail { background-color: transparent; }
                     .pricingDetail th { padding-top: 10px; }
                     .pricingDetail .cheapest { border-bottom: 1px solid #ff9800; font-weight: bold; }
+                    .pricingDetail .currency-flag { vertical-align: text-bottom; }
                 `);
 
                 const language = config.get('language');
@@ -2255,12 +2206,13 @@ const siteHandlers = {
 
                 // bundle page
                 APIData.bundles.forEach((tier, index) => {
-                    if (APIData.bundles.length > 1) $pricingDetail.append(`<tr><th colspan="2">Tier ${index + 1}</th></tr>`);
+                    if (APIData.bundles.length > 1) $pricingDetail.append(`<tr><th colspan="3">Tier ${index + 1}</th></tr>`);
                     Object.keys(tier.price).forEach((currency) => {
                         const value = tier.price[currency];
 
                         $pricingDetail.append(`
                             <tr class="tier${index + 1}">
+                                <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
                                 <td>${xe.currencies[currency].symbol + (value / 100)}</td>
                                 <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
                             </tr>
@@ -2283,6 +2235,7 @@ const siteHandlers = {
 
                         $pricingDetail.append(`
                             <tr class="tier1">
+                                <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
                                 <td>${xe.currencies[currency].symbol + (value / 100).toFixed(2)}</td>
                                 <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
                             </tr>
@@ -2318,137 +2271,6 @@ const siteHandlers = {
                 });
             });
         }).observe($('head')[0], { childList: true });
-    },
-    bundlestars(firstCalled) {
-        const cache = siteCache.bundlestars;
-        const $anchor = $('h2:contains(Order Keys)');
-        const BSselect = (selector) => {
-            let $results = $();
-            let from = parseInt($('.SBSE_container .selectFrom').val(), 10);
-            let to = parseInt($('.SBSE_container .selectTo').val(), 10);
-
-            if ($.isNumeric(from) && $.isNumeric(to)) {
-                if (from === 0 && to > 0) from = 1;
-                if (from > 0 && to === 0) to = cache.doms.length - 1;
-
-                for (let i = Math.min(from, to); i <= Math.max(from, to); i += 1) {
-                    $results = $results.add(
-                        $(cache.doms[i]).find(selector),
-                    );
-                }
-            }
-
-            return $results;
-        };
-        const extractKeys = () => {
-            const keys = [];
-
-            BSselect('.key-container input').each((index, input) => {
-                const $input = $(input);
-
-                keys.push({
-                    key: $input.val(),
-                    title: $input.closest('.key-container').prev().text().trim(),
-                });
-            });
-
-            return keys;
-        };
-
-        if ($('.SBSE_container').length === 0 && $anchor.length > 0) {
-            // insert textarea
-            $anchor.eq(0).before(bundleSitesBox());
-
-            // inject css
-            GM_addStyle(`
-                .SBSE_container { border: 1px solid #424242; color: #999999; }
-                .SBSE_container > textarea { background-color: #303030; color: #DDD; }
-                .SBSE_container > div > button, .SBSE_container > div > a { width: 80px; }
-                .SBSE_container > div > button, .SBSE_container select, .SBSE_container > div > a { border: 1px solid transparent; background-color: #262626; color: #DEDEDE; }
-                .SBSE_container > div > button:hover, .SBSE_container select:hover, .SBSE_container > div > a:hover { color: #A8A8A8; }
-                .SBSE_container > div > a { text-decoration: none; }
-                .SBSE_container label { color: #DEDEDE; }
-                .SBSE_container select { max-width:120px; height: 30px; }
-                .SBSE_container select, .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
-                .SBSE_container span { margin-top: 5px; }
-            `);
-
-            // narrow buttons
-            $('.SBSE_container > div > button').addClass('narrow');
-
-            // insert bundlestars select
-            $('.SBSE_container > div').append(`
-                <select class="selectTo"></select>
-                <span>${text.selectConnector}</span>
-                <select class="selectFrom"></select>
-            `);
-
-            // button click
-            $('.SBSE_BtnReveal').click(() => {
-                const handler = ($games, callback) => {
-                    const game = $games.shift();
-
-                    if (game) {
-                        if (!game.closest('.ng-hide')) {
-                            game.click();
-                            setTimeout(handler.bind(null, $games, callback), 300);
-                        } else handler($games, callback);
-                    } else setTimeout(callback, 500);
-                };
-
-                bundleSitesBoxHandler.reveal(handler, BSselect('.key-container a[ng-click^="redeemSerial"]'));
-            });
-
-            $('.SBSE_BtnRetrieve').click(() => {
-                bundleSitesBoxHandler.retrieve(extractKeys());
-            });
-            $('.SBSE_BtnExport').click(() => {
-                const $bundleTitle = $('h3.bundle');
-                const title = `BundleStars - ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
-
-                bundleSitesBoxHandler.export(extractKeys(), title);
-            });
-        }
-
-        // setup select
-        const $selects = $('.SBSE_container select');
-
-        $selects.empty();
-        $selects.append(new Option('All', 0));
-        cache.doms = [document];
-        $('hr ~ div > div:not(.ng-hide)').each((index, block) => {
-            const $block = $(block);
-            const $bundle = $block.find('h3');
-            const $tiers = $block.find('h4');
-
-            if ($tiers.length > 1) { // bundles with multiple tiers
-                $tiers.each((i, tier) => {
-                    const $tier = $(tier);
-
-                    $selects.append(
-                        new Option(`${$bundle.text()} ${$tier.text()}`, cache.doms.push($tier.parent()) - 1),
-                    );
-                });
-            } else if ($bundle.length > 0) { // bundles with single tier
-                $selects.append(
-                    new Option($bundle.text(), cache.doms.push($bundle.next()) - 1),
-                );
-            } else { // individual games
-                $selects.append(
-                    new Option($block.find('.title').text(), cache.doms.push($block) - 1),
-                );
-            }
-        });
-
-        if (firstCalled) {
-            new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    Array.from(mutation.removedNodes).forEach((removedNode) => {
-                        if (removedNode.id === 'loading-bar-spinner') siteHandlers.bundlestars();
-                    });
-                });
-            }).observe(document.body, { childList: true });
-        }
     },
     humblebundle() {
         let atDownload = true;
@@ -3098,7 +2920,7 @@ const siteHandlers = {
                 });
                 $steamKey.attr({
                     size: 50,
-                    maxlength: 50,
+                    maxlength: 200,
                 });
 
                 // search for current market price when click dropdown menu
@@ -3120,6 +2942,17 @@ const siteHandlers = {
                     }).then((html) => {
                         $searchResult.append($(html).find('#TableKeys'));
                     });
+                });
+
+                // apply last input price
+                const lastPrice = GM_getValue('SBSE_DIGLastPrice', 20);
+                const $priceField = $('input[name=price]');
+
+                $priceField.val(lastPrice).trigger('input');
+                $('#form_createtrade').submit(() => {
+                    const price = parseInt($priceField.val(), 10);
+
+                    if (price !== lastPrice) GM_setValue('SBSE_DIGLastPrice', price);
                 });
             // result page
             } else {
