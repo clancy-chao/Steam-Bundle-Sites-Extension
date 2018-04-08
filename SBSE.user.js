@@ -3,7 +3,8 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.15.2
+// @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
+// @version      1.15.3
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -13,7 +14,6 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @include      https://www.indiegala.com/gift*
 // @include      https://www.indiegala.com/profile*
 // @include      https://www.indiegala.com/game*
-// @include      http*://*bundlestars.com/*
 // @include      https://www.fanatical.com/*
 // @include      https://www.humblebundle.com/downloads*
 // @include      https://www.humblebundle.com/home/*
