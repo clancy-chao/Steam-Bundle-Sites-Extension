@@ -2,9 +2,9 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
-// @namespace    http://tampermonkey.net/
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
-// @version      1.15.3
+// @namespace    http://tampermonkey.net/
+// @version      1.15.4
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2341,7 +2341,7 @@ const siteHandlers = {
                         var _ref2 = _asyncToGenerator(function* (addedNode) {
                             const $node = $(addedNode);
 
-                            if ($node.hasClass('key-list')) {
+                            if ($node.hasClass('key-list') || $node.find('.key-list').length > 0) {
                                 $node.closest('.whitebox-redux').before($box);
 
                                 // fetch game heading & wrap heading
@@ -2406,6 +2406,33 @@ const siteHandlers = {
                                         }).insertBefore($keyRedeemer.find('.heading-text > h4'));
                                     }
                                 });
+
+                                // override default popups
+                                document.addEventListener('click', function (e) {
+                                    const $target = $(e.target).closest('.keyfield');
+
+                                    if ($target.length > 0 && !$target.hasClass('redeemed')) {
+                                        e.stopPropagation();
+
+                                        const $keyRedeemer = $target.closest('.key-redeemer');
+                                        const machineName = $keyRedeemer.attr('data-machineName');
+                                        const humanName = $keyRedeemer.attr('data-humanName');
+                                        const isOwned = $keyRedeemer.hasClass('SBSE_owned');
+
+                                        if (machineName) {
+                                            if (isOwned) {
+                                                swal({
+                                                    title: text.HBAlreadyOwned,
+                                                    text: text.HBRedeemAlreadyOwned.replace('%title%', humanName),
+                                                    type: 'question',
+                                                    showCancelButton: true
+                                                }).then(function (result) {
+                                                    if (result.value) fetchKey($target, machineName);
+                                                });
+                                            } else fetchKey($target, machineName);
+                                        }
+                                    }
+                                }, true);
 
                                 observer.disconnect();
                             }
@@ -2505,33 +2532,6 @@ const siteHandlers = {
 
             bundleSitesBoxHandler.export(extractKeys(), title);
         });
-
-        // override default popups
-        document.addEventListener('click', e => {
-            const $target = $(e.target).closest('.keyfield');
-
-            if ($target.length > 0 && !$target.hasClass('redeemed')) {
-                e.stopPropagation();
-
-                const $keyRedeemer = $target.closest('.key-redeemer');
-                const machineName = $keyRedeemer.attr('data-machineName');
-                const humanName = $keyRedeemer.attr('data-humanName');
-                const isOwned = $keyRedeemer.hasClass('SBSE_owned');
-
-                if (machineName) {
-                    if (isOwned) {
-                        swal({
-                            title: text.HBAlreadyOwned,
-                            text: text.HBRedeemAlreadyOwned.replace('%title%', humanName),
-                            type: 'question',
-                            showCancelButton: true
-                        }).then(result => {
-                            if (result.value) fetchKey($target, machineName);
-                        });
-                    } else fetchKey($target, machineName);
-                }
-            }
-        }, true);
     },
     dailyindiegame() {
         const MPHideList = JSON.parse(GM_getValue('SBSE_DIGMPHideList') || '[]');
