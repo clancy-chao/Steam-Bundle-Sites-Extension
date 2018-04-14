@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.0.0
+// @version      2.0.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -170,7 +170,7 @@ const eol = "\r\n";
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
 
-const steam = JSON.parse(localStorage.getItem('SBSE_steam', '{}'));
+const steam = JSON.parse(localStorage.getItem('SBSE_steam'0) || '{}');
 const config = {
     data: JSON.parse(GM_getValue('SBSE_config', '{}')),
     set(key, value, callback) {
