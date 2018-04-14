@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      1.15.4
+// @version      2.0.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -22,9 +22,9 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @include      https://groupees.com/purchases
 // @include      https://groupees.com/profile/purchases/*
 // @include      http*://*agiso.com/*
-// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.9.2/sweetalert2.min.js
-// @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.9.2/sweetalert2.min.css
+// @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.js
+// @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.css
 // @resource     currencyFlags https://cdnjs.cloudflare.com/ajax/libs/currency-flags/1.5.0/currency-flags.min.css
 // @connect      store.steampowered.com
 // @connect      www.google.com
@@ -61,32 +61,121 @@ $.fn.shift = [].shift;
 GM_addStyle(GM_getResourceText('sweetalert2CSS'));
 GM_addStyle(GM_getResourceText('currencyFlags'));
 
-// inject script css
+// inject script css styles
 GM_addStyle(`
     pre.SBSE_errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
+
+    /* settings */
+    .SBSE_settings .name { text-align: right; vertical-align: top; }
+    .SBSE_settings .value { text-align: left; }
+    .SBSE_settings .value > * { height: 30px; margin: 0 20px 10px; }
+    .SBSE_settings .switch { position: relative; display: inline-block; width: 60px; }
+    .SBSE_settings .switch input { display: none; }
+    .SBSE_settings .slider {
+        position: absolute;
+        top: 0; right: 0; bottom: 0; left: 0;
+        background-color: #CCC;
+        transition: 0.4s;
+        cursor: pointer;
+    }
+    .SBSE_settings .slider:before {
+        width: 26px; height: 26px;
+        position: absolute;
+        bottom: 2px; left: 2px;
+        background-color: white;
+        transition: 0.4s;
+        content: "";
+    }
+    .SBSE_settings input:checked + .slider { background-color: #2196F3; }
+    .SBSE_settings input:focus + .slider { box-shadow: 0 0 1px #2196F3; }
+    .SBSE_settings input:checked + .slider:before { transform: translateX(30px); }
+    .SBSE_settings > span { display: inline-block; color: white; cursor: pointer; }
+
+    /* container */
+    .SBSE_container {
+        width: 100%; height: 200px;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+    }
+    .SBSE_container > textarea {
+        width: 100%; height: 150px;
+        padding: 5px;
+        border: none;
+        box-sizing: border-box;
+        resize: none;
+        outline: none;
+    }
+    .SBSE_container > div { width: 100%; padding-top: 5px; box-sizing: border-box; }
+    .SBSE_container > div > button, .SBSE_container > div > a {
+        width: 120px;
+        position: relative;
+        margin-right: 10px;
+        line-height: 28px;
+        transition: all 0.5s;
+        box-sizing: border-box;
+        outline: none;
+        cursor: pointer;
+    }
+    .SBSE_container > div > a { display: inline-block; text-align: center; }
+    .SBSE_container label { margin-right: 10px; }
+    #SBSE_BtnSettings {
+        width: 20px; height: 20px;
+        float: right;
+        margin-top: 3px; margin-right: 0; margin-left: 10px;
+        background-color: transparent;
+        background-image: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjwhRE9DVFlQRSBzdmcgIFBVQkxJQyAnLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4nICAnaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkJz48c3ZnIGhlaWdodD0iMzJweCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMzIgMzI7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMycHgiIHhtbDpzcGFjZT0icHJlc2VydmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxnIGlkPSJMYXllcl8xIi8+PGcgaWQ9ImNvZyI+PHBhdGggZD0iTTMyLDE3Ljk2OXYtNGwtNC43ODEtMS45OTJjLTAuMTMzLTAuMzc1LTAuMjczLTAuNzM4LTAuNDQ1LTEuMDk0bDEuOTMtNC44MDVMMjUuODc1LDMuMjUgICBsLTQuNzYyLDEuOTYxYy0wLjM2My0wLjE3Ni0wLjczNC0wLjMyNC0xLjExNy0wLjQ2MUwxNy45NjksMGgtNGwtMS45NzcsNC43MzRjLTAuMzk4LDAuMTQxLTAuNzgxLDAuMjg5LTEuMTYsMC40NjlsLTQuNzU0LTEuOTEgICBMMy4yNSw2LjEyMWwxLjkzOCw0LjcxMUM1LDExLjIxOSw0Ljg0OCwxMS42MTMsNC43MDMsMTIuMDJMMCwxNC4wMzF2NGw0LjcwNywxLjk2MWMwLjE0NSwwLjQwNiwwLjMwMSwwLjgwMSwwLjQ4OCwxLjE4OCAgIGwtMS45MDIsNC43NDJsMi44MjgsMi44MjhsNC43MjMtMS45NDVjMC4zNzksMC4xOCwwLjc2NiwwLjMyNCwxLjE2NCwwLjQ2MUwxNC4wMzEsMzJoNGwxLjk4LTQuNzU4ICAgYzAuMzc5LTAuMTQxLDAuNzU0LTAuMjg5LDEuMTEzLTAuNDYxbDQuNzk3LDEuOTIybDIuODI4LTIuODI4bC0xLjk2OS00Ljc3M2MwLjE2OC0wLjM1OSwwLjMwNS0wLjcyMywwLjQzOC0xLjA5NEwzMiwxNy45Njl6ICAgIE0xNS45NjksMjJjLTMuMzEyLDAtNi0yLjY4OC02LTZzMi42ODgtNiw2LTZzNiwyLjY4OCw2LDZTMTkuMjgxLDIyLDE1Ljk2OSwyMnoiIHN0eWxlPSJmaWxsOiM0RTRFNTA7Ii8+PC9nPjwvc3ZnPg==);
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-origin: border-box;
+        border: none;
+        vertical-align: top;
+    }
+
+    /* spinner button affect */
+    .SBSE_container > div > button:before {
+        width: 20px; height: 20px;
+        content: '';
+        position: absolute;
+        margin-top: 5px;
+        right: 10px;
+        border: 3px solid;
+        border-left-color: transparent;
+        border-radius: 50%;
+        box-sizing: border-box;
+        opacity: 0;
+        transition: opacity 0.5s;
+        animation-duration: 1s;
+        animation-iteration-count: infinite;
+        animation-name: rotate;
+        animation-timing-function: linear;
+    }
+    .SBSE_container > div > button.narrow.working {
+        width: 100px;
+        padding-right: 40px;
+        transition: all 0.5s;
+    }
+    .SBSE_container > div > button.working:before {
+        transition-delay: 0.5s;
+        transition-duration: 1s;
+        opacity: 1;
+    }
+    @keyframes rotate {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 `);
 
 // load up
 const regKey = /(?:(?:([A-Z0-9])(?!\1{4})){5}-){2,5}[A-Z0-9]{5}/g;
 const eol = "\r\n";
-
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
 
 const steam = JSON.parse(localStorage.getItem('SBSE_steam', '{}'));
-const activated = {
-    data: JSON.parse(GM_getValue('SBSE_activated', '[]')),
-    push(key) {
-        this.data.push(key);
-        GM_setValue('SBSE_activated', JSON.stringify(this.data));
-    },
-    check(key) {
-        return this.data.includes(key);
-    }
-};
 const config = {
     data: JSON.parse(GM_getValue('SBSE_config', '{}')),
-    set(key, value, callback = null) {
+    set(key, value, callback) {
         this.data[key] = value;
         GM_setValue('SBSE_config', JSON.stringify(this.data));
 
@@ -104,32 +193,234 @@ const config = {
         if (!has.call(this.data, 'activateAllKeys')) this.data.activateAllKeys = false;
     }
 };
-const keyDetails = {
-    data: {},
-    set(key = '', obj) {
-        if (key.length > 0) {
-            obj.title = has.call(obj, 'title') ? obj.title.trim() : '';
-            if (has.call(obj, 'app')) obj.app = parseInt(obj.app, 10);
-            if (has.call(obj, 'sub')) obj.sub = parseInt(obj.sub, 10);
-            if (has.call(obj, 'url')) {
-                const matched = obj.url.match(/steam.+\/(app|sub)\/(\d+)/);
-
-                if (matched) obj[matched[1]] = parseInt(matched[2], 10);
-            }
-
-            this.data[key] = obj;
-        }
+const i18n = {
+    tchinese: {
+        name: '繁體中文',
+        updateSuccessTitle: '更新成功！',
+        updateSuccess: '成功更新Steam sessionID',
+        successStatus: '成功',
+        successDetail: '無資料',
+        skippedStatus: '跳過',
+        activatedDetail: '已啟動',
+        failStatus: '失敗',
+        failTitle: '糟糕！',
+        failDetailUnexpected: '發生未知錯誤，請稍後再試',
+        failDetailInvalidKey: '序號錯誤',
+        failDetailUsedKey: '序號已被使用',
+        failDetailRateLimited: '啟動受限',
+        failDetailCountryRestricted: '地區限制',
+        failDetailAlreadyOwned: '產品已擁有',
+        failDetailMissingBaseGame: '未擁有主程式',
+        failDetailPS3Required: '需要PS3 啟動',
+        failDetailGiftWallet: '偵測到禮物卡／錢包序號',
+        failDetailParsingFailed: '處理資料發生錯誤，請稍後再試',
+        failDetailRequestFailedNeedUpdate: '請求發生錯誤，請稍後再試<br/>或者嘗試更新SessionID',
+        noItemDetails: '無產品詳細資料',
+        notLoggedInTitle: '未登入',
+        notLoggedInMsg: '請登入Steam 以讓腳本紀錄SessionID',
+        missingTitle: '未發現SessionID',
+        missingMsg: '請問要更新SessionID 嗎？',
+        emptyInput: '未發現Steam 序號',
+        settingsTitle: '設定',
+        settingsAutoUpdateSessionID: '自動更新SessionID',
+        settingsSessionID: '我的SessionID',
+        settingsSyncLibrary: '同步遊戲庫資料',
+        settingsSyncLibraryButton: '同步',
+        settingsLanguage: '語言',
+        settingsPreselectIncludeTitle: '預選包括遊戲名',
+        settingsTitleComesLast: '遊戲名置後',
+        settingsPreselectJoinKeys: '預選合併序號',
+        settingsJoinKeysASFStyle: '合併ASF 格式序號',
+        settingsActivateAllKeys: '不跳過、啟動所有序號',
+        HBAlreadyOwned: '遊戲已擁有',
+        HBRedeemAlreadyOwned: '確定刮開 %title% Steam 序號？',
+        HBActivationRestrictions: '啟動限制',
+        HBDisallowedCountries: '限制以下地區啟動',
+        HBExclusiveCountries: '僅限以下地區啟動',
+        DIGEasyBuyPurchase: '購買',
+        DIGEasyBuySelectAll: '全選',
+        DIGEasyBuySelectCancel: '取消',
+        DIGEasyBuyHideOwned: '隱藏已擁有',
+        DIGEasyBuyShowOwned: '顯示已擁有',
+        DIGEasyBuyLoadAllPages: '加載所有頁',
+        DIGEasyBuyLoading: '加載第%page%頁中',
+        DIGEasyBuyLoadingComplete: '加載完成',
+        DIGButtonPurchasing: '購買中',
+        DIGInsufficientFund: '餘額不足，準備回到帳號頁',
+        DIGMarketSearchResult: '目前市集上架中',
+        DIGRateAllPositive: '全部好評',
+        DIGClickToHideThisRow: '隱藏此上架遊戲',
+        buttonReveal: '刮開',
+        buttonRetrieve: '提取',
+        buttonActivate: '啟動',
+        buttonCopy: '複製',
+        buttonReset: '清空',
+        buttonExport: '匯出',
+        checkboxIncludeGameTitle: '遊戲名',
+        checkboxJoinKeys: '合併',
+        checkboxSkipUsed: '跳過已使用',
+        checkboxSkipOwned: '跳過已擁有',
+        checkboxMarketListings: '上架於市集',
+        selectConnector: '至',
+        markAllAsUsed: '標記全部已使用',
+        syncSuccessTitle: '同步成功',
+        syncSuccess: '成功同步Steam 遊戲庫資料',
+        syncFailTitle: '同步失敗',
+        syncFail: '失敗同步Steam 遊戲庫資料',
+        visitSteam: '前往Steam',
+        lastSyncTime: '已於%seconds% 秒前同步收藏庫'
     },
-    get(key) {
-        return has.call(this.data, key) ? this.data[key] : null;
+    schinese: {
+        name: '简体中文',
+        updateSuccessTitle: '更新成功',
+        updateSuccess: '成功更新Steam sessionID',
+        successStatus: '成功',
+        successDetail: '无信息',
+        activatedDetail: '已激活',
+        skippedStatus: '跳过',
+        failStatus: '失败',
+        failTitle: '糟糕！',
+        failDetailUnexpected: '发生未知错误，请稍后再试',
+        failDetailInvalidKey: '激活码错误',
+        failDetailUsedKey: '激活码已被使用',
+        failDetailRateLimited: '激活受限',
+        failDetailCountryRestricted: '地区限制',
+        failDetailAlreadyOwned: '产品已拥有',
+        failDetailMissingBaseGame: '未拥有基础游戏',
+        failDetailPS3Required: '需要PS3 激活',
+        failDetailGiftWallet: '侦测到礼物卡／钱包激活码',
+        failDetailParsingFailed: '处理资料发生错误，请稍后再试',
+        failDetailRequestFailedNeedUpdate: '请求发生错误，请稍后再试<br/>或者尝试更新SessionID',
+        noItemDetails: '无产品详细信息',
+        notLoggedInTitle: '未登入',
+        notLoggedInMsg: '请登入Steam 以让脚本记录SessionID',
+        missingTitle: '未发现SessionID',
+        missingMsg: '请问要更新SessionID 吗？',
+        emptyInput: '未批配到Steam 激活码',
+        settingsTitle: '设置',
+        settingsAutoUpdateSessionID: '自动更新SessionID',
+        settingsSessionID: '我的SessionID',
+        settingsSyncLibrary: '同步游戏库资料',
+        settingsSyncLibraryButton: '同步',
+        settingsLanguage: '语言',
+        settingsPreselectIncludeTitle: '预选包括游戏名',
+        settingsTitleComesLast: '游戏名置后',
+        settingsPreselectJoinKeys: '预选合并激活码',
+        settingsJoinKeysASFStyle: '合并ASF 格式激活码',
+        settingsActivateAllKeys: '不跳过、激活所有激活码',
+        HBAlreadyOwned: '游戏已拥有',
+        HBRedeemAlreadyOwned: '确定刮开 %title% Steam 激活码？',
+        HBActivationRestrictions: '激活限制',
+        HBDisallowedCountries: '限制以下地区激活',
+        HBExclusiveCountries: '仅限以下地区激活',
+        DIGEasyBuyPurchase: '购买',
+        DIGEasyBuySelectAll: '全选',
+        DIGEasyBuySelectCancel: '取消',
+        DIGEasyBuyHideOwned: '隐藏已拥有',
+        DIGEasyBuyShowOwned: '显示已拥有',
+        DIGEasyBuyLoadAllPages: '加载所有页',
+        DIGEasyBuyLoading: '加载第%page%页中',
+        DIGEasyBuyLoadingComplete: '加载完成',
+        DIGButtonPurchasing: '购买中',
+        DIGInsufficientFund: '余额不足，准备回到账号页',
+        DIGMarketSearchResult: '目前市集上架中',
+        DIGRateAllPositive: '全部好评',
+        DIGClickToHideThisRow: '隐藏此上架游戏',
+        buttonReveal: '刮开',
+        buttonRetrieve: '提取',
+        buttonActivate: '激活',
+        buttonCopy: '复制',
+        buttonReset: '清空',
+        buttonExport: '导出',
+        checkboxIncludeGameTitle: '游戏名',
+        checkboxJoinKeys: '合并',
+        checkboxSkipUsed: '跳过已使用',
+        checkboxSkipOwned: '跳过已拥有',
+        checkboxMarketListings: '上架于市集',
+        selectConnector: '至',
+        markAllAsUsed: '标记全部已使用',
+        syncSuccessTitle: '同步成功',
+        syncSuccess: '成功同步Steam 游戏库资料',
+        syncFailTitle: '同步失败',
+        syncFail: '失败同步Steam 游戏库资料',
+        visitSteam: '前往Steam',
+        lastSyncTime: '已于%seconds% 秒前同步游戏库'
     },
-    isOwned(key) {
-        const detail = this.data[key];
-
-        if (detail && steam.owned.app.includes(detail.app)) return true;
-        if (detail && steam.owned.sub.includes(detail.sub)) return true;
-
-        return false;
+    english: {
+        name: 'English',
+        updateSuccessTitle: 'Update Successful!',
+        updateSuccess: 'Steam sessionID is successfully updated',
+        successStatus: 'Success',
+        successDetail: 'No Detail',
+        activatedDetail: 'Activated',
+        skippedStatus: 'Skipped',
+        failStatus: 'Fail',
+        failTitle: 'Opps!',
+        failDetailUnexpected: 'Unexpected Error',
+        failDetailInvalidKey: 'Invalid Key',
+        failDetailUsedKey: 'Used Key',
+        failDetailRateLimited: 'Rate Limited',
+        failDetailCountryRestricted: 'Country Restricted',
+        failDetailAlreadyOwned: 'Product Already Owned',
+        failDetailMissingBaseGame: 'Missing Base Game',
+        failDetailPS3Required: 'PS3 Activation Required',
+        failDetailGiftWallet: 'Gift Card/Wallet Code Detected',
+        failDetailParsingFailed: 'Result parse failed',
+        failDetailRequestFailedNeedUpdate: 'Request failed, please try again<br/>or update sessionID',
+        noItemDetails: 'No Item Details',
+        notLoggedInTitle: 'Not Logged-In',
+        notLoggedInMsg: 'Please login to Steam so sessionID can be saved',
+        missingTitle: 'Missing SessionID',
+        missingMsg: 'Do you want to update your Steam sessionID?',
+        emptyInput: 'Could not find Steam code',
+        settingsTitle: 'Settings',
+        settingsAutoUpdateSessionID: 'Auto Update SessionID',
+        settingsSessionID: 'Your sessionID',
+        settingsSyncLibrary: 'Sync Library Data',
+        settingsSyncLibraryButton: 'Sync',
+        settingsLanguage: 'Language',
+        settingsPreselectIncludeTitle: 'Pre-select Include Title',
+        settingsTitleComesLast: 'Title Comes Last',
+        settingsPreselectJoinKeys: 'Pre-select Join Keys',
+        settingsJoinKeysASFStyle: 'Join Keys w/ ASF Style',
+        settingsActivateAllKeys: 'No skip & activate all keys',
+        HBAlreadyOwned: 'Game Already Owned',
+        HBRedeemAlreadyOwned: 'Are you sure to redeem %title% Steam Key?',
+        HBActivationRestrictions: 'Activation Restrictions',
+        HBDisallowedCountries: 'Cannot be activated in the following regions',
+        HBExclusiveCountries: 'Can only be activated in the following regions',
+        DIGEasyBuyPurchase: 'Purchase',
+        DIGEasyBuySelectAll: 'Select All',
+        DIGEasyBuySelectCancel: 'Cancel',
+        DIGEasyBuyHideOwned: 'Hide Owned',
+        DIGEasyBuyShowOwned: 'Show Owned',
+        DIGEasyBuyLoadAllPages: 'Load All Pages',
+        DIGEasyBuyLoading: 'Loading page %page%',
+        DIGEasyBuyLoadingComplete: 'Loaded',
+        DIGButtonPurchasing: 'Purchassing',
+        DIGInsufficientFund: 'Insufficient fund, returning to account page',
+        DIGMarketSearchResult: 'Currently listing in marketplace',
+        DIGRateAllPositive: 'Mark All Positive',
+        DIGClickToHideThisRow: 'Hide this game from listings',
+        buttonReveal: 'Reveal',
+        buttonRetrieve: 'Retrieve',
+        buttonActivate: 'Activate',
+        buttonCopy: 'Copy',
+        buttonReset: 'Reset',
+        buttonExport: 'Export',
+        checkboxIncludeGameTitle: 'Game Title',
+        checkboxJoinKeys: 'Join',
+        checkboxSkipUsed: 'Skip Used',
+        checkboxSkipOwned: 'Skip Owned',
+        checkboxMarketListings: 'Market Listings',
+        selectConnector: 'to',
+        markAllAsUsed: 'Mark All as Used',
+        syncSuccessTitle: 'Sync Successful',
+        syncSuccess: 'Successfully sync Steam library data',
+        syncFailTitle: 'Sync failed',
+        syncFail: 'Failed to sync Steam library data',
+        visitSteam: 'Visit Steam',
+        lastSyncTime: 'Library data synced %seconds% seconds ago'
     }
 };
 const ISO2 = {
@@ -982,7 +1273,7 @@ const xe = {
             symbol: 'US$'
         }
     },
-    get() {
+    getRate() {
         const self = this;
 
         GM_xmlhttpRequest({
@@ -1040,309 +1331,22 @@ const xe = {
         });
     },
     init() {
-        const updateTimer = 12 * 60 * 60 * 1000;
+        const updateTimer = 12 * 60 * 60 * 1000; // update every 12 hours
 
-        if (Object.keys(this.exchangeRate).length === 0 || this.exchangeRate.lastUpdate < Date.now() - updateTimer) this.get();
+        if (Object.keys(this.exchangeRate).length === 0 || this.exchangeRate.lastUpdate < Date.now() - updateTimer) this.getRate();
     }
 };
 
 config.init();
 xe.init();
 
-// text
-const i18n = {
-    tchinese: {
-        name: '繁體中文',
-        updateSuccessTitle: '更新成功！',
-        updateSuccess: '成功更新Steam sessionID',
-        successStatus: '成功',
-        successDetail: '無資料',
-        skippedStatus: '跳過',
-        activatedDetail: '已啟動',
-        failStatus: '失敗',
-        failTitle: '糟糕！',
-        failDetailUnexpected: '發生未知錯誤，請稍後再試',
-        failDetailInvalidKey: '序號錯誤',
-        failDetailUsedKey: '序號已被使用',
-        failDetailRateLimited: '啟動受限',
-        failDetailCountryRestricted: '地區限制',
-        failDetailAlreadyOwned: '產品已擁有',
-        failDetailMissingBaseGame: '未擁有主程式',
-        failDetailPS3Required: '需要PS3 啟動',
-        failDetailGiftWallet: '偵測到禮物卡／錢包序號',
-        failDetailParsingFailed: '處理資料發生錯誤，請稍後再試',
-        failDetailRequestFailedNeedUpdate: '請求發生錯誤，請稍後再試<br/>或者嘗試更新SessionID',
-        noItemDetails: '無產品詳細資料',
-        notLoggedInTitle: '未登入',
-        notLoggedInMsg: '請登入Steam 以讓腳本紀錄SessionID',
-        missingTitle: '未發現SessionID',
-        missingMsg: '請問要更新SessionID 嗎？',
-        emptyInput: '未發現Steam 序號',
-        settingsTitle: '設定',
-        settingsAutoUpdateSessionID: '自動更新SessionID',
-        settingsSessionID: '我的SessionID',
-        settingsSyncLibrary: '同步遊戲庫資料',
-        settingsSyncLibraryButton: '同步',
-        settingsLanguage: '語言',
-        settingsPreselectIncludeTitle: '預選包括遊戲名',
-        settingsTitleComesLast: '遊戲名置後',
-        settingsPreselectJoinKeys: '預選合併序號',
-        settingsJoinKeysASFStyle: '合併ASF 格式序號',
-        settingsActivateAllKeys: '不跳過、啟動所有序號',
-        HBAlreadyOwned: '遊戲已擁有',
-        HBRedeemAlreadyOwned: '確定刮開 %title% Steam 序號？',
-        HBActivationRestrictions: '啟動限制',
-        HBDisallowedCountries: '限制以下地區啟動',
-        HBExclusiveCountries: '僅限以下地區啟動',
-        DIGEasyBuyPurchase: '購買',
-        DIGEasyBuySelectAll: '全選',
-        DIGEasyBuySelectCancel: '取消',
-        DIGEasyBuyHideOwned: '隱藏已擁有',
-        DIGEasyBuyShowOwned: '顯示已擁有',
-        DIGEasyBuyLoadAllPages: '加載所有頁',
-        DIGEasyBuyLoading: '加載第%page%頁中',
-        DIGEasyBuyLoadingComplete: '加載完成',
-        DIGButtonPurchasing: '購買中',
-        DIGInsufficientFund: '餘額不足，準備回到帳號頁',
-        DIGMarketSearchResult: '目前市集上架中',
-        DIGRateAllPositive: '全部好評',
-        DIGClickToHideThisRow: '隱藏此上架遊戲',
-        buttonReveal: '刮開',
-        buttonRetrieve: '提取',
-        buttonActivate: '啟動',
-        buttonCopy: '複製',
-        buttonReset: '清空',
-        buttonExport: '匯出',
-        checkboxIncludeGameTitle: '遊戲名',
-        checkboxJoinKeys: '合併',
-        checkboxSkipUsed: '跳過已使用',
-        checkboxSkipOwned: '跳過已擁有',
-        checkboxMarketListings: '上架於市集',
-        selectConnector: '至',
-        markAllAsUsed: '標記全部已使用',
-        syncSuccessTitle: '同步成功',
-        syncSuccess: '成功同步Steam 遊戲庫資料',
-        syncFailTitle: '同步失敗',
-        syncFail: '失敗同步Steam 遊戲庫資料',
-        visitSteam: '前往Steam',
-        lastSyncTime: '已於%seconds% 秒前同步收藏庫'
-    },
-    schinese: {
-        name: '简体中文',
-        updateSuccessTitle: '更新成功',
-        updateSuccess: '成功更新Steam sessionID',
-        successStatus: '成功',
-        successDetail: '无信息',
-        activatedDetail: '已激活',
-        skippedStatus: '跳过',
-        failStatus: '失败',
-        failTitle: '糟糕！',
-        failDetailUnexpected: '发生未知错误，请稍后再试',
-        failDetailInvalidKey: '激活码错误',
-        failDetailUsedKey: '激活码已被使用',
-        failDetailRateLimited: '激活受限',
-        failDetailCountryRestricted: '地区限制',
-        failDetailAlreadyOwned: '产品已拥有',
-        failDetailMissingBaseGame: '未拥有基础游戏',
-        failDetailPS3Required: '需要PS3 激活',
-        failDetailGiftWallet: '侦测到礼物卡／钱包激活码',
-        failDetailParsingFailed: '处理资料发生错误，请稍后再试',
-        failDetailRequestFailedNeedUpdate: '请求发生错误，请稍后再试<br/>或者尝试更新SessionID',
-        noItemDetails: '无产品详细信息',
-        notLoggedInTitle: '未登入',
-        notLoggedInMsg: '请登入Steam 以让脚本记录SessionID',
-        missingTitle: '未发现SessionID',
-        missingMsg: '请问要更新SessionID 吗？',
-        emptyInput: '未批配到Steam 激活码',
-        settingsTitle: '设置',
-        settingsAutoUpdateSessionID: '自动更新SessionID',
-        settingsSessionID: '我的SessionID',
-        settingsSyncLibrary: '同步游戏库资料',
-        settingsSyncLibraryButton: '同步',
-        settingsLanguage: '语言',
-        settingsPreselectIncludeTitle: '预选包括游戏名',
-        settingsTitleComesLast: '游戏名置后',
-        settingsPreselectJoinKeys: '预选合并激活码',
-        settingsJoinKeysASFStyle: '合并ASF 格式激活码',
-        settingsActivateAllKeys: '不跳过、激活所有激活码',
-        HBAlreadyOwned: '游戏已拥有',
-        HBRedeemAlreadyOwned: '确定刮开 %title% Steam 激活码？',
-        HBActivationRestrictions: '激活限制',
-        HBDisallowedCountries: '限制以下地区激活',
-        HBExclusiveCountries: '仅限以下地区激活',
-        DIGEasyBuyPurchase: '购买',
-        DIGEasyBuySelectAll: '全选',
-        DIGEasyBuySelectCancel: '取消',
-        DIGEasyBuyHideOwned: '隐藏已拥有',
-        DIGEasyBuyShowOwned: '显示已拥有',
-        DIGEasyBuyLoadAllPages: '加载所有页',
-        DIGEasyBuyLoading: '加载第%page%页中',
-        DIGEasyBuyLoadingComplete: '加载完成',
-        DIGButtonPurchasing: '购买中',
-        DIGInsufficientFund: '余额不足，准备回到账号页',
-        DIGMarketSearchResult: '目前市集上架中',
-        DIGRateAllPositive: '全部好评',
-        DIGClickToHideThisRow: '隐藏此上架游戏',
-        buttonReveal: '刮开',
-        buttonRetrieve: '提取',
-        buttonActivate: '激活',
-        buttonCopy: '复制',
-        buttonReset: '清空',
-        buttonExport: '导出',
-        checkboxIncludeGameTitle: '游戏名',
-        checkboxJoinKeys: '合并',
-        checkboxSkipUsed: '跳过已使用',
-        checkboxSkipOwned: '跳过已拥有',
-        checkboxMarketListings: '上架于市集',
-        selectConnector: '至',
-        markAllAsUsed: '标记全部已使用',
-        syncSuccessTitle: '同步成功',
-        syncSuccess: '成功同步Steam 游戏库资料',
-        syncFailTitle: '同步失败',
-        syncFail: '失败同步Steam 游戏库资料',
-        visitSteam: '前往Steam',
-        lastSyncTime: '已于%seconds% 秒前同步游戏库'
-    },
-    english: {
-        name: 'English',
-        updateSuccessTitle: 'Update Successful!',
-        updateSuccess: 'Steam sessionID is successfully updated',
-        successStatus: 'Success',
-        successDetail: 'No Detail',
-        activatedDetail: 'Activated',
-        skippedStatus: 'Skipped',
-        failStatus: 'Fail',
-        failTitle: 'Opps!',
-        failDetailUnexpected: 'Unexpected Error',
-        failDetailInvalidKey: 'Invalid Key',
-        failDetailUsedKey: 'Used Key',
-        failDetailRateLimited: 'Rate Limited',
-        failDetailCountryRestricted: 'Country Restricted',
-        failDetailAlreadyOwned: 'Product Already Owned',
-        failDetailMissingBaseGame: 'Missing Base Game',
-        failDetailPS3Required: 'PS3 Activation Required',
-        failDetailGiftWallet: 'Gift Card/Wallet Code Detected',
-        failDetailParsingFailed: 'Result parse failed',
-        failDetailRequestFailedNeedUpdate: 'Request failed, please try again<br/>or update sessionID',
-        noItemDetails: 'No Item Details',
-        notLoggedInTitle: 'Not Logged-In',
-        notLoggedInMsg: 'Please login to Steam so sessionID can be saved',
-        missingTitle: 'Missing SessionID',
-        missingMsg: 'Do you want to update your Steam sessionID?',
-        emptyInput: 'Could not find Steam code',
-        settingsTitle: 'Settings',
-        settingsAutoUpdateSessionID: 'Auto Update SessionID',
-        settingsSessionID: 'Your sessionID',
-        settingsSyncLibrary: 'Sync Library Data',
-        settingsSyncLibraryButton: 'Sync',
-        settingsLanguage: 'Language',
-        settingsPreselectIncludeTitle: 'Pre-select Include Title',
-        settingsTitleComesLast: 'Title Comes Last',
-        settingsPreselectJoinKeys: 'Pre-select Join Keys',
-        settingsJoinKeysASFStyle: 'Join Keys w/ ASF Style',
-        settingsActivateAllKeys: 'No skip & activate all keys',
-        HBAlreadyOwned: 'Game Already Owned',
-        HBRedeemAlreadyOwned: 'Are you sure to redeem %title% Steam Key?',
-        HBActivationRestrictions: 'Activation Restrictions',
-        HBDisallowedCountries: 'Cannot be activated in the following regions',
-        HBExclusiveCountries: 'Can only be activated in the following regions',
-        DIGEasyBuyPurchase: 'Purchase',
-        DIGEasyBuySelectAll: 'Select All',
-        DIGEasyBuySelectCancel: 'Cancel',
-        DIGEasyBuyHideOwned: 'Hide Owned',
-        DIGEasyBuyShowOwned: 'Show Owned',
-        DIGEasyBuyLoadAllPages: 'Load All Pages',
-        DIGEasyBuyLoading: 'Loading page %page%',
-        DIGEasyBuyLoadingComplete: 'Loaded',
-        DIGButtonPurchasing: 'Purchassing',
-        DIGInsufficientFund: 'Insufficient fund, returning to account page',
-        DIGMarketSearchResult: 'Currently listing in marketplace',
-        DIGRateAllPositive: 'Mark All Positive',
-        DIGClickToHideThisRow: 'Hide this game from listings',
-        buttonReveal: 'Reveal',
-        buttonRetrieve: 'Retrieve',
-        buttonActivate: 'Activate',
-        buttonCopy: 'Copy',
-        buttonReset: 'Reset',
-        buttonExport: 'Export',
-        checkboxIncludeGameTitle: 'Game Title',
-        checkboxJoinKeys: 'Join',
-        checkboxSkipUsed: 'Skip Used',
-        checkboxSkipOwned: 'Skip Owned',
-        checkboxMarketListings: 'Market Listings',
-        selectConnector: 'to',
-        markAllAsUsed: 'Mark All as Used',
-        syncSuccessTitle: 'Sync Successful',
-        syncSuccess: 'Successfully sync Steam library data',
-        syncFailTitle: 'Sync failed',
-        syncFail: 'Failed to sync Steam library data',
-        visitSteam: 'Visit Steam',
-        lastSyncTime: 'Library data synced %seconds% seconds ago'
-    }
-};
 let text = has.call(i18n, config.get('language')) ? i18n[config.get('language')] : i18n.english;
 
-// inject settings panel css
-GM_addStyle(`
-    .SBSE_settings .name { text-align: right; vertical-align: top; }
-    .SBSE_settings .value { text-align: left; }
-    .SBSE_settings .value > * { height: 30px; margin: 0 20px 10px; }
-    .SBSE_settings .switch { position: relative; display: inline-block; width: 60px; }
-    .SBSE_settings .switch input { display: none; }
-    .SBSE_settings .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #ccc;
-        transition: 0.4s;
-    }
-    .SBSE_settings .slider:before {
-        position: absolute;
-        content: "";
-        height: 26px;
-        width: 26px;
-        left: 2px;
-        bottom: 2px;
-        background-color: white;
-        transition: 0.4s;
-    }
-    .SBSE_settings input:checked + .slider { background-color: #2196F3; }
-    .SBSE_settings input:focus + .slider { box-shadow: 0 0 1px #2196F3; }
-    .SBSE_settings input:checked + .slider:before { transform: translateX(30px); }
-    .SBSE_settings > span { display: inline-block; cursor: pointer; color: white; }
-`);
-
 // functions
-const getSessionID = () => {
-    GM_xmlhttpRequest({
-        method: 'GET',
-        url: 'http://store.steampowered.com/',
-        onload: res => {
-            if (res.status === 200) {
-                const accountID = res.response.match(/g_AccountID = (\d+)/).pop();
-                const sessionID = res.response.match(/g_sessionID = "(\w+)"/).pop();
-
-                if (accountID > 0) config.set('sessionID', sessionID);else {
-                    swal({
-                        title: text.notLoggedInTitle,
-                        text: text.notLoggedInMsg,
-                        type: 'error',
-                        showCancelButton: true
-                    }).then(() => {
-                        window.open('http://store.steampowered.com/');
-                    });
-                }
-            }
-        }
-    });
-};
 const syncLibrary = (notify = true) => {
     GM_xmlhttpRequest({
         method: 'GET',
-        url: `http://store.steampowered.com/dynamicstore/userdata/t=${Math.random()}`,
+        url: `https://store.steampowered.com/dynamicstore/userdata/t=${Math.random()}`,
         onload: res => {
             try {
                 const data = JSON.parse(res.response);
@@ -1379,8 +1383,31 @@ const syncLibrary = (notify = true) => {
                     confirmButtonText: text.visitSteam,
                     showCancelButton: true
                 }).then(result => {
-                    if (result.value === true) window.open('http://store.steampowered.com/');
+                    if (result.value === true) window.open('https://store.steampowered.com/');
                 });
+            }
+        }
+    });
+};
+const getSessionID = () => {
+    GM_xmlhttpRequest({
+        method: 'GET',
+        url: 'https://store.steampowered.com/',
+        onload: res => {
+            if (res.status === 200) {
+                const accountID = res.response.match(/g_AccountID = (\d+)/).pop();
+                const sessionID = res.response.match(/g_sessionID = "(\w+)"/).pop();
+
+                if (accountID > 0) config.set('sessionID', sessionID);else {
+                    swal({
+                        title: text.notLoggedInTitle,
+                        text: text.notLoggedInMsg,
+                        type: 'error',
+                        showCancelButton: true
+                    }).then(result => {
+                        if (result.value === true) window.open('https://store.steampowered.com/');
+                    });
+                }
             }
         }
     });
@@ -1528,325 +1555,177 @@ const settings = {
         });
     }
 };
-const activateHandler = {
-    keys: [],
-    results: {},
-    updateResults(txt = null) {
-        const $textarea = $('.SBSE_container > textarea');
-
-        if (txt) $textarea.val(txt);else {
-            const results = this.results;
-            const parsed = [];
-
-            Object.values(results).forEach(result => {
-                parsed.push(result.join(' | '));
-            });
-
-            $textarea.val(parsed.join(eol));
-        }
+const activator = {
+    activated: JSON.parse(GM_getValue('SBSE_activated', '[]')),
+    isActivated(key) {
+        return this.activated.includes(key);
     },
-    getResultStatus(result) {
-        let status = text.failStatus;
-        let statusMsg = text.failDetailUnexpected;
-        const errors = {
-            14: text.failDetailInvalidKey,
-            15: text.failDetailUsedKey,
-            53: text.failDetailRateLimited,
-            13: text.failDetailCountryRestricted,
-            9: text.failDetailAlreadyOwned,
-            24: text.failDetailMissingBaseGame,
-            36: text.failDetailPS3Required,
-            50: text.failDetailGiftWallet
-        };
+    pushActivated(key) {
+        this.activated.push(key);
+        GM_setValue('SBSE_activated', JSON.stringify(this.activated));
+    },
+    keyDetails: {},
+    isOwned(key) {
+        return has.call(this.keyDetails, key) ? this.keyDetails[key].owned : false;
+    },
+    pushKeyDetails(data) {
+        if (!has.call(this.keyDetails, data.key)) this.keyDetails[data.key] = data;
+    },
+    getKeyDetails(key) {
+        return has.call(this.keyDetails, key) ? this.keyDetails[key] : null;
+    },
+    results: [],
+    resultDetails(result) {
+        // result from Steam
+        if (result.sbse !== true) {
+            // get status
+            let status = text.failStatus;
+            let statusMsg = text.failDetailUnexpected;
+            const errorCode = result.purchase_result_details;
+            const errors = {
+                14: text.failDetailInvalidKey,
+                15: text.failDetailUsedKey,
+                53: text.failDetailRateLimited,
+                13: text.failDetailCountryRestricted,
+                9: text.failDetailAlreadyOwned,
+                24: text.failDetailMissingBaseGame,
+                36: text.failDetailPS3Required,
+                50: text.failDetailGiftWallet
+            };
 
-        if (result.success === 1) {
-            status = text.successStatus;
-            statusMsg = text.successDetail;
-        } else if (result.success === 2) {
-            if (has.call(errors, result.purchase_result_details)) {
-                statusMsg = errors[result.purchase_result_details];
+            if (result.success === 1) {
+                status = text.successStatus;
+                statusMsg = text.successDetail;
+            } else if (result.success === 2) {
+                if (has.call(errors, errorCode)) statusMsg = errors[errorCode];
             }
+
+            result.status = `${status}/${statusMsg}`;
+
+            // get description
+            const info = result.purchase_receipt_info;
+            const chuncks = [];
+
+            if (info && info.line_items) {
+                info.line_items.forEach(item => {
+                    const chunk = [];
+
+                    if (item.packageid > 0) chunk.push(`sub: ${item.packageid}`);
+                    if (item.appid > 0) chunk.push(`app: ${item.appid}`);
+                    chunk.push(item.line_item_description);
+
+                    chuncks.push(chunk.join(' '));
+                });
+            }
+
+            result.descripton = chuncks.join(', ');
         }
 
-        return `${status}/${statusMsg}`;
+        const temp = [result.key];
+
+        if (result.status) temp.push(result.status);
+        if (result.descripton) temp.push(result.descripton);
+
+        return temp.join(' | ');
     },
-    getResultItems(info) {
-        const descriptions = [];
+    activate(keys, callback) {
+        this.results.length = 0;
 
-        if (info && info.line_items) {
-            info.line_items.forEach(item => {
-                const description = [];
+        const updateResults = () => {
+            $('.SBSE_container > textarea').val(this.results.concat(keys).join(eol));
+        };
+        const activateHandler = () => {
+            const key = keys.shift();
 
-                if (item.packageid > 0) description.push(`sub: ${item.packageid}`);
-                if (item.appid > 0) description.push(`app: ${item.appid}`);
-                description.push(item.line_item_description);
+            if (key) {
+                if (this.isActivated(key)) {
+                    this.results.push(this.resultDetails({
+                        sbse: true,
+                        key,
+                        status: `${text.skippedStatus}/${text.activatedDetail}`,
+                        descripton: text.noItemDetails
+                    }));
+                    updateResults();
 
-                descriptions.push(description.join(' '));
-            });
-        }
+                    // next key
+                    activateHandler();
+                } else if (this.isOwned(key) && !config.get('activateAllKeys')) {
+                    const detail = this.getKeyDetails(key);
+                    const description = [];
 
-        return descriptions.join(', ');
-    },
-    activateKey(callback) {
-        const self = this;
-        const key = self.keys.shift();
+                    ['app', 'sub'].forEach(type => {
+                        if (has.call(detail, type)) description.push(`${type}: ${detail[type]} ${detail.title}`);
+                    });
 
-        if (key) {
-            if (activated.check(key)) {
-                self.results[key].push(`${text.skippedStatus}/${text.activatedDetail}`, text.noItemDetails);
-                self.updateResults();
+                    this.results.push(this.resultDetails({
+                        sbse: true,
+                        key,
+                        status: `${text.skippedStatus}/${text.failDetailAlreadyOwned}`,
+                        descripton: description.join()
+                    }));
+                    updateResults();
 
-                // next key
-                self.activateKey(callback);
-            } else if (keyDetails.isOwned(key) && !config.get('activateAllKeys')) {
-                const detail = keyDetails.get(key);
-                const itemDetail = `${detail.app || detail.sub}, ${detail.title}`;
+                    // next key
+                    activateHandler();
+                } else {
+                    const self = this;
 
-                self.results[key].push(`${text.skippedStatus}/${text.failDetailAlreadyOwned}`, itemDetail);
-                self.updateResults();
-
-                // next key
-                self.activateKey(callback);
-            } else {
-                GM_xmlhttpRequest({
-                    method: 'POST',
-                    url: 'https://store.steampowered.com/account/ajaxregisterkey/',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                        Origin: 'https://store.steampowered.com',
-                        Referer: 'https://store.steampowered.com/account/registerkey'
-                    },
-                    data: `product_key=${key}&sessionid=${config.get('sessionID')}`,
-                    onload: res => {
-                        if (res.status === 200) {
-                            let status = '';
-                            let items = '';
-
-                            try {
+                    GM_xmlhttpRequest({
+                        method: 'POST',
+                        url: 'https://store.steampowered.com/account/ajaxregisterkey/',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                            Origin: 'https://store.steampowered.com',
+                            Referer: 'https://store.steampowered.com/account/registerkey'
+                        },
+                        data: `product_key=${key}&sessionid=${config.get('sessionID')}`,
+                        onload: res => {
+                            if (res.status === 200) {
                                 const result = JSON.parse(res.response);
-
-                                status = self.getResultStatus(result);
-                                items = self.getResultItems(result.purchase_receipt_info);
 
                                 // update activated
                                 const failCode = result.purchase_result_details;
                                 if (result.success === 1 || [14, 15, 9].includes(failCode)) {
-                                    activated.push(key);
+                                    self.pushActivated(key);
 
                                     // dispatch activated event
                                     $(document).trigger('activated', [key, result]);
                                 }
-                            } catch (e) {
-                                status = `${text.failStatus}/${text.failDetailParsingFailed}`;
-                                items = text.noItemDetails;
+
+                                result.key = key;
+                                this.results.push(this.resultDetails(result));
+                                updateResults();
+
+                                // next key
+                                setTimeout(activateHandler.bind(self), 2000);
+                            } else {
+                                const errorMsg = [];
+
+                                errorMsg.push('<pre class="SBSE_errorMsg">');
+                                errorMsg.push(`sessionID: ${config.get('sessionID') + eol}`);
+                                errorMsg.push(`autoUpdate: ${config.get('autoUpdateSessionID') + eol}`);
+                                errorMsg.push(`status: ${res.status + eol}`);
+                                errorMsg.push(`response: ${res.response + eol}`);
+                                errorMsg.push('</pre>');
+
+                                swal({
+                                    title: text.failTitle,
+                                    html: text.failDetailRequestFailedNeedUpdate + eol + errorMsg.join(''),
+                                    type: 'error'
+                                });
+                                getSessionID();
+                                if (typeof callback === 'function') callback();
                             }
-
-                            self.results[key].push(status, items);
-                            self.updateResults();
-
-                            // next key
-                            setTimeout(self.activateKey.bind(self, callback), 2000);
-                        } else {
-                            const errorMsg = [];
-
-                            errorMsg.push('<pre class="SBSE_errorMsg">');
-                            errorMsg.push(`sessionID: ${config.get('sessionID') + eol}`);
-                            errorMsg.push(`autoUpdate: ${config.get('autoUpdateSessionID') + eol}`);
-                            errorMsg.push(`status: ${res.status + eol}`);
-                            errorMsg.push(`response: ${res.response + eol}`);
-                            errorMsg.push('</pre>');
-
-                            swal({
-                                title: text.failTitle,
-                                html: text.failDetailRequestFailedNeedUpdate + eol + errorMsg.join(''),
-                                type: 'error'
-                            });
-                            getSessionID();
-                            callback();
                         }
-                    }
-                });
-            }
-        } else callback();
-    },
-    activateKeys(input, callback) {
-        const self = this;
-        const keys = unique(input.match(regKey));
-
-        if (keys.length > 0) {
-            keys.forEach(key => {
-                self.results[key] = [key];
-            });
-            self.keys = Object.keys(self.results);
-            self.updateResults();
-            self.activateKey(callback);
-        } else {
-            self.updateResults(text.emptyInput);
-            callback();
-        }
-    }
-};
-const bundleSitesBoxHandler = {
-    reveal(handler, $games) {
-        const $reveal = $('.SBSE_BtnReveal');
-
-        $reveal.addClass('working');
-
-        handler($games, () => {
-            $reveal.removeClass('working');
-            $('.SBSE_BtnRetrieve').click();
-        });
-    },
-    retrieve(data) {
-        if (data.length > 0) {
-            const includeTitle = !!$('.SBSE_ChkTitle:checked').length;
-            const joinKeys = !!$('.SBSE_ChkJoin:checked').length;
-            const separator = joinKeys ? ',' : eol;
-            const prefix = joinKeys && config.get('joinKeysASFStyle') ? '!redeem ' : '';
-            const keys = [];
-
-            data.forEach(d => {
-                if (typeof d === 'string') {
-                    keys.push(d);
-                } else {
-                    const temp = [d.key];
-
-                    if (includeTitle) temp.unshift(d.title);
-                    if (config.get('titleComesLast')) temp.reverse();
-
-                    keys.push(temp.join(', '));
+                    });
                 }
-            });
+            } else if (typeof callback === 'function') callback();
+        };
 
-            $('.SBSE_container > textarea').val(prefix + keys.join(separator));
-        }
-    },
-    activate(e) {
-        const $self = $(e.delegateTarget);
-        const $textarea = $('.SBSE_container > textarea');
-        let input = $textarea.val().trim();
-
-        if (input.length === 0) {
-            $('.SBSE_BtnRetrieve').click();
-            input = $textarea.val();
-        }
-
-        $self.prop('disabled', true).addClass('working');
-        $textarea.attr('disabled', '');
-
-        activateHandler.activateKeys(input, () => {
-            $self.prop('disabled', false).removeClass('working');
-            $textarea.removeAttr('disabled');
-        });
-    },
-    copy() {
-        $('.SBSE_container > textarea').select();
-        document.execCommand('copy');
-    },
-    reset() {
-        $('.SBSE_container > textarea').val('');
-    },
-    export(data, title) {
-        // data: [{key: ..., title: ...}, ...]
-        const $export = $('.SBSE_BtnExport');
-
-        $export.removeAttr('href').removeAttr('download');
-
-        if (Array.isArray(data) && data.length > 0) {
-            const filename = title.replace(/[\\/:*?"<>|!]/g, '');
-            const formattedData = data.map(line => `${line.title.replace(/,/g, ' ')},${line.key}`).join(eol);
-
-            $export.attr('href', `data:text/csv;charset=utf-8,\ufeff${encodeURIComponent(formattedData)}`).attr('download', `${filename}.csv`);
-        }
-    },
-    settings() {
-        settings.display();
+        activateHandler();
     }
 };
-const bundleSitesBox = () => {
-    GM_addStyle(`
-        .SBSE_container {
-            width: 100%;
-            height: 200px;
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-        }
-        .SBSE_container > textarea {
-            width: 100%;
-            height: 150px;
-            padding: 5px;
-            border: none;
-            box-sizing: border-box;
-            resize: none;
-            outline: none;
-        }
-        .SBSE_container > div { width: 100%; padding-top: 5px; box-sizing: border-box; }
-        .SBSE_container > div > button, .SBSE_container > div > a {
-            width: 120px;
-            position: relative;
-            margin-right: 10px;
-            line-height: 28px;
-            box-sizing: border-box;
-            outline: none;
-            cursor: pointer;
-            transition: all 0.5s;
-        }
-        .SBSE_container > div > a { display: inline-block; text-align: center; }
-        .SBSE_container label { margin-right: 10px; }
-        #SBSE_BtnSettings {
-            width: 20px;
-            height: 20px;
-            float: right;
-            margin-top: 3px;
-            margin-right: 0;
-            margin-left: 10px;
-            background-color: transparent;
-            background-image: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjwhRE9DVFlQRSBzdmcgIFBVQkxJQyAnLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4nICAnaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkJz48c3ZnIGhlaWdodD0iMzJweCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMzIgMzI7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMycHgiIHhtbDpzcGFjZT0icHJlc2VydmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxnIGlkPSJMYXllcl8xIi8+PGcgaWQ9ImNvZyI+PHBhdGggZD0iTTMyLDE3Ljk2OXYtNGwtNC43ODEtMS45OTJjLTAuMTMzLTAuMzc1LTAuMjczLTAuNzM4LTAuNDQ1LTEuMDk0bDEuOTMtNC44MDVMMjUuODc1LDMuMjUgICBsLTQuNzYyLDEuOTYxYy0wLjM2My0wLjE3Ni0wLjczNC0wLjMyNC0xLjExNy0wLjQ2MUwxNy45NjksMGgtNGwtMS45NzcsNC43MzRjLTAuMzk4LDAuMTQxLTAuNzgxLDAuMjg5LTEuMTYsMC40NjlsLTQuNzU0LTEuOTEgICBMMy4yNSw2LjEyMWwxLjkzOCw0LjcxMUM1LDExLjIxOSw0Ljg0OCwxMS42MTMsNC43MDMsMTIuMDJMMCwxNC4wMzF2NGw0LjcwNywxLjk2MWMwLjE0NSwwLjQwNiwwLjMwMSwwLjgwMSwwLjQ4OCwxLjE4OCAgIGwtMS45MDIsNC43NDJsMi44MjgsMi44MjhsNC43MjMtMS45NDVjMC4zNzksMC4xOCwwLjc2NiwwLjMyNCwxLjE2NCwwLjQ2MUwxNC4wMzEsMzJoNGwxLjk4LTQuNzU4ICAgYzAuMzc5LTAuMTQxLDAuNzU0LTAuMjg5LDEuMTEzLTAuNDYxbDQuNzk3LDEuOTIybDIuODI4LTIuODI4bC0xLjk2OS00Ljc3M2MwLjE2OC0wLjM1OSwwLjMwNS0wLjcyMywwLjQzOC0xLjA5NEwzMiwxNy45Njl6ICAgIE0xNS45NjksMjJjLTMuMzEyLDAtNi0yLjY4OC02LTZzMi42ODgtNiw2LTZzNiwyLjY4OCw2LDZTMTkuMjgxLDIyLDE1Ljk2OSwyMnoiIHN0eWxlPSJmaWxsOiM0RTRFNTA7Ii8+PC9nPjwvc3ZnPg==);
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-origin: border-box;
-            border: none;
-            vertical-align: top;
-        }
-    `);
-
-    // spinner button affect
-    GM_addStyle(`
-        .SBSE_container > div > button:before {
-            content: '';
-            position: absolute;
-            margin-top: 5px;
-            right: 10px;
-            width: 20px;
-            height: 20px;
-            border: 3px solid;
-            border-left-color: transparent;
-            border-radius: 50%;
-            box-sizing: border-box;
-            opacity: 0;
-            transition: opacity 0.5s;
-            animation-duration: 1s;
-            animation-iteration-count: infinite;
-            animation-name: rotate;
-            animation-timing-function: linear;
-        }
-        .SBSE_container > div > button.narrow.working {
-            width: 100px;
-            padding-right: 40px;
-            transition: all 0.5s;
-        }
-        .SBSE_container > div > button.working:before {
-            transition-delay: 0.5s;
-            transition-duration: 1s;
-            opacity: 1;
-        }
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    `);
-
+const getContainer = handlers => {
     const $container = $(`
         <div class="SBSE_container">
             <textarea></textarea>
@@ -1864,11 +1743,110 @@ const bundleSitesBox = () => {
         </div>
     `);
 
+    if (typeof handlers.reveal !== 'function') handlers.reveal = () => {};
+    if (typeof handlers.retrieve !== 'function') {
+        handlers.retrieve = () => {
+            const data = handlers.extract();
+            const keys = [];
+            const includeTitle = !!$('.SBSE_ChkTitle:checked').length;
+            const joinKeys = !!$('.SBSE_ChkJoin:checked').length;
+            const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
+            const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
+            const skipMarketListing = !$('.SBSE_ChkMarketListings:checked').length;
+            const separator = joinKeys ? ',' : eol;
+            const prefix = joinKeys && config.get('joinKeysASFStyle') ? '!redeem ' : '';
+
+            for (let i = 0; i < data.items.length; i += 1) {
+                const item = data.items[i];
+
+                if (item.owned && skipOwned) continue;
+                if (item.used && skipUsed) continue;
+                if (item.marketListing && skipMarketListing) continue;
+
+                const temp = [item.key];
+
+                if (includeTitle) temp.unshift(item.title);
+                if (config.get('titleComesLast')) temp.reverse();
+
+                keys.push(temp.join(', '));
+            }
+
+            $('.SBSE_container > textarea').val(prefix + keys.join(separator));
+        };
+    }
+    if (typeof handlers.activate !== 'function') {
+        handlers.activate = e => {
+            const $textarea = $container.find('textarea');
+            const keys = unique($textarea.val().match(regKey));
+
+            if (keys.length > 0) {
+                const $activateBtn = $(e.currentTarget);
+
+                $activateBtn.prop('disabled', true).addClass('working');
+                $textarea.attr('disabled', '');
+
+                $textarea.val(keys.join(eol));
+                activator.activate(keys, () => {
+                    $activateBtn.prop('disabled', false).removeClass('working');
+                    $textarea.removeAttr('disabled');
+                });
+            } else $textarea.val(text.emptyInput);
+        };
+    }
+    if (typeof handlers.copy !== 'function') {
+        handlers.copy = () => {
+            $('.SBSE_container > textarea').select();
+            document.execCommand('copy');
+        };
+    }
+    if (typeof handlers.reset !== 'function') {
+        handlers.reset = () => {
+            $('.SBSE_container > textarea').val('');
+        };
+    }
+    if (typeof handlers.export !== 'function') {
+        handlers.export = e => {
+            const data = handlers.extract();
+
+            if (data.items.length > 0) {
+                const $exportBtn = $(e.currentTarget);
+
+                $exportBtn.removeAttr('href').removeAttr('download');
+
+                const filename = data.filename.replace(/[\\/:*?"<>|!]/g, '');
+                const formattedData = data.items.map(line => {
+                    const temp = [];
+
+                    if (line.title) temp.push(line.title.replace(/,/g, ' '));
+                    temp.push(line.key);
+
+                    return temp.join();
+                }).join(eol);
+
+                $exportBtn.attr({
+                    href: `data:text/csv;charset=utf-8,\ufeff${encodeURIComponent(formattedData)}`,
+                    download: `${filename}.csv`
+                });
+            }
+        };
+    }
+    if (typeof handlers.settings !== 'function') {
+        handlers.settings = () => {
+            settings.display();
+        };
+    }
+
     // bind event
-    $container.find('.SBSE_BtnCopy').click(bundleSitesBoxHandler.copy);
-    $container.find('.SBSE_BtnReset').click(bundleSitesBoxHandler.reset);
-    $container.find('.SBSE_BtnActivate').click(bundleSitesBoxHandler.activate);
-    $container.find('#SBSE_BtnSettings').click(bundleSitesBoxHandler.settings);
+    $container.find('button').click(e => {
+        e.preventDefault();
+    });
+    $container.find('.SBSE_BtnReveal').click(handlers.reveal);
+    $container.find('.SBSE_BtnRetrieve').click(handlers.retrieve);
+    $container.find('.SBSE_BtnActivate').click(handlers.activate);
+    $container.find('.SBSE_BtnCopy').click(handlers.copy);
+    $container.find('.SBSE_BtnReset').click(handlers.reset);
+    $container.find('.SBSE_BtnExport').click(handlers.export);
+    $container.find('#SBSE_BtnSettings').click(handlers.settings);
 
     // apply settings
     if (config.get('preselectIncludeTitle')) $container.find('.SBSE_ChkTitle').prop('checked', true);
@@ -1878,9 +1856,126 @@ const bundleSitesBox = () => {
 };
 const siteHandlers = {
     indiegala() {
-        const $box = bundleSitesBox();
-        // insert textarea
-        $('#library-contain').eq(0).before($box);
+        // inject css
+        GM_addStyle(`
+            .SBSE_container { margin-top: 10px; }
+            .SBSE_container > textarea { border: 1px solid #CC001D; border-radius: 3px; }
+            .SBSE_container > div > button, .SBSE_container > div > a { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
+            .SBSE_container > div > a:hover { color: white; }
+            .swal2-popup .slider { margin: 0; }
+        `);
+
+        const handlers = {
+            extract() {
+                const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
+                const bundleTitle = $('[aria-expanded="true"] > div#bundle-title, #bundle-title, #indie_gala_2 > div > span').eq(0).text().trim();
+                const data = {
+                    title: bundleTitle,
+                    filename: `IndieGala ${bundleTitle} Keys`,
+                    items: []
+                };
+
+                $(source).find('.game-key-string').each((i, ele) => {
+                    const $ele = $(ele);
+                    const key = $ele.find('.keys').val();
+
+                    if (key) {
+                        const d = JSON.parse($(ele).closest('.SBSE_processed').attr('data-gameinfo') || '{}');
+
+                        if (Object.keys(d).length === 0) {
+                            const $a = $ele.find('.title_game > a');
+                            const matched = $a.attr('href').match(/steam.+\/(app|sub)\/(\d+)/);
+
+                            d.title = $a.text().trim();
+                            if (matched) d[matched[1]] = parseInt(matched[2], 10);
+                        }
+
+                        d.key = key;
+
+                        activator.pushKeyDetails(d);
+                        data.items.push(d);
+                    }
+                });
+
+                return data;
+            },
+            reveal(e) {
+                const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
+                const $revealBtn = $(e.currentTarget);
+                const handler = ($games, callback) => {
+                    const game = $games.shift();
+
+                    if (game) {
+                        const $game = $(game);
+                        const code = $game.attr('id').split('_').pop();
+                        const id = $game.attr('onclick').match(/steampowered\.com\/(app|sub)\/(\d+)/)[2];
+
+                        $.ajax({
+                            method: 'GET',
+                            url: '/myserials/syncget',
+                            dataType: 'json',
+                            data: {
+                                code,
+                                cache: false,
+                                productId: id
+                            },
+                            beforeSend() {
+                                $(`#permbutton_${code}, #fetchlink_${code}, #info_key_${code}`).hide();
+                                $(`#fetching_${code}`).fadeIn();
+                                $(`#ajax_loader_${code}`).show();
+                                $(`#container_activate_${code}`).html('');
+                            },
+                            success(data) {
+                                $(`#ajax_loader_${code}, #fetching_${code}, #info_key_${code}`).hide();
+                                $(`#serial_${code}`).fadeIn();
+                                $(`#serial_n_${code}`).val(data.serial_number);
+                                $game.parent().prev().find('.btn-convert-to-trade').remove();
+
+                                handler($games, callback);
+                            },
+                            error() {
+                                swal(text.failTitle, text.failDetailUnexpected, 'error');
+                            }
+                        });
+                    } else callback();
+                };
+
+                $revealBtn.addClass('working');
+
+                handler($(source).find('a[id^=fetchlink_]'), () => {
+                    $revealBtn.removeClass('working');
+                    $('.SBSE_BtnRetrieve').click();
+                });
+            }
+        };
+        const process = () => {
+            $('.game-key-string').each((i, ele) => {
+                const $ele = $(ele);
+                const $a = $ele.find('.title_game > a');
+                const data = {
+                    title: $a.text().trim()
+                };
+
+                const matched = $a.attr('href').match(/steam.+\/(app|sub)\/(\d+)/);
+                if (matched) data[matched[1]] = parseInt(matched[2], 10);
+
+                // check if owned
+                ['app', 'sub'].forEach(type => {
+                    if (has.call(data, type) && steam.owned[type].includes(data[type])) {
+                        $ele.addClass('SBSE_owned');
+                        data.owned = true;
+                    }
+                });
+
+                $ele.attr('data-gameinfo', JSON.stringify(data)).addClass('SBSE_processed');
+            });
+        };
+        const $container = getContainer(handlers);
+
+        process();
+
+        // insert container
+        $('#library-contain').eq(0).before($container);
 
         // support for new password protected gift page
         const $node = $('#gift-contents');
@@ -1890,7 +1985,8 @@ const siteHandlers = {
                 mutations.forEach(mutation => {
                     Array.from(mutation.addedNodes).forEach(addedNode => {
                         if (addedNode.id === 'library-contain') {
-                            $node.prepend($box);
+                            process();
+                            $node.prepend($container);
                             observer.disconnect();
                         }
                     });
@@ -1899,96 +1995,44 @@ const siteHandlers = {
 
             observer.observe($node[0], { childList: true });
         }
-
+    },
+    fanatical() {
         // inject css
         GM_addStyle(`
             .SBSE_container { margin-top: 10px; }
-            .SBSE_container > textarea { border: 1px solid #CC001D; border-radius: 3px; }
-            .SBSE_container > div > button, .SBSE_container > div > a { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
-            .SBSE_container > div > a:hover { color: white; }
+            .SBSE_container > textarea { background-color: #434343; color: #eee; }
+            .SBSE_container > div > button, .SBSE_container > div > a { width: 80px; }
+            .SBSE_container > div > button, .SBSE_container select, .SBSE_container > div > a { border: 1px solid transparent; background-color: #1c1c1c; color: #eee; }
+            .SBSE_container > div > button:hover, .SBSE_container select:hover, .SBSE_container > div > a:hover { color: #A8A8A8; }
+            .SBSE_container > div > a { text-decoration: none; }
+            .SBSE_container label { color: #DEDEDE; }
+            .SBSE_container select { max-width:120px; height: 30px; }
+            .SBSE_container select, .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
+            .SBSE_container span { margin-top: 5px; }
+
+            /* product page */
+            .cardBlock { width: 100%; padding: 0 .875rem 0 .875rem; }
+            .cardBlock > div { padding: 1rem; }
+            .cardBlock .currencyToggler {
+                width: 100%; height: 40px;
+                margin-bottom: 10px;
+                font-size: 20px;
+                border-radius: 3px;
+            }
+            .starDeal { padding: 1rem; }
+            .starDeal > div { display: flex; align-items: center; justify-content: space-evenly; }
+            .starDeal .currencyToggler {
+                width: 300px; height: 40px;
+                font-size: 20px;
+                border-radius: 3px;
+            }
+            .pricingDetail { background-color: transparent; }
+            .pricingDetail th { padding-top: 10px; }
+            .pricingDetail .cheapest { border-bottom: 1px solid #ff9800; font-weight: bold; }
+            .pricingDetail .currency-flag { vertical-align: text-bottom; }
+            .swal2-popup table { background-color: white; }
         `);
 
-        // dom source
-        const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
-        const extractKeys = () => {
-            const keys = [];
-
-            $(source).find('.game-key-string').each((index, element) => {
-                const $ele = $(element);
-                const key = $ele.find('.keys').val();
-
-                if (key) {
-                    const $a = $ele.find('.title_game > a');
-                    const title = $a.text().trim();
-
-                    // append key details
-                    keyDetails.set(key, {
-                        url: $a.attr('href'),
-                        title: $a.text()
-                    });
-
-                    keys.push({
-                        key,
-                        title
-                    });
-                }
-            });
-
-            return keys;
-        };
-
-        // button click
-        $box.find('.SBSE_BtnReveal').click(() => {
-            const handler = ($games, callback) => {
-                const game = $games.shift();
-
-                if (game) {
-                    const $game = $(game);
-                    const code = $game.attr('id').split('_').pop();
-                    const id = $game.attr('onclick').match(/steampowered\.com\/(app|sub)\/(\d+)/)[2];
-
-                    $.ajax({
-                        method: 'GET',
-                        url: '/myserials/syncget',
-                        dataType: 'json',
-                        data: {
-                            code,
-                            cache: false,
-                            productId: id
-                        },
-                        beforeSend() {
-                            $(`#permbutton_${code}, #fetchlink_${code}, #info_key_${code}`).hide();
-                            $(`#fetching_${code}`).fadeIn();
-                            $(`#ajax_loader_${code}`).show();
-                            $(`#container_activate_${code}`).html('');
-                        },
-                        success(data) {
-                            $(`#ajax_loader_${code}, #fetching_${code}, #info_key_${code}`).hide();
-                            $(`#serial_${code}`).fadeIn();
-                            $(`#serial_n_${code}`).val(data.serial_number);
-                            $game.parent().prev().find('.btn-convert-to-trade').remove();
-
-                            handler($games, callback);
-                        },
-                        error() {
-                            swal(text.failTitle, text.failDetailUnexpected, 'error');
-                        }
-                    });
-                } else callback();
-            };
-
-            bundleSitesBoxHandler.reveal(handler, $(source).find('a[id^=fetchlink_]'));
-        });
-        $box.find('.SBSE_BtnRetrieve').click(() => {
-            bundleSitesBoxHandler.retrieve(extractKeys());
-        });
-        $box.find('.SBSE_BtnExport').click(() => {
-            const $bundleTitle = location.pathname === '/profile' ? $('[aria-expanded="true"] > div#bundle-title') : $('#bundle-title, #indie_gala_2 > div > span');
-            const title = `IndieGala ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
-            bundleSitesBoxHandler.export(extractKeys(), title);
-        });
-    },
-    fanatical() {
         let APIData = null;
         const fetchAPIData = (() => {
             var _ref = _asyncToGenerator(function* (s, c) {
@@ -2020,157 +2064,11 @@ const siteHandlers = {
                 return _ref.apply(this, arguments);
             };
         })();
-        const extractKeys = () => {
-            const keys = [];
-
-            $('.account-content dl:has(input)').each((index, dl) => {
-                const $dl = $(dl);
-                const key = $(dl).find('input').val();
-                const title = $dl.attr('data-title') || $dl.find('dd').eq(1).text().trim();
-                const app = $dl.attr('data-appID');
-
-                // append key details
-                if (app.length > 0) {
-                    keyDetails.set(key, {
-                        title,
-                        app
-                    });
-                }
-
-                keys.push({
-                    key,
-                    title
-                });
-            });
-
-            return keys;
-        };
-        const insertBox = () => {
-            const $anchor = $('h3:contains(Order Keys)');
-
-            if ($('.SBSE_container').length === 0 && $anchor.length > 0) {
-                // insert textarea
-                $anchor.eq(0).before(bundleSitesBox());
-
-                // inject css
-                GM_addStyle(`
-                    .SBSE_container { margin-top: 10px; }
-                    .SBSE_container > textarea { background-color: #434343; color: #eee; }
-                    .SBSE_container > div > button, .SBSE_container > div > a { width: 80px; }
-                    .SBSE_container > div > button, .SBSE_container select, .SBSE_container > div > a { border: 1px solid transparent; background-color: #1c1c1c; color: #eee; }
-                    .SBSE_container > div > button:hover, .SBSE_container select:hover, .SBSE_container > div > a:hover { color: #A8A8A8; }
-                    .SBSE_container > div > a { text-decoration: none; }
-                    .SBSE_container label { color: #DEDEDE; }
-                    .SBSE_container select { max-width:120px; height: 30px; }
-                    .SBSE_container select, .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
-                    .SBSE_container span { margin-top: 5px; }
-                `);
-
-                // narrow buttons
-                $('.SBSE_container > div > button').addClass('narrow');
-
-                // dodge from master css selector
-                $('.SBSE_container > div > a').attr('href', '');
-                /*
-                // insert bundlestars select
-                $('.SBSE_container > div').append(`
-                    <select class="selectTo"></select>
-                    <span>${text.selectConnector}</span>
-                    <select class="selectFrom"></select>
-                `);
-                */
-                // button click
-                $('.SBSE_BtnReveal').click(() => {
-                    const handler = ($games, callback) => {
-                        const game = $games.shift();
-
-                        if (game) {
-                            game.click();
-                            setTimeout(handler.bind(null, $games, callback), 300);
-                        } else setTimeout(callback, 500);
-                    };
-
-                    bundleSitesBoxHandler.reveal(handler, $('.account-content dl button'));
-                });
-
-                $('.SBSE_BtnRetrieve').click(() => {
-                    bundleSitesBoxHandler.retrieve(extractKeys());
-                });
-                $('.SBSE_BtnExport').click(() => {
-                    const $bundleTitle = $('h5');
-                    const title = `Fanatical - ${$bundleTitle.length > 0 ? $bundleTitle.text() : 'Keys'}`;
-
-                    bundleSitesBoxHandler.export(extractKeys(), title);
-                });
-
-                // append Steam ID
-                const observer = new MutationObserver(mutations => {
-                    mutations.forEach(mutation => {
-                        Array.from(mutation.addedNodes).forEach(addedNode => {
-                            const title = $(addedNode).find('h5').eq(0).text();
-                            const slug = title.trim().toLowerCase().replace(/ /g, '-');
-
-                            if (slug.length > 0) {
-                                observer.disconnect();
-                                fetchAPIData(slug, () => {
-                                    if (Object.keys(APIData).length > 0) {
-                                        const matchGame = data => {
-                                            if (has.call(data, 'steam') && data.steam.id) {
-                                                const $gameTitle = $(`dd > div.d-flex.flex-column:contains(${data.name})`);
-
-                                                $gameTitle.contents().filter((i, n) => n.nodeType === 3).wrap(`<a href="http:www.steampowered.com/app/${data.steam.id}/"></a>`);
-                                                $gameTitle.closest('dl').attr({
-                                                    'data-title': data.name,
-                                                    'data-appID': data.steam.id
-                                                });
-                                            }
-                                        };
-
-                                        matchGame(APIData);
-                                        APIData.bundles.forEach(tier => {
-                                            tier.games.forEach(matchGame);
-                                        });
-                                    }
-                                });
-                            }
-                        });
-                    });
-                });
-
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-            }
-        };
-        const productHandler = () => {
-            if (Object.keys(APIData).length > 0) {
-                GM_addStyle(`
-                    .cardBlock { width: 100%; padding: 0 .875rem 0 .875rem; }
-                    .cardBlock > div { padding: 1rem; }
-                    .cardBlock .currencyToggler {
-                        width: 100%;
-                        height: 40px;
-                        margin-bottom: 10px;
-                        font-size: 20px;
-                        border-radius: 3px;
-                    }
-                    .starDeal { padding: 1rem; }
-                    .starDeal > div { display: flex; align-items: center; justify-content: space-evenly; }
-                    .starDeal .currencyToggler {
-                        width: 300px;
-                        height: 40px;
-                        font-size: 20px;
-                        border-radius: 3px;
-                    }
-                    .pricingDetail { background-color: transparent; }
-                    .pricingDetail th { padding-top: 10px; }
-                    .pricingDetail .cheapest { border-bottom: 1px solid #ff9800; font-weight: bold; }
-                    .pricingDetail .currency-flag { vertical-align: text-bottom; }
-                `);
-
-                const language = config.get('language');
-                const $priceExt = $(`
+        const productHandler = (() => {
+            var _ref2 = _asyncToGenerator(function* () {
+                if (Object.keys(APIData).length > 0) {
+                    const language = config.get('language');
+                    const $priceExt = $(`
                     <div class="cardBlock">
                         <div>
                             <select class="currencyToggler"></select>
@@ -2178,287 +2076,219 @@ const siteHandlers = {
                         </div>
                     </div>
                 `);
-                const $currencyToggler = $priceExt.find('.currencyToggler');
-                const $pricingDetail = $priceExt.find('.pricingDetail');
-                const selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'CNY');
-                const isStarDeal = !!$('.stardeal-purchase-info').length;
+                    const $currencyToggler = $priceExt.find('.currencyToggler');
+                    const $pricingDetail = $priceExt.find('.pricingDetail');
+                    const selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'CNY');
+                    const isStarDeal = !!$('.stardeal-purchase-info').length;
+                    let starDeal = {};
 
-                if (isStarDeal) $priceExt.toggleClass('cardBlock starDeal');
+                    if (isStarDeal) {
+                        $priceExt.toggleClass('cardBlock starDeal');
 
-                Object.keys(xe.currencies).forEach(currency => {
-                    const selected = currency === selectedCurrency ? ' selected' : '';
+                        // fetch star-deal data
+                        const res = yield fetch('https://api.fanatical.com/api/star-deal');
 
-                    $currencyToggler.append($(`<option value="${currency}"${selected}>${xe.currencies[currency][language]}</option>`));
-                });
+                        if (res.ok) starDeal = yield res.json();
+                    }
 
-                $currencyToggler.change(() => {
-                    xe.update($currencyToggler.val());
-                    GM_setValue('SBSE_selectedCurrency', $currencyToggler.val());
-                });
+                    Object.keys(xe.currencies).forEach(function (currency) {
+                        const selected = currency === selectedCurrency ? ' selected' : '';
 
-                // bundle page
-                APIData.bundles.forEach((tier, index) => {
-                    if (APIData.bundles.length > 1) $pricingDetail.append(`<tr><th colspan="3">Tier ${index + 1}</th></tr>`);
-                    Object.keys(tier.price).forEach(currency => {
-                        const value = tier.price[currency];
+                        $currencyToggler.append($(`<option value="${currency}"${selected}>${xe.currencies[currency][language]}</option>`));
+                    });
 
-                        $pricingDetail.append(`
+                    $currencyToggler.change(function () {
+                        xe.update($currencyToggler.val());
+                        GM_setValue('SBSE_selectedCurrency', $currencyToggler.val());
+                    });
+
+                    // bundle page
+                    APIData.bundles.forEach(function (tier, index) {
+                        if (APIData.bundles.length > 1) $pricingDetail.append(`<tr><th colspan="3">Tier ${index + 1}</th></tr>`);
+                        Object.keys(tier.price).forEach(function (currency) {
+                            const value = tier.price[currency];
+
+                            $pricingDetail.append(`
                             <tr class="tier${index + 1}">
                                 <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
                                 <td>${xe.currencies[currency].symbol + value / 100}</td>
                                 <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
                             </tr>
                         `);
+                        });
                     });
-                });
 
-                // game page
-                if (location.href.includes('/game/') || location.href.includes('/dlc/')) {
-                    let discount = 1;
+                    // game page
+                    if (location.href.includes('/game/') || location.href.includes('/dlc/')) {
+                        let discount = 1;
 
-                    if (has.call(APIData, 'current_discount') && new Date(APIData.current_discount.until).getTime() > Date.now()) discount = 1 - APIData.current_discount.percent;
+                        if (has.call(APIData, 'current_discount') && new Date(APIData.current_discount.until).getTime() > Date.now()) discount = 1 - APIData.current_discount.percent;
 
-                    if (isStarDeal) discount = 1 - $('.discount-percent').text().replace(/\D/g, '') / 100;
+                        if (isStarDeal) discount = 1 - $('.discount-percent').text().replace(/\D/g, '') / 100;
 
-                    Object.keys(APIData.price).forEach(currency => {
-                        const value = (APIData.price[currency] * discount).toFixed(2);
+                        Object.keys(APIData.price).forEach(function (currency) {
+                            let value = (APIData.price[currency] * discount).toFixed(2);
 
-                        $pricingDetail.append(`
+                            // if star-deal data loaded successfully
+                            if (has.call(starDeal, 'promoPrice')) value = starDeal.promoPrice[currency];
+
+                            $pricingDetail.append(`
                             <tr class="tier1">
                                 <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
                                 <td>${xe.currencies[currency].symbol + (value / 100).toFixed(2)}</td>
                                 <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
                             </tr>
                         `);
-                    });
+                        });
+                    }
+
+                    $('.product-commerce-container').append($priceExt);
+                    $('.stardeal-purchase-info').after($priceExt);
+                    xe.update(selectedCurrency);
+
+                    // highlight the cheapest
+                    for (let i = 1; i < 10; i += 1) {
+                        const $prices = $(`.tier${i} .SBSE_price`);
+
+                        if ($prices.length === 0) break;
+
+                        $($prices.toArray().sort(function (a, b) {
+                            return a.textContent.replace(/\D/g, '') - b.textContent.replace(/\D/g, '');
+                        }).shift()).closest('tr').addClass('cheapest');
+                    }
                 }
+            });
 
-                $('.product-commerce-container').append($priceExt);
-                $('.stardeal-purchase-info').after($priceExt);
-                xe.update(selectedCurrency);
+            return function productHandler() {
+                return _ref2.apply(this, arguments);
+            };
+        })();
+        const handlers = {
+            extract() {
+                const bundleTitle = $('h5').eq(0).text().trim();
+                const data = {
+                    title: bundleTitle,
+                    filename: `Fanatical ${bundleTitle} Keys`,
+                    items: []
+                };
 
-                // highlight the cheapest
-                for (let i = 1; i < 10; i += 1) {
-                    const $prices = $(`.tier${i} .SBSE_price`);
+                $('.account-content dl:has(input)').each((i, dl) => {
+                    const $dl = $(dl);
+                    const key = $dl.find('input').val();
 
-                    if ($prices.length === 0) break;
+                    if (key) {
+                        const d = JSON.parse($dl.closest('.SBSE_processed').attr('data-gameinfo') || '{}');
 
-                    $($prices.toArray().sort((a, b) => a.textContent.replace(/\D/g, '') - b.textContent.replace(/\D/g, '')).shift()).closest('tr').addClass('cheapest');
-                }
+                        if (Object.keys(d).length === 0) {
+                            d.title = $dl.find('dd').eq(1).text().trim();
+                        }
+
+                        d.key = key;
+
+                        activator.pushKeyDetails(d);
+                        data.items.push(d);
+                    }
+                });
+
+                return data;
+            },
+            reveal(e) {
+                const $revealBtn = $(e.currentTarget);
+                const handler = ($games, callback) => {
+                    const game = $games.shift();
+
+                    if (game) {
+                        game.click();
+                        setTimeout(handler.bind(null, $games, callback), 300);
+                    } else setTimeout(callback, 500);
+                };
+
+                $revealBtn.addClass('working');
+
+                handler($('.account-content dl button'), () => {
+                    $revealBtn.removeClass('working');
+                    $('.SBSE_BtnRetrieve').click();
+                });
             }
         };
+        const process = () => {
+            const title = $('.account-content h5').eq(0).text();
+            const slug = title.trim().toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
+
+            // empty textarea
+            $('.SBSE_container textarea').val('');
+
+            if (slug.length > 0) {
+                fetchAPIData(slug, () => {
+                    if (Object.keys(APIData).length > 0) {
+                        const matchGame = data => {
+                            if (has.call(data, 'steam') && data.steam.id) {
+                                const $gameTitle = $(`dd > div.d-flex.flex-column:contains(${data.name})`);
+                                const $dl = $gameTitle.closest('dl');
+                                const d = {
+                                    title: data.name,
+                                    app: data.steam.id
+                                };
+
+                                $gameTitle.contents().filter((i, n) => n.nodeType === 3).wrap(`<a href="http:www.steampowered.com/app/${data.steam.id}/"></a>`);
+
+                                // check if owned
+                                if (steam.owned.app.includes(data.steam.id)) {
+                                    $dl.addClass('SBSE_owned');
+                                    d.owned = true;
+                                }
+
+                                $dl.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify(d));
+                            }
+                        };
+
+                        matchGame(APIData);
+                        APIData.bundles.forEach(tier => {
+                            tier.games.forEach(matchGame);
+                        });
+                    }
+                });
+            }
+        };
+        const $container = getContainer(handlers);
+
+        $container.find('button').addClass('narrow'); // narrow buttons
+        $container.find('a').attr('href', ''); // dodge from master css selector
 
         new MutationObserver(mutations => {
             mutations.forEach(mutation => {
-                Array.from(mutation.addedNodes).filter(node => node.matches('[property="og:url"]')).forEach(() => {
-                    const currentURL = location.href;
+                Array.from(mutation.addedNodes).filter(x => x.nodeType === 1).forEach(node => {
+                    // url changed
+                    if (node.matches('[property="og:url"]')) {
+                        const currentURL = location.href;
 
-                    if (currentURL.includes('/orders/')) insertBox();
-                    if (currentURL.includes('/bundle/') || currentURL.includes('/game/') || currentURL.includes('/dlc/')) fetchAPIData(productHandler);
+                        if (currentURL.includes('/orders/')) {
+                            // insert container
+                            const $anchor = $('h3:contains(Order Keys)');
+
+                            if ($('.SBSE_container').length === 0 && $anchor.length > 0) $anchor.eq(0).before($container);
+                        }
+                        if (currentURL.includes('/bundle/') || currentURL.includes('/game/') || currentURL.includes('/dlc/')) fetchAPIData(productHandler);
+                    }
+
+                    // order contents loaded
+                    if ($(node).find('dl').length > 0) process();
                 });
             });
-        }).observe($('head')[0], { childList: true });
+        }).observe($('html')[0], {
+            childList: true,
+            subtree: true
+        });
     },
     humblebundle() {
-        let atDownload = true;
-        const $box = bundleSitesBox();
-        const fetchKey = ($node, machineName, callback) => {
-            fetch('https://www.humblebundle.com/humbler/redeemkey', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                    Origin: 'https://www.humblebundle.com',
-                    Referer: location.href
-                },
-                body: `keytype=${machineName}&key=${unsafeWindow.gamekeys[0]}&keyindex=0`,
-                credentials: 'same-origin'
-            }).then(res => {
-                if (res.ok) return res.json();
-                throw new Error('Network response was not ok.');
-            }).then(d => {
-                if (d.success) {
-                    $node.closest('.container').html(`
-                        <div title="${d.key}" class="keyfield redeemed">
-                            <div class="keyfield-value">${d.key}</div>
-                            <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
-                                <div class="steam-redeem-text">Redeem</div>
-                                <span class="tooltiptext">Redeem on Steam</span>
-                            </a>
-                            <div class="spinner"></div>
-                        </div>
-                    `);
-                } else swal(text.failTitle, JSON.stringify(d), 'error');
-
-                if (typeof callback === 'function') callback();
-            });
-        };
-        const extractKeys = () => {
-            const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
-            const keys = [];
-            const selectors = ['.key-redeemer .keyfield-value', // redeem page selector
-            'tr:has(.hb-steam) .redeemed > .keyfield-value'];
-
-            if (skipOwned) selectors[0] = '.key-redeemer:not(.SBSE_owned) .keyfield-value';
-
-            $(selectors.join()).each((index, element) => {
-                const $game = $(element);
-                const title = atDownload ? $game.closest('.key-redeemer').find('h4').contents().eq(0) : $game.closest('td').prev('.game-name').find('h4');
-
-                keys.push({
-                    key: $game.text().trim(),
-                    title: title.text().trim()
-                });
-            });
-
-            return keys;
-        };
-        const $keyManager = $('.js-key-manager-holder');
-
-        // insert textarea
-        // insert at /home/*
-        if ($keyManager.length > 0) {
-            const observer = new MutationObserver(mutations => {
-                mutations.forEach(mutation => {
-                    Array.from(mutation.addedNodes).forEach(addedNode => {
-                        if (addedNode.className === 'header') {
-                            atDownload = false;
-
-                            $(addedNode).after($box);
-                            $box.find('.SBSE_ChkSkipOwned').parent().remove();
-
-                            observer.disconnect();
-                        }
-                    });
-                });
-            });
-
-            observer.observe($keyManager[0], { childList: true });
-            // insert at download page
-        } else {
-            const observer = new MutationObserver(mutations => {
-                mutations.forEach(mutation => {
-                    Array.from(mutation.addedNodes).forEach((() => {
-                        var _ref2 = _asyncToGenerator(function* (addedNode) {
-                            const $node = $(addedNode);
-
-                            if ($node.hasClass('key-list') || $node.find('.key-list').length > 0) {
-                                $node.closest('.whitebox-redux').before($box);
-
-                                // fetch game heading & wrap heading
-                                $node.find('.heading-text > h4').each(function (i, heading) {
-                                    heading.parentElement.title = heading.innerText.trim();
-                                    $(heading.firstChild).wrap('<span/>');
-                                });
-
-                                // fetch key data
-                                const gameKey = unsafeWindow.gamekeys[0];
-                                let json = GM_getValue(gameKey, '');
-
-                                if (json.length === 0) {
-                                    const res = yield fetch(`https://www.humblebundle.com/api/v1/order/${gameKey}?all_tpkds=true`, {
-                                        method: 'GET',
-                                        credentials: 'same-origin'
-                                    });
-
-                                    json = yield res.text();
-                                }
-
-                                const data = JSON.parse(json);
-
-                                data.tpkd_dict.all_tpks.forEach(function (game) {
-                                    keyDetails.set(game.redeemed_key_val, {
-                                        app: game.steam_app_id,
-                                        title: game.human_name
-                                    });
-
-                                    const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[title="${game.human_name}"])`);
-
-                                    // store data
-                                    $keyRedeemer.attr({
-                                        'data-machineName': game.machine_name,
-                                        'data-humanName': game.human_name
-                                    });
-
-                                    // apply owned effect on game title
-                                    const appID = parseInt(game.steam_app_id, 10);
-
-                                    if (appID && steam.owned.app.includes(appID)) $keyRedeemer.addClass('SBSE_owned');
-
-                                    // activation restrictions
-                                    let html = '';
-                                    const disallowed = game.disallowed_countries.map(function (c) {
-                                        return ISO2.get(c);
-                                    });
-                                    const exclusive = game.exclusive_countries.map(function (c) {
-                                        return ISO2.get(c);
-                                    });
-                                    const separator = config.get('language').includes('chinese') ? '、' : ', ';
-
-                                    if (disallowed.length > 0) html += `<p>${text.HBDisallowedCountries}<br>${disallowed.join(separator)}</p>`;
-                                    if (exclusive.length > 0) html += `<p>${text.HBExclusiveCountries}<br>${exclusive.join(separator)}</p>`;
-                                    if (disallowed.length > 0 || exclusive.length > 0) {
-                                        $(`<span class="SBSE_activationRestrictions">${text.HBActivationRestrictions}</span>`).click(function () {
-                                            swal({
-                                                title: `${game.human_name}<br>${text.HBActivationRestrictions}`,
-                                                html,
-                                                type: 'info'
-                                            });
-                                        }).insertBefore($keyRedeemer.find('.heading-text > h4'));
-                                    }
-                                });
-
-                                // override default popups
-                                document.addEventListener('click', function (e) {
-                                    const $target = $(e.target).closest('.keyfield');
-
-                                    if ($target.length > 0 && !$target.hasClass('redeemed')) {
-                                        e.stopPropagation();
-
-                                        const $keyRedeemer = $target.closest('.key-redeemer');
-                                        const machineName = $keyRedeemer.attr('data-machineName');
-                                        const humanName = $keyRedeemer.attr('data-humanName');
-                                        const isOwned = $keyRedeemer.hasClass('SBSE_owned');
-
-                                        if (machineName) {
-                                            if (isOwned) {
-                                                swal({
-                                                    title: text.HBAlreadyOwned,
-                                                    text: text.HBRedeemAlreadyOwned.replace('%title%', humanName),
-                                                    type: 'question',
-                                                    showCancelButton: true
-                                                }).then(function (result) {
-                                                    if (result.value) fetchKey($target, machineName);
-                                                });
-                                            } else fetchKey($target, machineName);
-                                        }
-                                    }
-                                }, true);
-
-                                observer.disconnect();
-                            }
-                        });
-
-                        return function (_x3) {
-                            return _ref2.apply(this, arguments);
-                        };
-                    })());
-                });
-            });
-
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-        }
-
         // inject css
         GM_addStyle(`
             .SBSE_container > div { position: relative; }
             .SBSE_container > textarea {
                 border: 1px solid #CFCFCF;
+                border-radius: 5px;
                 color: #4a4c45;
                 text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-                border-radius: 5px;
             }
             .SBSE_container > div > button, .SBSE_container > div > a {
                 width: 70px;
@@ -2487,51 +2317,260 @@ const siteHandlers = {
             .SBSE_activationRestrictions { float: right; cursor: pointer; }
         `);
 
-        // narrow buttons
-        $box.find('div > button').addClass('narrow');
+        const atDownload = location.pathname === '/downloads';
+        const fetchKey = (() => {
+            var _ref3 = _asyncToGenerator(function* ($node, machineName, callback) {
+                const res = yield fetch('https://www.humblebundle.com/humbler/redeemkey', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        Origin: 'https://www.humblebundle.com',
+                        Referer: location.href
+                    },
+                    body: `keytype=${machineName}&key=${unsafeWindow.gamekeys[0]}&keyindex=0`,
+                    credentials: 'same-origin'
+                });
 
-        // append checkbox for owned game
-        $box.find('#SBSE_BtnSettings').before($(`<label><input type="checkbox" class="SBSE_ChkSkipOwned" checked>${text.checkboxSkipOwned}</label>`));
+                if (res.ok) {
+                    const d = yield res.json();
 
-        // button click
-        $box.find('.SBSE_BtnReveal').click(() => {
-            const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
-            const handler = ($games, callback) => {
-                const game = $games.shift();
+                    if (d.success) {
+                        $node.closest('.container').html(`
+                        <div title="${d.key}" class="keyfield redeemed">
+                            <div class="keyfield-value">${d.key}</div>
+                            <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
+                                <div class="steam-redeem-text">Redeem</div>
+                                <span class="tooltiptext">Redeem on Steam</span>
+                            </a>
+                            <div class="spinner"></div>
+                        </div>
+                    `);
+                    } else swal(text.failTitle, JSON.stringify(d), 'error');
+                }
 
-                if (game) {
-                    const $game = $(game);
-                    const isOwned = !!$game.closest('.SBSE_owned').length;
-                    const machineName = $game.closest('.key-redeemer').attr('data-machineName');
+                if (typeof callback === 'function') callback();
+            });
 
-                    if (skipOwned && isOwned) handler($games, callback);else if (atDownload && machineName) {
-                        fetchKey($game, machineName, () => {
-                            handler($games, callback);
-                        });
-                    } else {
-                        game.click();
-                        $('.sr-warning-modal-confirm-button').click();
-
-                        setTimeout(handler.bind(null, $games, callback), 200);
-                    }
-                } else callback();
+            return function fetchKey(_x3, _x4, _x5) {
+                return _ref3.apply(this, arguments);
             };
-            const selectors = ['.key-redeemer .keyfield', // redeem page selector
-            'div.keyfield[title="Reveal your Steam key"]'];
+        })();
+        const handlers = {
+            extract() {
+                const bundleTitle = $('title').text().split(' (').shift();
+                const data = {
+                    title: bundleTitle,
+                    filename: `Humble Bundle ${bundleTitle} Keys`,
+                    items: []
+                };
 
-            if (skipOwned) selectors[0] = '.key-redeemer:not(.SBSE_owned) .keyfield';
+                $('.keyfield.redeemed .keyfield-value').each((i, ele) => {
+                    const $ele = $(ele);
+                    const key = $ele.text().trim();
 
-            bundleSitesBoxHandler.reveal(handler, $(selectors.join()));
-        });
-        $box.find('.SBSE_BtnRetrieve').click(() => {
-            bundleSitesBoxHandler.retrieve(extractKeys());
-        });
-        $box.find('.SBSE_BtnExport').click(() => {
-            const $bundleTitle = $('meta[name=title]');
-            const title = `Humble Bundle - ${$bundleTitle.length > 0 ? $bundleTitle.attr('content') : 'Keys'}`;
+                    if (key) {
+                        const d = JSON.parse($ele.closest('.SBSE_processed').attr('data-gameinfo') || '{}');
 
-            bundleSitesBoxHandler.export(extractKeys(), title);
-        });
+                        if (Object.keys(d).length === 0) {
+                            const $titleEle = $ele.closest(atDownload ? '.container' : '.redeemer-cell').prev().find('h4');
+
+                            d.title = $titleEle.contents().eq(0).text().trim();
+                        }
+
+                        d.key = key;
+
+                        activator.pushKeyDetails(d);
+                        data.items.push(d);
+                    }
+                });
+
+                return data;
+            },
+            reveal(e) {
+                const $revealBtn = $(e.currentTarget);
+                const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
+                const notSelector = skipOwned ? ':not(.SBSE_owned)' : '';
+                const handler = ($games, callback) => {
+                    const game = $games.shift();
+
+                    if (game) {
+                        const $game = $(game);
+                        const machineName = $game.closest('.key-redeemer').attr('data-machineName');
+
+                        if (atDownload && machineName) {
+                            fetchKey($game, machineName, () => {
+                                handler($games, callback);
+                            });
+                        } else {
+                            game.click();
+                            $('.sr-warning-modal-confirm-button').click();
+
+                            setTimeout(handler.bind(null, $games, callback), 200);
+                        }
+                    } else callback();
+                };
+
+                $revealBtn.addClass('working');
+
+                handler($(`.key-redeemer${notSelector} .keyfield:not(.redeemed)`), () => {
+                    $revealBtn.removeClass('working');
+                    $('.SBSE_BtnRetrieve').click();
+                });
+            }
+        };
+        const process = (() => {
+            var _ref4 = _asyncToGenerator(function* ($node) {
+                const gameKey = unsafeWindow.gamekeys[0];
+                let json = GM_getValue(gameKey, '');
+
+                if (json.length === 0) {
+                    const res = yield fetch(`https://www.humblebundle.com/api/v1/order/${gameKey}?all_tpkds=true`, {
+                        method: 'GET',
+                        credentials: 'same-origin'
+                    });
+
+                    json = yield res.text();
+                }
+
+                const data = JSON.parse(json);
+
+                data.tpkd_dict.all_tpks.forEach(function (game) {
+                    const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[title="${game.human_name}"])`);
+
+                    if ($keyRedeemer.length > 0) {
+                        // apply owned effect on game title
+                        const app = parseInt(game.steam_app_id, 10);
+                        const owned = app && steam.owned.app.includes(app);
+
+                        if (owned) $keyRedeemer.addClass('SBSE_owned');
+
+                        // activation restrictions
+                        let html = '';
+                        const disallowed = game.disallowed_countries.map(function (c) {
+                            return ISO2.get(c);
+                        });
+                        const exclusive = game.exclusive_countries.map(function (c) {
+                            return ISO2.get(c);
+                        });
+                        const separator = config.get('language').includes('chinese') ? '、' : ', ';
+
+                        if (disallowed.length > 0) html += `<p>${text.HBDisallowedCountries}<br>${disallowed.join(separator)}</p>`;
+                        if (exclusive.length > 0) html += `<p>${text.HBExclusiveCountries}<br>${exclusive.join(separator)}</p>`;
+                        if (disallowed.length > 0 || exclusive.length > 0) {
+                            $(`<span class="SBSE_activationRestrictions">${text.HBActivationRestrictions}</span>`).click(function () {
+                                swal({
+                                    title: `${game.human_name}<br>${text.HBActivationRestrictions}`,
+                                    html,
+                                    type: 'info'
+                                });
+                            }).insertBefore($keyRedeemer.find('.heading-text > h4'));
+                        }
+
+                        // store data
+                        $keyRedeemer.attr({
+                            'data-machineName': game.machine_name,
+                            'data-humanName': game.human_name,
+                            'data-gameinfo': JSON.stringify({
+                                title: game.human_name,
+                                app,
+                                owned
+                            })
+                        });
+
+                        $keyRedeemer.addClass('SBSE_processed');
+                    }
+                });
+            });
+
+            return function process(_x6) {
+                return _ref4.apply(this, arguments);
+            };
+        })();
+        const $container = getContainer(handlers);
+        const $keyManager = $('.js-key-manager-holder');
+
+        // narrow buttons
+        $container.find('div > button').addClass('narrow');
+
+        // at home page
+        if ($keyManager.length > 0) {
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    Array.from(mutation.addedNodes).forEach(addedNode => {
+                        if (addedNode.className === 'header') {
+                            observer.disconnect();
+                            $(addedNode).after($container);
+                        }
+                    });
+                });
+            });
+
+            observer.observe($keyManager[0], { childList: true });
+            // at download page
+        } else {
+            // append checkbox for owned game
+            $container.find('#SBSE_BtnSettings').before(`
+                <label><input type="checkbox" class="SBSE_ChkSkipOwned" checked>${text.checkboxSkipOwned}</label>
+            `);
+
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    Array.from(mutation.addedNodes).forEach((() => {
+                        var _ref5 = _asyncToGenerator(function* (addedNode) {
+                            const $node = $(addedNode);
+
+                            if ($node.hasClass('key-list') || $node.find('.key-list').length > 0) {
+                                observer.disconnect();
+                                $node.closest('.whitebox-redux').before($container);
+
+                                // fetch game heading & wrap heading
+                                $node.find('.heading-text > h4').each(function (i, heading) {
+                                    heading.parentElement.title = heading.innerText.trim();
+                                    $(heading.firstChild).wrap('<span/>');
+                                });
+
+                                // fetch & process key data
+                                process($node);
+
+                                // override default popups
+                                document.addEventListener('click', function (e) {
+                                    const $target = $(e.target).closest('.keyfield');
+
+                                    if ($target.length > 0 && !$target.hasClass('redeemed')) {
+                                        e.stopPropagation();
+
+                                        const $keyRedeemer = $target.closest('.key-redeemer');
+                                        const machineName = $keyRedeemer.attr('data-machineName');
+
+                                        if (machineName) {
+                                            if ($keyRedeemer.hasClass('SBSE_owned')) {
+                                                swal({
+                                                    title: text.HBAlreadyOwned,
+                                                    text: text.HBRedeemAlreadyOwned.replace('%title%', $keyRedeemer.attr('data-humanName')),
+                                                    type: 'question',
+                                                    showCancelButton: true
+                                                }).then(function (result) {
+                                                    if (result.value) fetchKey($target, machineName);
+                                                });
+                                            } else fetchKey($target, machineName);
+                                        }
+                                    }
+                                }, true);
+                            }
+                        });
+
+                        return function (_x7) {
+                            return _ref5.apply(this, arguments);
+                        };
+                    })());
+                });
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
     },
     dailyindiegame() {
         const MPHideList = JSON.parse(GM_getValue('SBSE_DIGMPHideList') || '[]');
@@ -2555,34 +2594,33 @@ const siteHandlers = {
                 }
             `);
 
-            const extractKeys = () => {
-                const keys = [];
-                const marketListings = !!$('.SBSE_ChkMarketListings:checked').length;
+            const handlers = {
+                extract() {
+                    const data = {
+                        title: 'DailyIndieGame Keys',
+                        filename: 'DailyIndieGame Keys',
+                        items: []
+                    };
 
-                $('#TableKeys tr').each((index, tr) => {
-                    const $tds = $(tr).children();
+                    $('#TableKeys tr').each((i, tr) => {
+                        const $tds = $(tr).children();
+                        const key = $tds.eq(4).text().trim();
 
-                    if ($tds.eq(4).text().includes('-') && (!$tds.eq(6).text().includes('Cancel trade') || marketListings)) {
-                        keys.push({
-                            key: $tds.eq(4).text().trim(),
-                            title: $tds.eq(2).text().trim()
-                        });
-                    }
-                });
+                        if (key.includes('-')) {
+                            const d = {
+                                title: $tds.eq(2).text().trim(),
+                                key,
+                                marketListing: $tds.eq(6).text().includes('Cancel trade')
+                            };
 
-                return keys;
-            };
+                            activator.pushKeyDetails(d);
+                            data.items.push(d);
+                        }
+                    });
 
-            // insert textarea
-            const $box = bundleSitesBox();
-            $('#TableKeys').eq(0).before($box);
-
-            // append checkbox for market keys
-            $box.find('#SBSE_BtnSettings').before($(`<label><input type="checkbox" class="SBSE_ChkMarketListings">${text.checkboxMarketListings}</label>`));
-
-            // button click
-            $('.SBSE_BtnReveal').click(() => {
-                const handler = () => {
+                    return data;
+                },
+                reveal() {
                     const $form = $('#form3');
 
                     $('.quickaction').val(1);
@@ -2594,34 +2632,43 @@ const siteHandlers = {
                             location.reload();
                         }
                     });
-                };
+                }
+            };
+            const $container = getContainer(handlers);
 
-                bundleSitesBoxHandler.reveal(handler);
-            });
-            $('.SBSE_BtnRetrieve').click(() => {
-                bundleSitesBoxHandler.retrieve(extractKeys());
-            });
-            $('.SBSE_BtnExport').remove();
+            // remove export button
+            $container.find('.SBSE_BtnExport').remove();
+            // append checkbox for market keys
+            $container.find('#SBSE_BtnSettings').before(`
+                <label><input type="checkbox" class="SBSE_ChkMarketListings">${text.checkboxMarketListings}</label>
+            `);
+
+            $('#TableKeys').eq(0).before($container);
 
             // rate all positive
             const $awaitRatings = $('a[href^="account_page_0_ratepositive"]');
 
             if ($awaitRatings.length > 0) {
                 $('#TableKeys td:contains(Rate TRADE)').text(text.DIGRateAllPositive).css('cursor', 'pointer').click(() => {
-                    $awaitRatings.each((index, a) => {
-                        fetch(a.href, {
-                            method: 'GET',
-                            credentials: 'same-origin'
-                        }).then(res => {
-                            if (res.ok) {
-                                $(a).parent('td').html('<span class="DIG3_14_Orange">Positive</span>');
-                            }
+                    $awaitRatings.each((() => {
+                        var _ref6 = _asyncToGenerator(function* (i, a) {
+                            const res = yield fetch(a.href, {
+                                method: 'GET',
+                                credentials: 'same-origin'
+                            });
+
+                            if (res.ok) $(a).parent('td').html('<span class="DIG3_14_Orange">Positive</span>');
                         });
-                    });
+
+                        return function (_x8, _x9) {
+                            return _ref6.apply(this, arguments);
+                        };
+                    })());
                 });
             }
-        } else if (pathname === '/account_digstore.html' || pathname === '/account_trades.html' || pathname === '/account_tradesXT.html') {
             // DIG EasyBuy
+        } else if (pathname === '/account_digstore.html' || pathname === '/account_trades.html' || pathname === '/account_tradesXT.html') {
+            // inject css styles
             GM_addStyle(`
                 .DIGEasyBuy_row { height: 30px; }
                 .DIGEasyBuy button { padding: 4px 8px; outline: none; cursor: pointer; }
@@ -2630,8 +2677,7 @@ const siteHandlers = {
                 .DIGEasyBuy_hideOwned tr.SBSE_hide + .SBSE_searchResults { display: none; }
                 .SBSE_searchResults td { padding: 0 }
                 .SBSE_searchResults iframe {
-                    width: 100%;
-                    height: 300px;
+                    width: 100%; height: 300px;
                     display: none;
                     background-color: white;
                     border: none;
@@ -2639,11 +2685,12 @@ const siteHandlers = {
                 .SBSE_owned a[href*="steam"] .DIG3_14_Gray { color: #9ccc65; }
                 .SBSE_wished a[href*="steam"] .DIG3_14_Gray { color: #29b6f6; }
                 .SBSE_ignored a[href*="steam"] .DIG3_14_Gray { text-decoration: line-through;}
+                #form3 #sortby { width: 250px; }
             `);
 
             // setup row data & event
-            const easyBuySetup = (i, element) => {
-                const $game = $(element);
+            const easyBuySetup = (i, ele) => {
+                const $game = $(ele);
                 const $row = $game.closest('tr');
 
                 $row.attr('data-id', $game.attr('href').replace(/\D/g, ''));
@@ -2773,24 +2820,22 @@ const siteHandlers = {
             $('.DIGButtonPurchase').click(e => {
                 let bought = 0;
                 let balance = parseFloat($('a[href^="account_transac"]').parent('div').text().slice(19)) || 0;
-                const $self = $(e.delegateTarget);
-                const $checked = $('.DIGEasyBuy_checked');
-                const handler = callback => {
-                    const item = $checked.shift();
+                const $self = $(e.currentTarget);
 
-                    if (item) {
-                        const $item = $(item);
-                        const id = $item.data('id');
-                        const price = parseInt($item.data('price'), 10);
+                $self.prop('disabled', true).text(text.DIGButtonPurchasing);
+
+                $('.DIGEasyBuy_checked').each((() => {
+                    var _ref7 = _asyncToGenerator(function* (i, ele) {
+                        const $ele = $(ele);
+                        const id = $ele.data('id');
+                        const price = parseInt($ele.data('price'), 10);
 
                         if (id && price > 0) {
                             if (balance - price > 0) {
                                 let url = `${location.origin}/account_buy.html`;
                                 const requestInit = {
                                     method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/x-www-form-urlencoded'
-                                    },
+                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                                     body: `quantity=1&xgameid=${id}&xgameprice1=${price}&send=Purchase`,
                                     mode: 'same-origin',
                                     credentials: 'same-origin',
@@ -2804,35 +2849,34 @@ const siteHandlers = {
                                     requestInit.referrer = url;
                                 }
 
-                                fetch(url, requestInit).then(res => {
-                                    if (res.ok) {
-                                        $item.click();
-                                        bought += 1;
-                                        balance -= price;
+                                const res = yield fetch(url, requestInit);
 
-                                        setTimeout(handler.bind(null, callback), 300);
-                                    } else handler(callback);
-                                });
+                                if (res.ok) {
+                                    $ele.click();
+                                    bought += 1;
+                                    balance -= price;
+                                }
                             } else {
                                 swal({
                                     title: text.failTitle,
                                     text: text.DIGInsufficientFund,
                                     type: 'error'
-                                }).then(() => {
+                                }).then(function () {
                                     window.location = `${location.origin}/account_page.html`;
                                 });
                             }
-                        } else handler(callback);
-                    } else callback();
-                };
+                        }
+                    });
 
-                $self.prop('disabled', true).text(text.DIGButtonPurchasing);
-                handler(() => {
-                    if (bought) window.location = `${location.origin}/account_page.html`;else $self.prop('disabled', false).text(text.DIGButtonPurchase);
-                });
+                    return function (_x10, _x11) {
+                        return _ref7.apply(this, arguments);
+                    };
+                })());
+
+                if (bought) window.location = `${location.origin}/account_page.html`;else $self.prop('disabled', false).text(text.DIGButtonPurchase);
             });
             $('.DIGButtonSelectAll').click(e => {
-                const $self = $(e.delegateTarget);
+                const $self = $(e.currentTarget);
                 const state = !$self.data('state');
                 const selector = $('.DIGEasyBuy_hideOwned').length > 0 ? '.DIGEasyBuy_row:not(.SBSE_hide)' : '.DIGEasyBuy_row';
 
@@ -2841,7 +2885,7 @@ const siteHandlers = {
                 $self.text(state ? text.DIGEasyBuySelectCancel : text.DIGEasyBuySelectAll);
             });
             $('.DIGButtonHideOwned').click(e => {
-                const $self = $(e.delegateTarget);
+                const $self = $(e.currentTarget);
                 const state = !$self.data('state');
 
                 $('#TableKeys').toggleClass('DIGEasyBuy_hideOwned', state);
@@ -2850,30 +2894,33 @@ const siteHandlers = {
             });
             $('.DIGButtonLoadAllPages').click(e => {
                 // auto load all pages at marketplace
-                const $self = $(e.delegateTarget);
+                const $self = $(e.currentTarget);
                 const $tbody = $('#TableKeys > tbody');
-                const load = (page, retry = 0) => {
-                    $self.text(text.DIGEasyBuyLoading.replace('%page%', page));
+                const load = (() => {
+                    var _ref8 = _asyncToGenerator(function* (page, retry = 0) {
+                        $self.text(text.DIGEasyBuyLoading.replace('%page%', page));
 
-                    fetch(`${location.origin}/account_tradesXT_${page}.html`, {
-                        method: 'GET',
-                        credentials: 'same-origin'
-                    }).then(res => {
-                        if (res.ok) return res.text();
-                        throw new Error('Network response was not ok.');
-                    }).then(html => {
-                        const $result = $(html).find('#TableKeys tr.DIG3_14_Gray');
+                        const res = yield fetch(`${location.origin}/account_tradesXT_${page}.html`, {
+                            method: 'GET',
+                            credentials: 'same-origin'
+                        });
 
-                        if ($result.length > 0) {
-                            $result.find('a[href^="account_buy"]').each(easyBuySetup);
-                            $result.find('a[href*="steampowered"]').each(check);
-                            $tbody.append($result);
-                            load(page + 1);
-                        } else $self.text(text.DIGEasyBuyLoadingComplete);
-                    }).catch(() => {
-                        if (retry < 3) load(page, retry + 1);else load(page + 1);
+                        if (res.ok) {
+                            const $result = $((yield res.text())).find('#TableKeys tr.DIG3_14_Gray');
+
+                            if ($result.length > 0) {
+                                $result.find('a[href^="account_buy"]').each(easyBuySetup);
+                                $result.find('a[href*="steampowered"]').each(check);
+                                $tbody.append($result);
+                                load(page + 1);
+                            } else $self.text(text.DIGEasyBuyLoadingComplete);
+                        } else if (retry < 3) load(page, retry + 1);else load(page + 1);
                     });
-                };
+
+                    return function load(_x12) {
+                        return _ref8.apply(this, arguments);
+                    };
+                })();
 
                 load(1);
                 $self.prop('disabled', true);
@@ -2908,20 +2955,19 @@ const siteHandlers = {
                 $gameTitle.closest('table').after($searchResult);
                 $searchResult.before(`<h3>${text.DIGMarketSearchResult}</h3>`);
 
-                $('.tt-dropdown-menu').click(() => {
+                $('.tt-dropdown-menu').click(_asyncToGenerator(function* () {
                     $searchResult.empty();
-                    fetch(`${location.origin}/account_tradesXT.html`, {
+
+                    const res = yield fetch(`${location.origin}/account_tradesXT.html`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: `search=${encodeURIComponent($gameTitle.val()).replace(/%20/g, '+')}&button=SEARCH`,
                         credentials: 'same-origin'
-                    }).then(res => {
-                        if (res.ok) return res.text();
-                        throw new Error('Network response was not ok.');
-                    }).then(html => {
-                        $searchResult.append($(html).find('#TableKeys'));
                     });
-                });
+                    const result = res.ok ? $((yield res.text())).find('#TableKeys') : 'Network response was not ok.';
+
+                    $searchResult.append(result);
+                }));
 
                 // apply last input price
                 const lastPrice = GM_getValue('SBSE_DIGLastPrice', 20);
@@ -2937,20 +2983,18 @@ const siteHandlers = {
             } else {
                 GM_addStyle(`
                     .check.icon {
-                        color: #5cb85c;
+                        width: 42px; height: 24px;
                         margin: 12px 0 5px 9px;
-                        width: 42px;
-                        height: 24px;
                         border-bottom: solid 3px currentColor;
                         border-left: solid 3px currentColor;
                         transform: rotate(-45deg);
+                        color: #5cb85c;
                     }
                     .remove.icon { color: #d9534f; margin-left: 9px; margin-top: 30px; }
                     .remove.icon:before, .remove.icon:after {
-                        content: '';
+                        width: 45px; height: 3px;
                         position: absolute;
-                        width: 45px;
-                        height: 3px;
+                        content: '';
                         background-color: currentColor;
                         transform: rotate(45deg);
                     }
@@ -2965,16 +3009,13 @@ const siteHandlers = {
         }
     },
     ccyycn() {
-        // insert textarea
-        $('.featurette-divider').eq(0).after(bundleSitesBox());
-
         // inject css
         GM_addStyle(`
             .SBSE_container {
                 width: 80%;
                 margin: 0 auto;
-                color: #000;
                 font-size: 16px;
+                color: #000;
             }
             .SBSE_container > textarea {
                 background-color: #EEE;
@@ -3000,51 +3041,56 @@ const siteHandlers = {
             }
         `);
 
-        // narrow buttons
-        $('.SBSE_container > div > button').addClass('narrow');
+        const handlers = {
+            extract() {
+                const data = {
+                    title: 'CCYYCN Bundle',
+                    filename: 'CCYYCN Bundle',
+                    items: []
+                };
 
-        const extractKeys = () => {
-            const keys = [];
+                $('.deliver-gkey:contains(-)').each((i, ele) => {
+                    const $ele = $(ele);
+                    const d = {
+                        title: $ele.parent().prev().text().trim(),
+                        key: $ele.text().trim()
+                    };
 
-            $('.deliver-gkey:contains(-)').each((index, element) => {
-                const $game = $(element);
-
-                keys.push({
-                    key: $game.text().trim(),
-                    title: $game.parent().prev().text().trim()
+                    activator.pushKeyDetails(d);
+                    data.items.push(d);
                 });
-            });
 
-            return keys;
+                return data;
+            },
+            reveal(e) {
+                const $revealBtn = $(e.currentTarget);
+                const handler = ($games, callback) => {
+                    const game = $games.shift();
+
+                    if (game) {
+                        game.click();
+                        setTimeout(handler.bind(null, $games, callback), 300);
+                    } else callback();
+                };
+
+                $revealBtn.addClass('working');
+
+                handler($('.deliver-btn'), () => {
+                    $revealBtn.removeClass('working');
+                    $('.SBSE_BtnRetrieve').click();
+                });
+            }
         };
+        const $container = getContainer(handlers);
 
-        // button click
-        $('.SBSE_BtnReveal').click(() => {
-            const handler = ($games, callback) => {
-                const game = $games.shift();
+        // narrow buttons
+        $container.find('button').addClass('narrow');
 
-                if (game) {
-                    game.click();
-                    setTimeout(handler.bind(null, $games, callback), 300);
-                } else callback();
-            };
-
-            bundleSitesBoxHandler.reveal(handler, $('.deliver-btn'));
-        });
-        $('.SBSE_BtnRetrieve').click(() => {
-            bundleSitesBoxHandler.retrieve(extractKeys());
-        });
-        $('.SBSE_BtnExport').click(() => {
-            const bundleTitle = 'CCYYCN Bundle'; // can't find bundle title in html
-
-            bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
-        });
+        // insert textarea
+        $('.featurette-divider').eq(0).after($container);
     },
     groupees() {
         if (location.pathname.startsWith('/profile/')) {
-            // insert textarea
-            $('.table-products').before(bundleSitesBox());
-
             // inject css
             GM_addStyle(`
                 .SBSE_container > textarea, .SBSE_container > div > button, .SBSE_container > div > a {
@@ -3061,10 +3107,72 @@ const siteHandlers = {
                 }
                 img.product-cover { display: none; }
             `);
+            const handlers = {
+                extract() {
+                    const bundleTitle = $('h2').text().trim();
+                    const data = {
+                        title: bundleTitle,
+                        filename: `Groupees ${bundleTitle} Keys`,
+                        items: []
+                    };
+
+                    $('.key-block input.code').each((i, ele) => {
+                        const $ele = $(ele);
+                        const key = $ele.val();
+
+                        if (key.includes('-')) {
+                            const $titleEle = $ele.closest('tr').prev().find('td:nth-of-type(3)');
+                            const d = {
+                                title: $titleEle.text().trim(),
+                                key,
+                                used: !!$ele.closest('.key-block').find('.key-status:contains(used)').length
+                            };
+
+                            activator.pushKeyDetails(d);
+                            data.items.push(d);
+                        }
+                    });
+
+                    return data;
+                },
+                reveal(e) {
+                    const $revealBtn = $(e.currentTarget);
+                    const handler = ($games, callback) => {
+                        const game = $games.shift();
+
+                        if (game) {
+                            game.click();
+                            setTimeout(handler.bind(null, $games, callback), 300);
+                        } else callback();
+                    };
+
+                    $revealBtn.addClass('working');
+
+                    const $reveals = $('.product:has(img[title*=Steam]) .reveal-product');
+                    const timer = $reveals.length > 0 ? 1500 : 0;
+
+                    $reveals.click();
+                    setTimeout(() => {
+                        handler($('.btn-reveal-key'), () => {
+                            $revealBtn.removeClass('working');
+                            $('.SBSE_BtnRetrieve').click();
+                        });
+                    }, timer);
+                }
+            };
+            const $container = getContainer(handlers);
+
+            // append checkbox for used-key
+            $('#SBSE_BtnSettings').before(`
+                <label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>
+            `);
+
+            // insert container
+            $('.table-products').before($container);
 
             // load details
             $('img[src*="steam.svg"]').each((() => {
-                var _ref3 = _asyncToGenerator(function* (index, ele) {
+                var _ref10 = _asyncToGenerator(function* (index, ele) {
                     $.ajax({
                         url: $(ele).closest('tr').find('.item-link').attr('href'),
                         data: { v: 1 },
@@ -3072,82 +3180,90 @@ const siteHandlers = {
                     });
                 });
 
-                return function (_x4, _x5) {
-                    return _ref3.apply(this, arguments);
+                return function (_x13, _x14) {
+                    return _ref10.apply(this, arguments);
                 };
             })());
-
-            const extractKeys = () => {
-                const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
-                const keys = [];
-
-                $('.key-block input.code').each((index, element) => {
-                    const $game = $(element);
-                    const used = !!$game.closest('.key-block').find('.key-status:contains(used)').length;
-
-                    if ($game.val().includes('-') && (!used || used && !skipUsed)) {
-                        keys.push({
-                            key: $game.val(),
-                            title: $game.closest('tr').prev().children('td').eq(2).text().trim()
-                        });
-                    }
-                });
-
-                return keys;
-            };
-
-            // append checkbox for used-key
-            $('#SBSE_BtnSettings').before($(`<label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>`));
-
-            // button click
-            $('.SBSE_BtnReveal').click(() => {
-                const handler = ($games, callback) => {
-                    const game = $games.shift();
-
-                    if (game) {
-                        game.click();
-                        setTimeout(handler.bind(null, $games, callback), 300);
-                    } else callback();
-                };
-
-                const $reveals = $('.product:has(img[title*=Steam]) .reveal-product');
-                const timer = $reveals.length > 0 ? 1500 : 0;
-
-                $reveals.click();
-                setTimeout(() => {
-                    bundleSitesBoxHandler.reveal(handler, $('.btn-reveal-key'));
-                }, timer);
-            });
-            $('.SBSE_BtnRetrieve').click(() => {
-                bundleSitesBoxHandler.retrieve(extractKeys());
-            });
-            $('.SBSE_BtnExport').click(() => {
-                const bundleTitle = `Groupees - ${$('h2').text()}`;
-
-                bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
-            });
 
             // bind custom event
             $(document).on('activated', (e, key, result) => {
                 if (result.success === 1) $(`.btn-steam-redeem[href*=${key}]`).next('.key-usage-toggler').click();
             });
         } else {
-            // insert textarea
-            $('.container > div').eq(1).before(bundleSitesBox());
-
             // inject css
             GM_addStyle(`
                 .SBSE_container { margin-bottom: 20px; }
                 .SBSE_container > textarea { background-color: #EEE; border-radius: 3px; }
                 .SBSE_container > div > button, .SBSE_container > div > a { outline: none !important; }
+                .SBSE_container > div > a {
+                    -webkit-appearance: button;
+                    -moz-appearance: button;
+                    padding: 3px 6px;
+                    color: inherit;
+                    text-decoration: none;
+                }
                 #SBSE_BtnSettings { margin-top: 8px; }
             `);
 
-            // append checkbox for used-key
-            $('#SBSE_BtnSettings').before($(`<label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>`));
+            const handlers = {
+                extract() {
+                    const bundleTitle = $('.expanded .caption').text().trim();
+                    const data = {
+                        title: bundleTitle,
+                        filename: `Groupees ${bundleTitle} Keys`,
+                        items: []
+                    };
 
+                    $('.expanded .code').each((i, ele) => {
+                        const $ele = $(ele);
+                        const d = {
+                            title: $ele.closest('.details').find('h3').text().trim(),
+                            key: $ele.val(),
+                            used: $ele.closest('li').find('.usage').prop('checked')
+                        };
+
+                        activator.pushKeyDetails(d);
+                        data.items.push(d);
+                    });
+
+                    return data;
+                },
+                reveal(e) {
+                    const $revealBtn = $(e.currentTarget);
+                    const handler = ($games, callback) => {
+                        const game = $games.shift();
+
+                        if (game) {
+                            game.click();
+                            setTimeout(handler.bind(null, $games, callback), 300);
+                        } else callback();
+                    };
+
+                    $revealBtn.addClass('working');
+
+                    const $reveals = $('.product:has(img[title*=Steam]) .reveal-product');
+                    const timer = $reveals.length > 0 ? 1500 : 0;
+
+                    $reveals.click();
+                    setTimeout(() => {
+                        handler($('.expanded .reveal'), () => {
+                            $revealBtn.removeClass('working');
+                            $('.SBSE_BtnRetrieve').click();
+                        });
+                    }, timer);
+                }
+            };
+            const $container = getContainer(handlers);
+
+            // append checkbox for used-key
+            $container.find('#SBSE_BtnSettings').before($(`
+                <label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>
+            `));
             // add buttons style via groupees's class
-            $('.SBSE_container > div > button, .SBSE_container > div > a').addClass('btn btn-default');
+            $container.find('.SBSE_container > div > button, .SBSE_container > div > a').addClass('btn btn-default');
+
+            // insert container
+            $('.container > div').eq(1).before($container);
 
             // append mark all as used button
             new MutationObserver(mutations => {
@@ -3167,53 +3283,6 @@ const siteHandlers = {
                 });
             }).observe($('#profile_content')[0], { childList: true });
 
-            const extractKeys = () => {
-                const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
-                const keys = [];
-
-                $('.expanded .code').each((index, element) => {
-                    const $game = $(element);
-                    const used = $game.closest('li').find('.usage').prop('checked');
-
-                    if (!used || used && !skipUsed) {
-                        keys.push({
-                            key: $game.val(),
-                            title: $game.closest('.details').find('h3').text().trim()
-                        });
-                    }
-                });
-
-                return keys;
-            };
-
-            // button click
-            $('.SBSE_BtnReveal').click(() => {
-                const handler = ($games, callback) => {
-                    const game = $games.shift();
-
-                    if (game) {
-                        game.click();
-                        setTimeout(handler.bind(null, $games, callback), 300);
-                    } else callback();
-                };
-
-                const $reveals = $('.product:has(img[title*=Steam]) .reveal-product');
-                const timer = $reveals.length > 0 ? 1500 : 0;
-
-                $reveals.click();
-                setTimeout(() => {
-                    bundleSitesBoxHandler.reveal(handler, $('.expanded .reveal'));
-                }, timer);
-            });
-            $('.SBSE_BtnRetrieve').click(() => {
-                bundleSitesBoxHandler.retrieve(extractKeys());
-            });
-            $('.SBSE_BtnExport').click(() => {
-                const bundleTitle = `Groupees - ${$('.expanded .caption').text()}`;
-
-                bundleSitesBoxHandler.export(extractKeys(), bundleTitle);
-            });
-
             // bind custom event
             $(document).on('activated', (e, key, result) => {
                 if (result.success === 1) $(`li.key:has(input[value=${key}]) .usage`).click();
@@ -3224,9 +3293,6 @@ const siteHandlers = {
         const keys = unique($('body').text().match(regKey));
 
         if (keys.length > 0) {
-            // insert textarea
-            $('#tabs').eq(0).prepend(bundleSitesBox());
-
             // inject css
             GM_addStyle(`
                 .SBSE_container > textarea { border: 1px solid #AAAAAA; }
@@ -3240,26 +3306,30 @@ const siteHandlers = {
                     background: #dadada url(images/ui-bg_glass_75_dadada_1x400.png) 50% 50% repeat-x;
                     color: #212121;
                 }
-                #SBSE_BtnSettings { width: 32px !important; height: 32px !important; }
             `);
 
-            // remove event from agiso
-            $('.SBSE_container > div > button').click(e => {
-                e.preventDefault();
-            });
+            const handlers = {
+                extract() {
+                    const bundleTitle = $('a[href*="tradeSnap.htm"]').eq(1).text().trim();
+                    const data = {
+                        title: bundleTitle,
+                        filename: `agiso ${bundleTitle} Keys`,
+                        items: []
+                    };
 
-            // hide reveal
-            $('.SBSE_BtnReveal').hide();
+                    keys.forEach(key => {
+                        data.items.push({ key });
+                    });
 
-            // button click
-            $('.SBSE_BtnRetrieve').click(() => {
-                bundleSitesBoxHandler.retrieve(keys);
-            });
-            $('.SBSE_BtnExport').click(() => {
-                const bundleTitle = 'agiso Bundle';
+                    return data;
+                }
+            };
+            const $container = getContainer(handlers);
 
-                bundleSitesBoxHandler.export(keys, bundleTitle);
-            });
+            $container.find('.SBSE_BtnReveal').remove(); // remove reveal
+
+            // insert container
+            $('#tabs').eq(0).prepend($container);
         }
     }
 };
@@ -3287,23 +3357,18 @@ const init = () => {
                 }
             }
         }
-        /* else {
-            swal(text.notLoggedInTitle, text.notLoggedInMsg, 'error');
-        } */
     } else {
         const site = location.hostname.replace(/(www|alds|bundle)\./, '').split('.').shift();
 
         // check sessionID
         if (!config.get('sessionID')) getSessionID();
 
-        if (has.call(siteHandlers, site)) {
-            siteHandlers[site](true);
-
-            // update steam library every 10 min
-            const updateTimer = 10 * 60 * 1000;
-            if (!steam.lastSync || steam.lastSync < Date.now() - updateTimer) syncLibrary(false);
-        }
+        if (has.call(siteHandlers, site)) siteHandlers[site](true);
     }
+
+    // update steam library every 10 min
+    const updateTimer = 10 * 60 * 1000;
+    if (!steam.lastSync || steam.lastSync < Date.now() - updateTimer) syncLibrary(false);
 };
 
 $(init);
