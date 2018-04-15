@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.0.1
+// @version      2.1.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -20,6 +20,7 @@
 // @include      https://groupees.com/purchases
 // @include      https://groupees.com/profile/purchases/*
 // @include      http*://*agiso.com/*
+// @include      https://steamdb.steamcn.com/tooltip*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.js
 // @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.css
@@ -37,6 +38,7 @@
 // @connect      www.google.fr
 // @connect      api.fanatical.com
 // @connect      www.ecb.europa.eu
+// @connect      steamdb.steamcn.com
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -44,7 +46,6 @@
 // @grant        GM_getResourceText
 // @grant        unsafeWindow
 // @run-at       document-start
-// @noframes
 // ==/UserScript==
 
 /* global swal */
@@ -162,6 +163,66 @@ GM_addStyle(`
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+
+    /* icons */
+    .SBSE_icon {
+        width: 20px; height: 20px;
+        display: inline-block;
+        border-radius: 50%;
+        background-color: #E87A90;
+        transform: rotate(45deg);
+    }
+    .SBSE_icon:before, .SBSE_icon:after {
+        content: '';
+        width: 3px; height: 14px;
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        border-radius: 5px;
+        pointer-events: none;
+    }
+    .SBSE_icon:after {
+        transform: translate(-50%, -50%) rotate(-90deg);
+    }
+    .SBSE_owned .SBSE_icon { background-color: #9CCC65; }
+    .SBSE_owned .SBSE_icon:before, .SBSE_owned .SBSE_icon:after { transform: none; }
+    .SBSE_owned .SBSE_icon:before {
+        width: 3px; height: 11px;
+        top: 4px; left: 10px;
+        border-radius: 5px 5px 5px 0;
+    }
+    .SBSE_owned .SBSE_icon:after {
+        width: 5px; height: 3px;
+        top: 12px; left: 6px;
+        border-radius: 5px 0 0 5px;
+    }
+    .SBSE_wished .SBSE_icon { transform: rotate(0); background-color: #29B6F6; }
+    .SBSE_wished .SBSE_icon:before, .SBSE_wished .SBSE_icon:after {
+        width: 6px; height: 10px;
+        top: 5px; left: 10px;
+        border-radius: 6px 6px 0 0;
+        transform: rotate(-45deg);
+        transform-origin: 0 100%;
+    }
+    .SBSE_wished .SBSE_icon:after {
+        left: 4px;
+        transform: rotate(45deg);
+        transform-origin :100% 100%;
+    }
+
+    /* tooltip */
+    .SBSE_tooltip {
+        width: 308px;
+        position: fixed;
+        overflow: hidden;
+        background: url(https://steamstore-a.akamaihd.net/public/images/v6/blue_body_darker_repeat.jpg) -700px center repeat-y scroll rgb(0, 0, 0);
+        border: 0;
+        box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5);
+        transition: all 0.5s;
+        z-index: 999;
+    }
+    .SBSE_tooltip.SBSE_hide { display: none; }
 `);
 
 // load up
@@ -170,7 +231,7 @@ const eol = "\r\n";
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
 
-const steam = JSON.parse(localStorage.getItem('SBSE_steam'0) || '{}');
+const steam = JSON.parse(localStorage.getItem('SBSE_steam') || '{}');
 const config = {
     data: JSON.parse(GM_getValue('SBSE_config', '{}')),
     set(key, value, callback) {
@@ -1421,6 +1482,77 @@ const getSessionID = () => {
         },
     });
 };
+const steamCNTooltip = {
+    timeoutID: 0,
+    load(data) {
+        ['app', 'sub'].forEach((type) => {
+            if (has.call(data, type)) {
+                const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${data[type]}#steam_info_${type}_${data[type]}_1`;
+
+                $('body').append(
+                    $(`<iframe id="tooltip_${type + data[type]}" class="SBSE_tooltip SBSE_hide" src="${url}"></iframe>`)
+                        .mouseenter(() => {
+                            clearTimeout(this.timeoutID);
+                        })
+                        .mouseout(this.hide),
+                );
+            }
+        });
+    },
+    show(e) {
+        const $target = $(e.currentTarget);
+        const json = $target.closest('.SBSE_processed').attr('data-gameinfo');
+
+        if (json.length > 0) {
+            const data = JSON.parse(json);
+            const opened = !!$('.SBSE_tooltip:not(.SBSE_hide)').length;
+
+            ['app', 'sub'].forEach((type) => {
+                const $tooltip = $(`#tooltip_${type + data[type]}`);
+
+                if ($tooltip.length > 0 && !opened) {
+                    $tooltip.css({
+                        top: e.clientY,
+                        left: e.clientX + 10,
+                    }).removeClass('SBSE_hide');
+                    this.reposition($tooltip, $tooltip.height());
+                    $tooltip[0].contentWindow.postMessage('show', '*'); // get height
+
+                    $target.one('mouseout', () => {
+                        this.timeoutID = setTimeout(this.hide.bind(steamCNTooltip), 500);
+                    });
+                }
+            });
+        }
+    },
+    hide() {
+        const $tooltip = $('.SBSE_tooltip:not(.SBSE_hide)');
+
+        $tooltip.addClass('SBSE_hide');
+        $tooltip[0].contentWindow.postMessage('hide', '*');
+    },
+    reposition($tooltip, height) {
+        const $window = $(window);
+        const $document = $(document);
+        const offsetTop = $tooltip.offset().top - $document.scrollTop();
+        const offsetLeft = $tooltip.offset().left - $document.scrollLeft();
+        const overflowX = (offsetLeft + $tooltip.width()) - ($window.width() - 20);
+        const overflowY = (offsetTop + height) - ($window.height() - 20);
+
+        if (overflowY > 0) $tooltip.css('top', offsetTop - overflowY);
+        if (overflowX > 0) $tooltip.css('left', offsetLeft - overflowX);
+    },
+    listen() {
+        window.addEventListener('message', (e) => {
+            if (e.origin === 'https://steamdb.steamcn.com' && e.data.height && e.data.src) {
+                const $tooltip = $(`.SBSE_tooltip[src="${e.data.src}"]`);
+
+                $tooltip.height(e.data.height);
+                this.reposition($tooltip, e.data.height);
+            }
+        });
+    },
+};
 const settings = {
     construct() {
         const panelHTML = `
@@ -1872,6 +2004,7 @@ const siteHandlers = {
             .SBSE_container > div > button, .SBSE_container > div > a { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
             .SBSE_container > div > a:hover { color: white; }
             .swal2-popup .slider { margin: 0; }
+            .SBSE_icon { vertical-align: middle; }
         `);
 
         const handlers = {
@@ -1961,22 +2094,36 @@ const siteHandlers = {
             $('.game-key-string').each((i, ele) => {
                 const $ele = $(ele);
                 const $a = $ele.find('.title_game > a');
-                const data = {
+                const d = {
                     title: $a.text().trim(),
                 };
 
                 const matched = $a.attr('href').match(/steam.+\/(app|sub)\/(\d+)/);
-                if (matched) data[matched[1]] = parseInt(matched[2], 10);
+                if (matched) d[matched[1]] = parseInt(matched[2], 10);
 
                 // check if owned
                 ['app', 'sub'].forEach((type) => {
-                    if (has.call(data, type) && steam.owned[type].includes(data[type])) {
-                        $ele.addClass('SBSE_owned');
-                        data.owned = true;
+                    if (has.call(d, type)) {
+                        const owned = steam.owned[type].includes(d[type]);
+                        const wished = steam.wished[type].includes(d[type]);
+
+                        // append icon
+                        $a.after(
+                            $('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)),
+                        );
+
+                        if (owned) $ele.addClass('SBSE_owned');
+                        if (wished) $ele.addClass('SBSE_wished');
+
+                        // load SteamCN tooltip
+                        steamCNTooltip.load(d);
+
+                        d.owned = owned;
+                        d.wished = wished;
                     }
                 });
 
-                $ele.attr('data-gameinfo', JSON.stringify(data)).addClass('SBSE_processed');
+                $ele.attr('data-gameinfo', JSON.stringify(d)).addClass('SBSE_processed');
             });
         };
         const $container = getContainer(handlers);
@@ -2040,6 +2187,7 @@ const siteHandlers = {
             .pricingDetail .cheapest { border-bottom: 1px solid #ff9800; font-weight: bold; }
             .pricingDetail .currency-flag { vertical-align: text-bottom; }
             .swal2-popup table { background-color: white; }
+            .SBSE_icon { margin-top: -16px; align-self: flex-end; }
         `);
 
         let APIData = null;
@@ -2224,20 +2372,30 @@ const siteHandlers = {
                             if (has.call(data, 'steam') && data.steam.id) {
                                 const $gameTitle = $(`dd > div.d-flex.flex-column:contains(${data.name})`);
                                 const $dl = $gameTitle.closest('dl');
-                                const d = {
-                                    title: data.name,
-                                    app: data.steam.id,
-                                };
+                                const app = parseInt(data.steam.id, 10);
+                                const owned = steam.owned.app.includes(app);
+                                const wished = steam.wished.app.includes(app);
 
                                 $gameTitle.contents().filter((i, n) => n.nodeType === 3).wrap(`<a href="http:www.steampowered.com/app/${data.steam.id}/"></a>`);
 
-                                // check if owned
-                                if (steam.owned.app.includes(data.steam.id)) {
-                                    $dl.addClass('SBSE_owned');
-                                    d.owned = true;
-                                }
+                                // append icon
+                                $gameTitle.append(
+                                    $('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)),
+                                );
 
-                                $dl.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify(d));
+                                // check if owned & wished
+                                if (owned) $dl.addClass('SBSE_owned');
+                                if (wished) $dl.addClass('SBSE_wished');
+
+                                // load SteamCN tooltip
+                                steamCNTooltip.load({ app });
+
+                                $dl.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify({
+                                    title: data.name,
+                                    app,
+                                    owned,
+                                    wished,
+                                }));
                             }
                         };
 
@@ -2310,13 +2468,14 @@ const siteHandlers = {
             .SBSE_owned .sr-unredeemed-steam-button {
                 background-color: #F3F3F3;
                 background: linear-gradient(to top, #E8E8E8, #F6F6F6);
-            }
+            }/*
             .SBSE_owned .heading-text h4 > span:not(.steam-owned):last-child::after {
                 content: '\\f085';
                 font-family: hb-icons;
                 color: #17A1E5;
-            }
-            .SBSE_activationRestrictions { float: right; cursor: pointer; }
+            }*/
+            .SBSE_activationRestrictions { float: right; margin-right: 5px; cursor: pointer; }
+            .swal2-icon-text { font-size: inherit; }
         `);
 
         const atDownload = location.pathname === '/downloads';
@@ -2430,14 +2589,19 @@ const siteHandlers = {
             const data = JSON.parse(json);
 
             data.tpkd_dict.all_tpks.forEach((game) => {
-                const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[title="${game.human_name}"])`);
+                const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[data-title="${game.human_name}"])`);
 
                 if ($keyRedeemer.length > 0) {
                     // apply owned effect on game title
                     const app = parseInt(game.steam_app_id, 10);
-                    const owned = app && steam.owned.app.includes(app);
+                    const owned = steam.owned.app.includes(app);
+                    const wished = steam.wished.app.includes(app);
 
                     if (owned) $keyRedeemer.addClass('SBSE_owned');
+                    if (wished) $keyRedeemer.addClass('SBSE_wished');
+
+                    // load SteamCN tooltip
+                    steamCNTooltip.load({ app });
 
                     // activation restrictions
                     let html = '';
@@ -2465,6 +2629,7 @@ const siteHandlers = {
                             title: game.human_name,
                             app,
                             owned,
+                            wished,
                         }),
                     });
 
@@ -2510,8 +2675,11 @@ const siteHandlers = {
 
                             // fetch game heading & wrap heading
                             $node.find('.heading-text > h4').each((i, heading) => {
-                                heading.parentElement.title = heading.innerText.trim();
+                                heading.parentElement.dataset.title = heading.innerText.trim();
                                 $(heading.firstChild).wrap('<span/>');
+                                $(heading).append(
+                                    $('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)),
+                                );
                             });
 
                             // fetch & process key data
@@ -3298,6 +3466,11 @@ const siteHandlers = {
             $('#tabs').eq(0).prepend($container);
         }
     },
+    steamcn() {
+        if (location.pathname.startsWith('/tooltip')) {
+            GM_addStyle('body { overflow: hidden; }');
+        }
+    },
 };
 const init = () => {
     if (location.hostname === 'store.steampowered.com') {
@@ -3324,13 +3497,15 @@ const init = () => {
             }
         }
     } else {
-        const site = location.hostname.replace(/(www|alds|bundle)\./, '').split('.').shift();
+        const site = location.hostname.replace(/(www|alds|bundle|steamdb)\./, '').split('.').shift();
 
         // check sessionID
         if (!config.get('sessionID')) getSessionID();
 
         if (has.call(siteHandlers, site)) siteHandlers[site](true);
     }
+
+    steamCNTooltip.listen();
 
     // update steam library every 10 min
     const updateTimer = 10 * 60 * 1000;
