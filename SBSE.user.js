@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.1.0
+// @version      2.2.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -233,7 +233,6 @@ const eol = "\r\n";
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
 
-const steam = JSON.parse(localStorage.getItem('SBSE_steam') || '{}');
 const config = {
     data: JSON.parse(GM_getValue('SBSE_config', '{}')),
     set(key, value, callback) {
@@ -482,6 +481,9 @@ const i18n = {
         syncFail: 'Failed to sync Steam library data',
         visitSteam: 'Visit Steam',
         lastSyncTime: 'Library data synced %seconds% seconds ago'
+    },
+    get(key) {
+        return this[config.get('language')][key];
     }
 };
 const ISO2 = {
@@ -1397,72 +1399,91 @@ const xe = {
         if (Object.keys(this.exchangeRate).length === 0 || this.exchangeRate.lastUpdate < Date.now() - updateTimer) this.getRate();
     }
 };
-
-config.init();
-xe.init();
-
-let text = has.call(i18n, config.get('language')) ? i18n[config.get('language')] : i18n.english;
-
-// functions
-const syncLibrary = (notify = true) => {
-    GM_xmlhttpRequest({
-        method: 'GET',
-        url: `https://store.steampowered.com/dynamicstore/userdata/t=${Math.random()}`,
-        onload: res => {
-            try {
+const steam = {
+    library: JSON.parse(localStorage.getItem('SBSE_steam') || '{}'),
+    sync(notify = true) {
+        const self = this;
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: `https://store.steampowered.com/dynamicstore/userdata/t=${Math.random()}`,
+            onload(res) {
                 const data = JSON.parse(res.response);
 
-                if (data.rgOwnedApps.length === 0 || data.rgOwnedPackages.length === 0) throw new Error('Empty library data');
+                self.library.owned.app = data.rgOwnedApps;
+                self.library.owned.sub = data.rgOwnedPackages;
+                self.library.wished.app = data.rgWishlist;
+                self.library.wished.sub = [];
+                self.library.ignored.app = data.rgIgnoredApps;
+                self.library.ignored.sub = data.rgIgnoredPackages;
+                self.library.lastSync = Date.now();
+                self.set();
 
-                if (!has.call(steam, 'owned')) steam.owned = {};
-                if (!has.call(steam, 'wished')) steam.wished = {};
-                if (!has.call(steam, 'ignored')) steam.ignored = {};
-
-                steam.owned.app = data.rgOwnedApps;
-                steam.owned.sub = data.rgOwnedPackages;
-                steam.wished.app = data.rgWishlist;
-                steam.wished.sub = [];
-                steam.ignored.app = data.rgIgnoredApps;
-                steam.ignored.sub = data.rgIgnoredPackages;
-                steam.lastSync = Date.now();
-
-                localStorage.setItem('SBSE_steam', JSON.stringify(steam));
-
-                if (notify) {
+                if (notify === true) {
                     swal({
-                        title: text.syncSuccessTitle,
-                        text: text.syncSuccess,
+                        title: i18n.get('syncSuccessTitle'),
+                        text: i18n.get('syncSuccess'),
                         type: 'success',
                         timer: 3000
                     });
                 }
-            } catch (e) {
+            },
+            onerror() {
                 swal({
-                    title: text.syncFailTitle,
-                    text: text.syncFail,
+                    title: i18n.get('syncFailTitle'),
+                    text: i18n.get('syncFail'),
                     type: 'error',
-                    confirmButtonText: text.visitSteam,
+                    confirmButtonText: i18n.get('visitSteam'),
                     showCancelButton: true
                 }).then(result => {
                     if (result.value === true) window.open('https://store.steampowered.com/');
                 });
             }
+        });
+    },
+    set() {
+        localStorage.setItem('SBSE_steam', JSON.stringify(this.library));
+    },
+    isOwned(o) {
+        return this.library.owned.app.includes(o.app) || this.library.owned.sub.includes(o.sub);
+    },
+    isWished(o) {
+        return this.library.wished.app.includes(o.app) || this.library.wished.sub.includes(o.sub);
+    },
+    isIgnored(o) {
+        return this.library.ignored.app.includes(o.app) || this.library.ignored.sub.includes(o.sub);
+    },
+    lastSync() {
+        return this.library.lastSync;
+    },
+    init() {
+        if (Object.keys(this.library).length === 0) {
+            this.library.owned = { app: {}, sub: {} };
+            this.library.wished = { app: {}, sub: {} };
+            this.library.ignored = { app: {}, sub: {} };
+            this.set();
         }
-    });
+
+        // update steam library every 10 min
+        const updateTimer = 10 * 60 * 1000;
+
+        if (!this.lastSync() || this.lastSync() < Date.now() - updateTimer) this.sync(false);
+    }
 };
+
+// functions
 const getSessionID = () => {
     GM_xmlhttpRequest({
         method: 'GET',
         url: 'https://store.steampowered.com/',
-        onload: res => {
+        onload(res) {
             if (res.status === 200) {
                 const accountID = res.response.match(/g_AccountID = (\d+)/).pop();
                 const sessionID = res.response.match(/g_sessionID = "(\w+)"/).pop();
 
                 if (accountID > 0) config.set('sessionID', sessionID);else {
                     swal({
-                        title: text.notLoggedInTitle,
-                        text: text.notLoggedInMsg,
+                        title: i18n.get('notLoggedInTitle'),
+                        text: i18n.get('notLoggedInMsg'),
                         type: 'error',
                         showCancelButton: true
                     }).then(result => {
@@ -1546,7 +1567,7 @@ const settings = {
             <div class="SBSE_settings">
                 <table>
                     <tr>
-                        <td class="name">${text.settingsAutoUpdateSessionID}</td>
+                        <td class="name">${i18n.get('settingsAutoUpdateSessionID')}</td>
                         <td class="value">
                             <label class="switch">
                                 <input type="checkbox" class="autoUpdateSessionID">
@@ -1555,25 +1576,25 @@ const settings = {
                         </td>
                     </tr>
                     <tr>
-                        <td class="name">${text.settingsSessionID}</td>
+                        <td class="name">${i18n.get('settingsSessionID')}</td>
                         <td class="value">
                             <input type="text" class="sessionID" value="${config.get('sessionID')}">
                         </td>
                     </tr>
                     <tr>
-                        <td class="name">${text.settingsSyncLibrary}</td>
+                        <td class="name">${i18n.get('settingsSyncLibrary')}</td>
                         <td class="value">
-                            <button class="syncLibrary">${text.settingsSyncLibraryButton}</button>
+                            <button class="syncLibrary">${i18n.get('settingsSyncLibraryButton')}</button>
                         </td>
                     </tr>
                     <tr>
-                        <td class="name">${text.settingsLanguage}</td>
+                        <td class="name">${i18n.get('settingsLanguage')}</td>
                         <td class="value">
                             <select class="language"></select>
                         </td>
                     </tr>
                     <tr>
-                        <td class="name">${text.settingsPreselectIncludeTitle}</td>
+                        <td class="name">${i18n.get('settingsPreselectIncludeTitle')}</td>
                         <td class="value">
                             <label class="switch">
                                 <input type="checkbox" class="preselectIncludeTitle">
@@ -1582,7 +1603,7 @@ const settings = {
                         </td>
                     </tr>
                     <tr>
-                        <td class="name">${text.settingsTitleComesLast}</td>
+                        <td class="name">${i18n.get('settingsTitleComesLast')}</td>
                         <td class="value">
                             <label class="switch">
                                 <input type="checkbox" class="titleComesLast">
@@ -1591,7 +1612,7 @@ const settings = {
                         </td>
                     </tr>
                     <tr>
-                        <td class="name">${text.settingsPreselectJoinKeys}</td>
+                        <td class="name">${i18n.get('settingsPreselectJoinKeys')}</td>
                         <td class="value">
                             <label class="switch">
                                 <input type="checkbox" class="preselectJoinKeys">
@@ -1600,7 +1621,7 @@ const settings = {
                         </td>
                     </tr>
                     <tr>
-                        <td class="name">${text.settingsJoinKeysASFStyle}</td>
+                        <td class="name">${i18n.get('settingsJoinKeysASFStyle')}</td>
                         <td class="value">
                             <label class="switch">
                                 <input type="checkbox" class="joinKeysASFStyle">
@@ -1609,7 +1630,7 @@ const settings = {
                         </td>
                     </tr>
                     <tr>
-                        <td class="name">${text.settingsActivateAllKeys}</td>
+                        <td class="name">${i18n.get('settingsActivateAllKeys')}</td>
                         <td class="value">
                             <label class="switch">
                                 <input type="checkbox" class="activateAllKeys">
@@ -1625,7 +1646,7 @@ const settings = {
     },
     display() {
         swal({
-            title: text.settingsTitle,
+            title: i18n.get('settingsTitle'),
             html: this.construct()
         });
 
@@ -1664,7 +1685,9 @@ const settings = {
         });
 
         // sync library
-        $panel.find('.syncLibrary').click(syncLibrary);
+        $panel.find('.syncLibrary').click(() => {
+            steam.sync();
+        });
 
         // language
         Object.keys(i18n).forEach(language => {
@@ -1676,8 +1699,6 @@ const settings = {
 
             const newLanguage = $language.val();
             config.set('language', newLanguage);
-
-            text = has.call(i18n, newLanguage) ? i18n[newLanguage] : i18n.english;
 
             setTimeout(swal.hideLoading, 500);
         });
@@ -1707,23 +1728,23 @@ const activator = {
         // result from Steam
         if (result.sbse !== true) {
             // get status
-            let status = text.failStatus;
-            let statusMsg = text.failDetailUnexpected;
+            let status = i18n.get('failStatus');
+            let statusMsg = i18n.get('failDetailUnexpected');
             const errorCode = result.purchase_result_details;
             const errors = {
-                14: text.failDetailInvalidKey,
-                15: text.failDetailUsedKey,
-                53: text.failDetailRateLimited,
-                13: text.failDetailCountryRestricted,
-                9: text.failDetailAlreadyOwned,
-                24: text.failDetailMissingBaseGame,
-                36: text.failDetailPS3Required,
-                50: text.failDetailGiftWallet
+                14: i18n.get('failDetailInvalidKey'),
+                15: i18n.get('failDetailUsedKey'),
+                53: i18n.get('failDetailRateLimited'),
+                13: i18n.get('failDetailCountryRestricted'),
+                9: i18n.get('failDetailAlreadyOwned'),
+                24: i18n.get('failDetailMissingBaseGame'),
+                36: i18n.get('failDetailPS3Required'),
+                50: i18n.get('failDetailGiftWallet')
             };
 
             if (result.success === 1) {
-                status = text.successStatus;
-                statusMsg = text.successDetail;
+                status = i18n.get('successStatus');
+                statusMsg = i18n.get('successDetail');
             } else if (result.success === 2) {
                 if (has.call(errors, errorCode)) statusMsg = errors[errorCode];
             }
@@ -1770,8 +1791,8 @@ const activator = {
                     this.results.push(this.resultDetails({
                         sbse: true,
                         key,
-                        status: `${text.skippedStatus}/${text.activatedDetail}`,
-                        descripton: text.noItemDetails
+                        status: `${i18n.get('skippedStatus')}/${i18n.get('activatedDetail')}`,
+                        descripton: i18n.get('noItemDetails')
                     }));
                     updateResults();
 
@@ -1788,7 +1809,7 @@ const activator = {
                     this.results.push(this.resultDetails({
                         sbse: true,
                         key,
-                        status: `${text.skippedStatus}/${text.failDetailAlreadyOwned}`,
+                        status: `${i18n.get('skippedStatus')}/${i18n.get('failDetailAlreadyOwned')}`,
                         descripton: description.join()
                     }));
                     updateResults();
@@ -1807,7 +1828,7 @@ const activator = {
                             Referer: 'https://store.steampowered.com/account/registerkey'
                         },
                         data: `product_key=${key}&sessionid=${config.get('sessionID')}`,
-                        onload: res => {
+                        onload(res) {
                             if (res.status === 200) {
                                 const result = JSON.parse(res.response);
 
@@ -1837,8 +1858,8 @@ const activator = {
                                 errorMsg.push('</pre>');
 
                                 swal({
-                                    title: text.failTitle,
-                                    html: text.failDetailRequestFailedNeedUpdate + eol + errorMsg.join(''),
+                                    title: i18n.get('failTitle'),
+                                    html: i18n.get('failDetailRequestFailedNeedUpdate') + eol + errorMsg.join(''),
                                     type: 'error'
                                 });
                                 getSessionID();
@@ -1858,14 +1879,14 @@ const getContainer = handlers => {
         <div class="SBSE_container">
             <textarea></textarea>
             <div>
-                <button class="SBSE_BtnReveal">${text.buttonReveal}</button>
-                <button class="SBSE_BtnRetrieve">${text.buttonRetrieve}</button>
-                <button class="SBSE_BtnActivate">${text.buttonActivate}</button>
-                <button class="SBSE_BtnCopy">${text.buttonCopy}</button>
-                <button class="SBSE_BtnReset">${text.buttonReset}</button>
-                <a class="SBSE_BtnExport">${text.buttonExport}</a>
-                <label><input type="checkbox" class="SBSE_ChkTitle">${text.checkboxIncludeGameTitle}</label>
-                <label><input type="checkbox" class="SBSE_ChkJoin">${text.checkboxJoinKeys}</label>
+                <button class="SBSE_BtnReveal">${i18n.get('buttonReveal')}</button>
+                <button class="SBSE_BtnRetrieve">${i18n.get('buttonRetrieve')}</button>
+                <button class="SBSE_BtnActivate">${i18n.get('buttonActivate')}</button>
+                <button class="SBSE_BtnCopy">${i18n.get('buttonCopy')}</button>
+                <button class="SBSE_BtnReset">${i18n.get('buttonReset')}</button>
+                <a class="SBSE_BtnExport">${i18n.get('buttonExport')}</a>
+                <label><input type="checkbox" class="SBSE_ChkTitle">${i18n.get('checkboxIncludeGameTitle')}</label>
+                <label><input type="checkbox" class="SBSE_ChkJoin">${i18n.get('checkboxJoinKeys')}</label>
                 <button id="SBSE_BtnSettings"> </button>
             </div>
         </div>
@@ -1918,7 +1939,7 @@ const getContainer = handlers => {
                     $activateBtn.prop('disabled', false).removeClass('working');
                     $textarea.removeAttr('disabled');
                 });
-            } else $textarea.val(text.emptyInput);
+            } else $textarea.val(i18n.get('emptyInput'));
         };
     }
     if (typeof handlers.copy !== 'function') {
@@ -2063,7 +2084,7 @@ const siteHandlers = {
                                 handler($games, callback);
                             },
                             error() {
-                                swal(text.failTitle, text.failDetailUnexpected, 'error');
+                                swal(i18n.get('failTitle'), i18n.get('failDetailUnexpected'), 'error');
                             }
                         });
                     } else callback();
@@ -2088,25 +2109,18 @@ const siteHandlers = {
                 const matched = $a.attr('href').match(/steam.+\/(app|sub)\/(\d+)/);
                 if (matched) d[matched[1]] = parseInt(matched[2], 10);
 
-                // check if owned
-                ['app', 'sub'].forEach(type => {
-                    if (has.call(d, type)) {
-                        const owned = steam.owned[type].includes(d[type]);
-                        const wished = steam.wished[type].includes(d[type]);
+                // check if owned & wished
+                d.owned = steam.isOwned(d);
+                d.wished = steam.isWished(d);
 
-                        // append icon
-                        $a.after($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
+                if (d.owned) $ele.addClass('SBSE_owned');
+                if (d.wished) $ele.addClass('SBSE_wished');
 
-                        if (owned) $ele.addClass('SBSE_owned');
-                        if (wished) $ele.addClass('SBSE_wished');
+                // append icon
+                $a.after($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
 
-                        // load SteamCN tooltip
-                        steamCNTooltip.load(d);
-
-                        d.owned = owned;
-                        d.wished = wished;
-                    }
-                });
+                // load SteamCN tooltip
+                steamCNTooltip.load(d);
 
                 $ele.attr('data-gameinfo', JSON.stringify(d)).addClass('SBSE_processed');
             });
@@ -2367,28 +2381,28 @@ const siteHandlers = {
                             if (has.call(data, 'steam') && data.steam.id) {
                                 const $gameTitle = $(`dd > div.d-flex.flex-column:contains(${data.name})`);
                                 const $dl = $gameTitle.closest('dl');
-                                const app = parseInt(data.steam.id, 10);
-                                const owned = steam.owned.app.includes(app);
-                                const wished = steam.wished.app.includes(app);
+                                const d = {
+                                    title: data.name,
+                                    app: parseInt(data.steam.id, 10)
+                                };
 
+                                d.owned = steam.isOwned(d);
+                                d.wished = steam.isWished(d);
+
+                                // check if owned & wished
+                                if (d.owned) $dl.addClass('SBSE_owned');
+                                if (d.wished) $dl.addClass('SBSE_wished');
+
+                                // wrap link
                                 $gameTitle.contents().filter((i, n) => n.nodeType === 3).wrap(`<a href="http:www.steampowered.com/app/${data.steam.id}/"></a>`);
 
                                 // append icon
                                 $gameTitle.append($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
 
-                                // check if owned & wished
-                                if (owned) $dl.addClass('SBSE_owned');
-                                if (wished) $dl.addClass('SBSE_wished');
-
                                 // load SteamCN tooltip
-                                steamCNTooltip.load({ app });
+                                steamCNTooltip.load(d);
 
-                                $dl.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify({
-                                    title: data.name,
-                                    app,
-                                    owned,
-                                    wished
-                                }));
+                                $dl.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify(d));
                             }
                         };
 
@@ -2496,7 +2510,7 @@ const siteHandlers = {
                             <div class="spinner"></div>
                         </div>
                     `);
-                    } else swal(text.failTitle, JSON.stringify(d), 'error');
+                    } else swal(i18n.get('failTitle'), JSON.stringify(d), 'error');
                 }
 
                 if (typeof callback === 'function') callback();
@@ -2589,16 +2603,20 @@ const siteHandlers = {
                     const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[data-title="${game.human_name}"])`);
 
                     if ($keyRedeemer.length > 0) {
-                        // apply owned effect on game title
-                        const app = parseInt(game.steam_app_id, 10);
-                        const owned = steam.owned.app.includes(app);
-                        const wished = steam.wished.app.includes(app);
+                        const d = {
+                            title: game.human_name,
+                            app: parseInt(game.steam_app_id, 10)
+                        };
 
-                        if (owned) $keyRedeemer.addClass('SBSE_owned');
-                        if (wished) $keyRedeemer.addClass('SBSE_wished');
+                        d.owned = steam.isOwned(d);
+                        d.wished = steam.isWished(d);
+
+                        // apply owned effect on game title
+                        if (d.owned) $keyRedeemer.addClass('SBSE_owned');
+                        if (d.wished) $keyRedeemer.addClass('SBSE_wished');
 
                         // load SteamCN tooltip
-                        steamCNTooltip.load({ app });
+                        steamCNTooltip.load(d);
 
                         // activation restrictions
                         let html = '';
@@ -2610,12 +2628,12 @@ const siteHandlers = {
                         });
                         const separator = config.get('language').includes('chinese') ? '、' : ', ';
 
-                        if (disallowed.length > 0) html += `<p>${text.HBDisallowedCountries}<br>${disallowed.join(separator)}</p>`;
-                        if (exclusive.length > 0) html += `<p>${text.HBExclusiveCountries}<br>${exclusive.join(separator)}</p>`;
+                        if (disallowed.length > 0) html += `<p>${i18n.get('HBDisallowedCountries')}<br>${disallowed.join(separator)}</p>`;
+                        if (exclusive.length > 0) html += `<p>${i18n.get('HBExclusiveCountries')}<br>${exclusive.join(separator)}</p>`;
                         if (disallowed.length > 0 || exclusive.length > 0) {
-                            $(`<span class="SBSE_activationRestrictions">${text.HBActivationRestrictions}</span>`).click(function () {
+                            $(`<span class="SBSE_activationRestrictions">${i18n.get('HBActivationRestrictions')}</span>`).click(function () {
                                 swal({
-                                    title: `${game.human_name}<br>${text.HBActivationRestrictions}`,
+                                    title: `${game.human_name}<br>${i18n.get('HBActivationRestrictions')}`,
                                     html,
                                     type: 'info'
                                 });
@@ -2626,12 +2644,7 @@ const siteHandlers = {
                         $keyRedeemer.attr({
                             'data-machineName': game.machine_name,
                             'data-humanName': game.human_name,
-                            'data-gameinfo': JSON.stringify({
-                                title: game.human_name,
-                                app,
-                                owned,
-                                wished
-                            })
+                            'data-gameinfo': JSON.stringify(d)
                         });
 
                         $keyRedeemer.addClass('SBSE_processed');
@@ -2667,7 +2680,7 @@ const siteHandlers = {
         } else {
             // append checkbox for owned game
             $container.find('#SBSE_BtnSettings').before(`
-                <label><input type="checkbox" class="SBSE_ChkSkipOwned" checked>${text.checkboxSkipOwned}</label>
+                <label><input type="checkbox" class="SBSE_ChkSkipOwned" checked>${i18n.get('checkboxSkipOwned')}</label>
             `);
 
             const observer = new MutationObserver(mutations => {
@@ -2703,8 +2716,8 @@ const siteHandlers = {
                                         if (machineName) {
                                             if ($keyRedeemer.hasClass('SBSE_owned')) {
                                                 swal({
-                                                    title: text.HBAlreadyOwned,
-                                                    text: text.HBRedeemAlreadyOwned.replace('%title%', $keyRedeemer.attr('data-humanName')),
+                                                    title: i18n.get('HBAlreadyOwned'),
+                                                    text: i18n.get('HBRedeemAlreadyOwned').replace('%title%', $keyRedeemer.attr('data-humanName')),
                                                     type: 'question',
                                                     showCancelButton: true
                                                 }).then(function (result) {
@@ -2736,7 +2749,7 @@ const siteHandlers = {
 
         if (pathname.includes('/account_page')) {
             // force sync library
-            syncLibrary(false);
+            steam.sync(false);
 
             // inject css
             GM_addStyle(`
@@ -2798,7 +2811,7 @@ const siteHandlers = {
             $container.find('.SBSE_BtnExport').remove();
             // append checkbox for market keys
             $container.find('#SBSE_BtnSettings').before(`
-                <label><input type="checkbox" class="SBSE_ChkMarketListings">${text.checkboxMarketListings}</label>
+                <label><input type="checkbox" class="SBSE_ChkMarketListings">${i18n.get('checkboxMarketListings')}</label>
             `);
 
             $('#TableKeys').eq(0).before($container);
@@ -2807,7 +2820,7 @@ const siteHandlers = {
             const $awaitRatings = $('a[href^="account_page_0_ratepositive"]');
 
             if ($awaitRatings.length > 0) {
-                $('#TableKeys td:contains(Rate TRADE)').text(text.DIGRateAllPositive).css('cursor', 'pointer').click(() => {
+                $('#TableKeys td:contains(Rate TRADE)').text(i18n.get('DIGRateAllPositive')).css('cursor', 'pointer').click(() => {
                     $awaitRatings.each((() => {
                         var _ref6 = _asyncToGenerator(function* (i, a) {
                             const res = yield fetch(a.href, {
@@ -2868,14 +2881,15 @@ const siteHandlers = {
                 const data = a.pathname.slice(1).split('/');
                 const steamID = parseInt(data[1], 10);
                 const id = parseInt($tr.attr('data-id'), 10);
+                const d = { [data[0]]: steamID };
 
-                if (steam.owned[data[0]].includes(steamID)) $tr.addClass('SBSE_owned SBSE_hide');
-                if (steam.wished[data[0]].includes(steamID)) $tr.addClass('SBSE_wished');
-                if (steam.ignored[data[0]].includes(steamID)) $tr.addClass('SBSE_ignored');
+                if (steam.isOwned(d)) $tr.addClass('SBSE_owned SBSE_hide');
+                if (steam.isWished(d)) $tr.addClass('SBSE_wished');
+                if (steam.isIgnored(d)) $tr.addClass('SBSE_ignored');
                 if (MPHideList.includes(id)) $tr.addClass('SBSE_hide');
 
                 // append manual hide feature
-                $tr.children().eq(0).attr('title', text.DIGClickToHideThisRow).click(e => {
+                $tr.children().eq(0).attr('title', i18n.get('DIGClickToHideThisRow')).click(e => {
                     e.stopPropagation();
 
                     if (id > 0) {
@@ -2946,9 +2960,9 @@ const siteHandlers = {
             const $target = $('#form3').closest('tr').children().eq(0);
             const $DIGEasyBuy = $(`
                 <div class="DIGEasyBuy">
-                    <button class="DIGButtonPurchase DIG3_Orange_15_Form">${text.DIGEasyBuyPurchase}</button>
-                    <button class="DIGButtonSelectAll DIG3_Orange_15_Form">${text.DIGEasyBuySelectAll}</button>
-                    <button class="DIGButtonHideOwned DIG3_Orange_15_Form">${text.DIGEasyBuyHideOwned}</button>
+                    <button class="DIGButtonPurchase DIG3_Orange_15_Form">${i18n.get('DIGEasyBuyPurchase')}</button>
+                    <button class="DIGButtonSelectAll DIG3_Orange_15_Form">${i18n.get('DIGEasyBuySelectAll')}</button>
+                    <button class="DIGButtonHideOwned DIG3_Orange_15_Form">${i18n.get('DIGEasyBuyHideOwned')}</button>
                 </div>
             `);
 
@@ -2963,15 +2977,15 @@ const siteHandlers = {
 
             if (pathname === '/account_tradesXT.html') {
                 $DIGEasyBuy.append(`
-                    <button class="DIGButtonLoadAllPages DIG3_Orange_15_Form">${text.DIGEasyBuyLoadAllPages}</button>
+                    <button class="DIGButtonLoadAllPages DIG3_Orange_15_Form">${i18n.get('DIGEasyBuyLoadAllPages')}</button>
                 `);
             }
 
             // append sync time and event
-            const seconds = Math.round((Date.now() - steam.lastSync) / 1000);
+            const seconds = Math.round((Date.now() - steam.lastSync()) / 1000);
 
             $DIGEasyBuy.append(`
-                <span> ${text.lastSyncTime.replace('%seconds%', seconds)}</span>
+                <span> ${i18n.get('lastSyncTime').replace('%seconds%', seconds)}</span>
             `);
 
             // bind button event
@@ -2980,7 +2994,7 @@ const siteHandlers = {
                 let balance = parseFloat($('a[href^="account_transac"]').parent('div').text().slice(19)) || 0;
                 const $self = $(e.currentTarget);
 
-                $self.prop('disabled', true).text(text.DIGButtonPurchasing);
+                $self.prop('disabled', true).text(i18n.get('DIGButtonPurchasing'));
 
                 $('.DIGEasyBuy_checked').each((() => {
                     var _ref7 = _asyncToGenerator(function* (i, ele) {
@@ -3016,8 +3030,8 @@ const siteHandlers = {
                                 }
                             } else {
                                 swal({
-                                    title: text.failTitle,
-                                    text: text.DIGInsufficientFund,
+                                    title: i18n.get('failTitle'),
+                                    text: i18n.get('DIGInsufficientFund'),
                                     type: 'error'
                                 }).then(function () {
                                     window.location = `${location.origin}/account_page.html`;
@@ -3031,7 +3045,7 @@ const siteHandlers = {
                     };
                 })());
 
-                if (bought) window.location = `${location.origin}/account_page.html`;else $self.prop('disabled', false).text(text.DIGButtonPurchase);
+                if (bought) window.location = `${location.origin}/account_page.html`;else $self.prop('disabled', false).text(i18n.get('DIGButtonPurchase'));
             });
             $('.DIGButtonSelectAll').click(e => {
                 const $self = $(e.currentTarget);
@@ -3040,7 +3054,7 @@ const siteHandlers = {
 
                 $(selector).toggleClass('DIGEasyBuy_checked', state);
                 $self.data('state', state);
-                $self.text(state ? text.DIGEasyBuySelectCancel : text.DIGEasyBuySelectAll);
+                $self.text(state ? i18n.get('DIGEasyBuySelectCancel') : i18n.get('DIGEasyBuySelectAll'));
             });
             $('.DIGButtonHideOwned').click(e => {
                 const $self = $(e.currentTarget);
@@ -3048,7 +3062,7 @@ const siteHandlers = {
 
                 $('#TableKeys').toggleClass('DIGEasyBuy_hideOwned', state);
                 $self.data('state', state);
-                $self.text(state ? text.DIGEasyBuyShowOwned : text.DIGEasyBuyHideOwned);
+                $self.text(state ? i18n.get('DIGEasyBuyShowOwned') : i18n.get('DIGEasyBuyHideOwned'));
             });
             $('.DIGButtonLoadAllPages').click(e => {
                 // auto load all pages at marketplace
@@ -3056,7 +3070,7 @@ const siteHandlers = {
                 const $tbody = $('#TableKeys > tbody');
                 const load = (() => {
                     var _ref8 = _asyncToGenerator(function* (page, retry = 0) {
-                        $self.text(text.DIGEasyBuyLoading.replace('%page%', page));
+                        $self.text(i18n.get('DIGEasyBuyLoading').replace('%page%', page));
 
                         const res = yield fetch(`${location.origin}/account_tradesXT_${page}.html`, {
                             method: 'GET',
@@ -3071,7 +3085,7 @@ const siteHandlers = {
                                 $result.find('a[href*="steampowered"]').each(check);
                                 $tbody.append($result);
                                 load(page + 1);
-                            } else $self.text(text.DIGEasyBuyLoadingComplete);
+                            } else $self.text(i18n.get('DIGEasyBuyLoadingComplete'));
                         } else if (retry < 3) load(page, retry + 1);else load(page + 1);
                     });
 
@@ -3111,7 +3125,7 @@ const siteHandlers = {
                 const $searchResult = $('<div/>');
 
                 $gameTitle.closest('table').after($searchResult);
-                $searchResult.before(`<h3>${text.DIGMarketSearchResult}</h3>`);
+                $searchResult.before(`<h3>${i18n.get('DIGMarketSearchResult')}</h3>`);
 
                 $('.tt-dropdown-menu').click(_asyncToGenerator(function* () {
                     $searchResult.empty();
@@ -3322,7 +3336,7 @@ const siteHandlers = {
 
             // append checkbox for used-key
             $('#SBSE_BtnSettings').before(`
-                <label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>
+                <label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${i18n.get('checkboxSkipUsed')}</label>
             `);
 
             // insert container
@@ -3415,7 +3429,7 @@ const siteHandlers = {
 
             // append checkbox for used-key
             $container.find('#SBSE_BtnSettings').before($(`
-                <label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${text.checkboxSkipUsed}</label>
+                <label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${i18n.get('checkboxSkipUsed')}</label>
             `));
             // add buttons style via groupees's class
             $container.find('.SBSE_container > div > button, .SBSE_container > div > a').addClass('btn btn-default');
@@ -3430,7 +3444,7 @@ const siteHandlers = {
                         const $orderMeta = $(addedNode).find('.order-meta');
 
                         if ($orderMeta.length > 0) {
-                            $orderMeta.after($(`<button class="btn btn-default" style="margin-right: 10px;"><b>${text.markAllAsUsed}</b></button>`).click(() => {
+                            $orderMeta.after($(`<button class="btn btn-default" style="margin-right: 10px;"><b>${i18n.get('markAllAsUsed')}</b></button>`).click(() => {
                                 $('.expanded .usage').each((i, checkbox) => {
                                     if (!checkbox.checked) checkbox.click();
                                 });
@@ -3497,6 +3511,10 @@ const siteHandlers = {
     }
 };
 const init = () => {
+    config.init();
+    xe.init();
+    steam.init();
+
     if (location.hostname === 'store.steampowered.com') {
         // save sessionID
         if (unsafeWindow.g_AccountID > 0) {
@@ -3511,8 +3529,8 @@ const init = () => {
                 if (!currentID || update) {
                     config.set('sessionID', sessionID, () => {
                         swal({
-                            title: text.updateSuccessTitle,
-                            text: text.updateSuccess,
+                            title: i18n.get('updateSuccessTitle'),
+                            text: i18n.get('updateSuccess'),
                             type: 'success',
                             timer: 3000
                         });
@@ -3530,10 +3548,6 @@ const init = () => {
     }
 
     steamCNTooltip.listen();
-
-    // update steam library every 10 min
-    const updateTimer = 10 * 60 * 1000;
-    if (!steam.lastSync || steam.lastSync < Date.now() - updateTimer) syncLibrary(false);
 };
 
 $(init);
