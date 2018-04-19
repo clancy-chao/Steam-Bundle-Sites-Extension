@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.2.1
+// @version      2.2.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -484,12 +484,14 @@ const i18n = {
             lastSyncTime: 'Library data synced %seconds% seconds ago'
         }
     },
-    language: 'english',
+    language: null,
     set() {
-        this.language = has.call(this.data, config.get('language')) ? config.get('language') : 'english';
+        const selectedLanguage = has.call(this.data, config.get('language')) ? config.get('language') : 'english';
+
+        this.language = this.data[selectedLanguage];
     },
     get(key) {
-        return this.data[this.language][key];
+        return has.call(this.language, key) ? this.language[key] : this.data.english[key];
     },
     init() {
         this.set();
@@ -2521,7 +2523,7 @@ const siteHandlers = {
                         </div>
                     `);
                     } else swal(i18n.get('failTitle'), JSON.stringify(d), 'error');
-                }
+                } else $node.click();
 
                 if (typeof callback === 'function') callback();
             });
@@ -2734,7 +2736,7 @@ const siteHandlers = {
                                                     if (result.value) fetchKey($target, machineName);
                                                 });
                                             } else fetchKey($target, machineName);
-                                        }
+                                        } else $target.click();
                                     }
                                 }, true);
                             }
