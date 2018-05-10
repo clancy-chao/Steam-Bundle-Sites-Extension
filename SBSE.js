@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.2.2
+// @version      2.2.3
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -249,6 +249,7 @@ const config = {
         if (!has.call(this.data, 'preselectJoinKeys')) this.data.preselectJoinKeys = false;
         if (!has.call(this.data, 'joinKeysASFStyle')) this.data.joinKeysASFStyle = true;
         if (!has.call(this.data, 'activateAllKeys')) this.data.activateAllKeys = false;
+        if (!has.call(this.data, 'enableTooltips')) this.data.enableTooltips = this.get('language') !== 'english';
     },
 };
 const i18n = {
@@ -291,6 +292,7 @@ const i18n = {
             settingsPreselectJoinKeys: '預選合併序號',
             settingsJoinKeysASFStyle: '合併ASF 格式序號',
             settingsActivateAllKeys: '不跳過、啟動所有序號',
+            settingsEnableTooltips: 'SteamCN 論壇提示框',
             HBAlreadyOwned: '遊戲已擁有',
             HBRedeemAlreadyOwned: '確定刮開 %title% Steam 序號？',
             HBActivationRestrictions: '啟動限制',
@@ -367,6 +369,7 @@ const i18n = {
             settingsPreselectJoinKeys: '预选合并激活码',
             settingsJoinKeysASFStyle: '合并ASF 格式激活码',
             settingsActivateAllKeys: '不跳过、激活所有激活码',
+            settingsEnableTooltips: 'SteamCN 论坛提示窗',
             HBAlreadyOwned: '游戏已拥有',
             HBRedeemAlreadyOwned: '确定刮开 %title% Steam 激活码？',
             HBActivationRestrictions: '激活限制',
@@ -443,6 +446,7 @@ const i18n = {
             settingsPreselectJoinKeys: 'Pre-select Join Keys',
             settingsJoinKeysASFStyle: 'Join Keys w/ ASF Style',
             settingsActivateAllKeys: 'No skip & activate all keys',
+            settingsEnableTooltips: 'Tooltips from SteamCN',
             HBAlreadyOwned: 'Game Already Owned',
             HBRedeemAlreadyOwned: 'Are you sure to redeem %title% Steam Key?',
             HBActivationRestrictions: 'Activation Restrictions',
@@ -1518,7 +1522,7 @@ const steamCNTooltip = {
     timeoutID: 0,
     load(data) {
         ['app', 'sub'].forEach((type) => {
-            if (has.call(data, type)) {
+            if (has.call(data, type) && config.get('enableTooltips')) {
                 const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${data[type]}#steam_info_${type}_${data[type]}_1`;
 
                 $('body').append(
@@ -1535,7 +1539,7 @@ const steamCNTooltip = {
         const $target = $(e.currentTarget);
         const json = $target.closest('.SBSE_processed').attr('data-gameinfo');
 
-        if (json.length > 0) {
+        if (json.length > 0 && config.get('enableTooltips')) {
             const data = JSON.parse(json);
             const opened = !!$('.SBSE_tooltip:not(.SBSE_hide)').length;
 
@@ -1658,6 +1662,15 @@ const settings = {
                         <td class="value">
                             <label class="switch">
                                 <input type="checkbox" class="activateAllKeys">
+                                <span class="slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="name">${i18n.get('settingsEnableTooltips')}</td>
+                        <td class="value">
+                            <label class="switch">
+                                <input type="checkbox" class="enableTooltips">
                                 <span class="slider"></span>
                             </label>
                         </td>
