@@ -1,8 +1,10 @@
+function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
+
 // ==UserScript==
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.2.3
+// @version      2.3.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -13,18 +15,21 @@
 // @include      https://www.indiegala.com/profile*
 // @include      https://www.indiegala.com/game*
 // @include      https://www.fanatical.com/*
-// @include      https://www.humblebundle.com/downloads*
-// @include      https://www.humblebundle.com/home/*
+// @include      https://www.humblebundle.com/*
 // @include      http*://*dailyindiegame.com/*
 // @include      http*://bundle.ccyycn.com/order/*
 // @include      https://groupees.com/purchases
 // @include      https://groupees.com/profile/purchases/*
 // @include      http*://*agiso.com/*
 // @include      https://steamdb.steamcn.com/tooltip*
+// @include      https://yuplay.ru/orders/*/
+// @include      https://yuplay.ru/product/*/
+// @include      http://gama-gama.ru/personal/settings/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.js
 // @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.css
 // @resource     currencyFlags https://cdnjs.cloudflare.com/ajax/libs/currency-flags/1.5.0/currency-flags.min.css
+// @resource     flagIcon https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.1.0/css/flag-icon.min.css
 // @connect      store.steampowered.com
 // @connect      www.google.com
 // @connect      www.google.com.tw
@@ -39,6 +44,7 @@
 // @connect      api.fanatical.com
 // @connect      www.ecb.europa.eu
 // @connect      steamdb.steamcn.com
+// @connect      steamdb.info
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -59,6 +65,7 @@ $.fn.shift = [].shift;
 // inject external css styles
 GM_addStyle(GM_getResourceText('sweetalert2CSS'));
 GM_addStyle(GM_getResourceText('currencyFlags'));
+GM_addStyle(GM_getResourceText('flagIcon').replace(/\.\.\//g, 'https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.1.0/'));
 
 // inject script css styles
 GM_addStyle(`
@@ -211,7 +218,7 @@ GM_addStyle(`
         transform-origin :100% 100%;
     }
 
-    /* tooltip */
+    /* Steam Tooltip */
     .SBSE_tooltip {
         width: 308px;
         position: fixed;
@@ -223,6 +230,32 @@ GM_addStyle(`
         z-index: 999;
     }
     .SBSE_tooltip.SBSE_hide { display: none; }
+
+    /* Tooltip */
+    [tooltip]::before, [tooltip]::after {
+        position: absolute;
+        opacity: 0;
+        transition: all 0.15s ease;
+    }
+    [tooltip]::before {
+        width: max-content;
+        content: attr(tooltip);
+        top: calc(100% + 10px); left: 0;
+        padding: 10px;
+        color: #4a4c45;
+        background-color: white;
+        border-radius: 3px;
+        box-shadow: 1px 2px 3px rgba(0,0,0,0.45);
+    }
+    [tooltip]::after {
+        content: "";
+        top: calc(100% + 5px); left: 10px;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-bottom: 5px solid white;
+    }
+    [tooltip]:hover::before, [tooltip]:hover::after { opacity: 1; }
+    [tooltip]:not([tooltip-persistent])::before, [tooltip]:not([tooltip-persistent])::after { pointer-events: none; }
 `);
 
 // load up
@@ -250,7 +283,7 @@ const config = {
         if (!has.call(this.data, 'joinKeysASFStyle')) this.data.joinKeysASFStyle = true;
         if (!has.call(this.data, 'activateAllKeys')) this.data.activateAllKeys = false;
         if (!has.call(this.data, 'enableTooltips')) this.data.enableTooltips = this.get('language') !== 'english';
-    },
+    }
 };
 const i18n = {
     data: {
@@ -298,6 +331,7 @@ const i18n = {
             HBActivationRestrictions: '啟動限制',
             HBDisallowedCountries: '限制以下地區啟動',
             HBExclusiveCountries: '僅限以下地區啟動',
+            HBCurrentLocation: '當前位於：',
             DIGEasyBuyPurchase: '購買',
             DIGEasyBuySelectAll: '全選',
             DIGEasyBuySelectCancel: '取消',
@@ -329,7 +363,7 @@ const i18n = {
             syncFailTitle: '同步失敗',
             syncFail: '失敗同步Steam 遊戲庫資料',
             visitSteam: '前往Steam',
-            lastSyncTime: '已於%seconds% 秒前同步收藏庫',
+            lastSyncTime: '已於%seconds% 秒前同步收藏庫'
         },
         schinese: {
             name: '简体中文',
@@ -375,6 +409,7 @@ const i18n = {
             HBActivationRestrictions: '激活限制',
             HBDisallowedCountries: '限制以下地区激活',
             HBExclusiveCountries: '仅限以下地区激活',
+            HBCurrentLocation: '当前位于：',
             DIGEasyBuyPurchase: '购买',
             DIGEasyBuySelectAll: '全选',
             DIGEasyBuySelectCancel: '取消',
@@ -406,7 +441,7 @@ const i18n = {
             syncFailTitle: '同步失败',
             syncFail: '失败同步Steam 游戏库资料',
             visitSteam: '前往Steam',
-            lastSyncTime: '已于%seconds% 秒前同步游戏库',
+            lastSyncTime: '已于%seconds% 秒前同步游戏库'
         },
         english: {
             name: 'English',
@@ -452,6 +487,7 @@ const i18n = {
             HBActivationRestrictions: 'Activation Restrictions',
             HBDisallowedCountries: 'Cannot be activated in the following regions',
             HBExclusiveCountries: 'Can only be activated in the following regions',
+            HBCurrentLocation: 'Current Location: ',
             DIGEasyBuyPurchase: 'Purchase',
             DIGEasyBuySelectAll: 'Select All',
             DIGEasyBuySelectCancel: 'Cancel',
@@ -483,8 +519,8 @@ const i18n = {
             syncFailTitle: 'Sync failed',
             syncFail: 'Failed to sync Steam library data',
             visitSteam: 'Visit Steam',
-            lastSyncTime: 'Library data synced %seconds% seconds ago',
-        },
+            lastSyncTime: 'Library data synced %seconds% seconds ago'
+        }
     },
     language: null,
     set() {
@@ -497,7 +533,7 @@ const i18n = {
     },
     init() {
         this.set();
-    },
+    }
 };
 const ISO2 = {
     name: {
@@ -752,7 +788,7 @@ const ISO2 = {
             YT: '馬約特',
             ZA: '南非',
             ZM: '尚比亞',
-            ZW: '辛巴威',
+            ZW: '辛巴威'
         },
         schinese: {
             AD: '安道尔',
@@ -1005,7 +1041,7 @@ const ISO2 = {
             YT: '马约特',
             ZA: '南非',
             ZM: '赞比亚',
-            ZW: '津巴布韦',
+            ZW: '津巴布韦'
         },
         english: {
             AD: 'Andorra',
@@ -1258,14 +1294,14 @@ const ISO2 = {
             YT: 'Mayotte',
             ZA: 'South Africa',
             ZM: 'Zambia',
-            ZW: 'Zimbabwe',
-        },
+            ZW: 'Zimbabwe'
+        }
     },
     get(code, language) {
-        const data = this.name[(language || config.get('language') || 'english')];
+        const data = this.name[language || config.get('language') || 'english'];
 
         return has.call(data, code) ? data[code] : code;
-    },
+    }
 };
 const xe = {
     exchangeRate: JSON.parse(GM_getValue('SBSE_xe', '{}')),
@@ -1274,80 +1310,80 @@ const xe = {
             english: 'Australian Dollar',
             tchinese: '澳幣',
             schinese: '澳元',
-            symbol: 'AU$',
+            symbol: 'AU$'
         },
         CAD: {
             english: 'Canadian Dollar',
             tchinese: '加幣',
             schinese: '加元',
-            symbol: 'CA$',
+            symbol: 'CA$'
         },
         CNY: {
             english: 'Chinese Yuan',
             tchinese: '人民幣',
             schinese: '人民币',
-            symbol: 'CN¥',
+            symbol: 'CN¥'
         },
         EUR: {
             english: 'Euro',
             tchinese: '歐元',
             schinese: '欧元',
-            symbol: '€',
+            symbol: '€'
         },
         GBP: {
             english: 'Great Britain Pound',
             tchinese: '英鎊',
             schinese: '英镑',
-            symbol: '£',
+            symbol: '£'
         },
         HKD: {
             english: 'Hong Kong Dollar',
             tchinese: '港幣',
             schinese: '港元',
-            symbol: 'HK$',
+            symbol: 'HK$'
         },
         JPY: {
             english: 'Japanese Yen',
             tchinese: '日圓',
             schinese: '日元',
-            symbol: 'JP¥',
+            symbol: 'JP¥'
         },
         KRW: {
             english: 'South Korean Won',
             tchinese: '韓圓',
             schinese: '韩币',
-            symbol: '₩',
+            symbol: '₩'
         },
         MYR: {
             english: 'Malaysian Ringgit',
             tchinese: '令吉',
             schinese: '林吉特',
-            symbol: 'RM',
+            symbol: 'RM'
         },
         NTD: {
             english: 'New Taiwan Dollar',
             tchinese: '台幣',
             schinese: '台币',
-            symbol: 'NT$',
+            symbol: 'NT$'
         },
         NZD: {
             english: 'New Zealand Dollar',
             tchinese: '紐幣',
             schinese: '新西兰元',
-            symbol: 'NZ$',
+            symbol: 'NZ$'
         },
         RUB: {
             english: 'Russian Ruble',
             tchinese: '盧布',
             schinese: '卢布',
-            symbol: 'руб',
+            symbol: 'руб'
         },
         USD: {
             english: 'United States Dollar',
             tchinese: '美元',
             schinese: '美元',
-            symbol: 'US$',
-        },
+            symbol: 'US$'
+        }
     },
     getRate() {
         const self = this;
@@ -1355,15 +1391,15 @@ const xe = {
         GM_xmlhttpRequest({
             method: 'GET',
             url: 'http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml',
-            onload: (res) => {
+            onload: res => {
                 if (res.status === 200) {
                     try {
                         const exchangeRate = {
                             lastUpdate: Date.now(),
-                            rates: {},
+                            rates: {}
                         };
 
-                        res.response.split("\n").forEach((line) => {
+                        res.response.split("\n").forEach(line => {
                             if (line.includes('currency=')) {
                                 const currency = line.split('currency=\'').pop().slice(0, 3);
                                 const rate = line.trim().split('rate=\'').pop().slice(0, -3);
@@ -1376,7 +1412,7 @@ const xe = {
                         GM_xmlhttpRequest({
                             method: 'GET',
                             url: 'https://www.google.com/search?q=1+EUR+%3D+NTD',
-                            onload: (searchRes) => {
+                            onload: searchRes => {
                                 const rate = parseFloat(searchRes.response.split('<div class="vk_ans vk_bk">').pop().slice(0, 7).trim());
                                 const NTDRate = isNaN(rate) ? exchangeRate.rates.HKD * 3.75 : rate;
 
@@ -1384,23 +1420,15 @@ const xe = {
                                 exchangeRate.rates.EUR = 1;
                                 self.exchangeRate = exchangeRate;
                                 GM_setValue('SBSE_xe', JSON.stringify(exchangeRate));
-                            },
+                            }
                         });
                     } catch (e) {
-                        swal(
-                            'Parsing Failed',
-                            'An error occured when parsing exchange rate data, please reload to try again',
-                            'error',
-                        );
+                        swal('Parsing Failed', 'An error occured when parsing exchange rate data, please reload to try again', 'error');
                     }
                 } else {
-                    swal(
-                        'Loading Failed',
-                        'Unable to fetch exchange rate data, please reload to try again',
-                        'error',
-                    );
+                    swal('Loading Failed', 'Unable to fetch exchange rate data, please reload to try again', 'error');
                 }
-            },
+            }
         });
     },
     update(targetCurrency = 'USD') {
@@ -1409,7 +1437,7 @@ const xe = {
             const originalValue = parseInt(ele.dataset.value, 10);
             const originalRate = this.exchangeRate.rates[originalCurrency];
             const targetRate = this.exchangeRate.rates[targetCurrency];
-            const exchangedValue = (originalValue / originalRate) * targetRate;
+            const exchangedValue = originalValue / originalRate * targetRate;
 
             $(ele).text(this.currencies[targetCurrency].symbol + (exchangedValue / 100).toFixed(2));
         });
@@ -1417,10 +1445,8 @@ const xe = {
     init() {
         const updateTimer = 12 * 60 * 60 * 1000; // update every 12 hours
 
-        if (Object.keys(this.exchangeRate).length === 0 ||
-            this.exchangeRate.lastUpdate < (Date.now() - updateTimer)
-        ) this.getRate();
-    },
+        if (Object.keys(this.exchangeRate).length === 0 || this.exchangeRate.lastUpdate < Date.now() - updateTimer) this.getRate();
+    }
 };
 const steam = {
     library: JSON.parse(localStorage.getItem('SBSE_steam') || '{}'),
@@ -1446,7 +1472,7 @@ const steam = {
                         title: i18n.get('syncSuccessTitle'),
                         text: i18n.get('syncSuccess'),
                         type: 'success',
-                        timer: 3000,
+                        timer: 3000
                     });
                 }
             },
@@ -1456,11 +1482,11 @@ const steam = {
                     text: i18n.get('syncFail'),
                     type: 'error',
                     confirmButtonText: i18n.get('visitSteam'),
-                    showCancelButton: true,
-                }).then((result) => {
+                    showCancelButton: true
+                }).then(result => {
                     if (result.value === true) window.open('https://store.steampowered.com/');
                 });
-            },
+            }
         });
     },
     set() {
@@ -1489,8 +1515,8 @@ const steam = {
         // update steam library every 10 min
         const updateTimer = 10 * 60 * 1000;
 
-        if (!this.lastSync() || this.lastSync() < (Date.now() - updateTimer)) this.sync(false);
-    },
+        if (!this.lastSync() || this.lastSync() < Date.now() - updateTimer) this.sync(false);
+    }
 };
 
 // functions
@@ -1503,37 +1529,40 @@ const getSessionID = () => {
                 const accountID = res.response.match(/g_AccountID = (\d+)/).pop();
                 const sessionID = res.response.match(/g_sessionID = "(\w+)"/).pop();
 
-                if (accountID > 0) config.set('sessionID', sessionID);
-                else {
+                if (accountID > 0) config.set('sessionID', sessionID);else {
                     swal({
                         title: i18n.get('notLoggedInTitle'),
                         text: i18n.get('notLoggedInMsg'),
                         type: 'error',
-                        showCancelButton: true,
-                    }).then((result) => {
+                        showCancelButton: true
+                    }).then(result => {
                         if (result.value === true) window.open('https://store.steampowered.com/');
                     });
                 }
             }
-        },
+        }
     });
 };
 const steamCNTooltip = {
     timeoutID: 0,
     load(data) {
-        ['app', 'sub'].forEach((type) => {
-            if (has.call(data, type) && config.get('enableTooltips')) {
-                const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${data[type]}#steam_info_${type}_${data[type]}_1`;
+        if (config.get('enableTooltips')) {
+            const $container = $('<div/>');
 
-                $('body').append(
-                    $(`<iframe id="tooltip_${type + data[type]}" class="SBSE_tooltip SBSE_hide" src="${url}"></iframe>`)
-                        .mouseenter(() => {
+            (Array.isArray(data) ? data : [data]).forEach(d => {
+                ['app', 'sub'].forEach(type => {
+                    if (has.call(d, type)) {
+                        const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${d[type]}#steam_info_${type}_${d[type]}_1`;
+
+                        $container.append($(`<iframe id="tooltip_${type + d[type]}" class="SBSE_tooltip SBSE_hide" data-url="${url}"></iframe>`).mouseenter(() => {
                             clearTimeout(this.timeoutID);
-                        })
-                        .mouseout(this.hide),
-                );
-            }
-        });
+                        }).mouseout(this.hide));
+                    }
+                });
+            });
+
+            $('body').append($container);
+        }
     },
     show(e) {
         const $target = $(e.currentTarget);
@@ -1543,13 +1572,16 @@ const steamCNTooltip = {
             const data = JSON.parse(json);
             const opened = !!$('.SBSE_tooltip:not(.SBSE_hide)').length;
 
-            ['app', 'sub'].forEach((type) => {
+            ['app', 'sub'].forEach(type => {
                 const $tooltip = $(`#tooltip_${type + data[type]}`);
 
                 if ($tooltip.length > 0 && !opened) {
+                    // load tooltip
+                    if (!$tooltip.attr('src')) $tooltip.attr('src', $tooltip.attr('data-url'));
+
                     $tooltip.css({
                         top: e.clientY,
-                        left: e.clientX + 10,
+                        left: e.clientX + 10
                     }).removeClass('SBSE_hide');
                     this.reposition($tooltip, $tooltip.height());
                     $tooltip[0].contentWindow.postMessage('show', '*'); // get height
@@ -1572,14 +1604,14 @@ const steamCNTooltip = {
         const $document = $(document);
         const offsetTop = $tooltip.offset().top - $document.scrollTop();
         const offsetLeft = $tooltip.offset().left - $document.scrollLeft();
-        const overflowX = (offsetLeft + $tooltip.width()) - ($window.width() - 20);
-        const overflowY = (offsetTop + height) - ($window.height() - 20);
+        const overflowX = offsetLeft + $tooltip.width() - ($window.width() - 20);
+        const overflowY = offsetTop + height - ($window.height() - 20);
 
         if (overflowY > 0) $tooltip.css('top', offsetTop - overflowY);
         if (overflowX > 0) $tooltip.css('left', offsetLeft - overflowX);
     },
     listen() {
-        window.addEventListener('message', (e) => {
+        window.addEventListener('message', e => {
             if (e.origin === 'https://steamdb.steamcn.com' && e.data.height && e.data.src) {
                 const $tooltip = $(`.SBSE_tooltip[src="${e.data.src}"]`);
 
@@ -1587,7 +1619,7 @@ const steamCNTooltip = {
                 this.reposition($tooltip, e.data.height);
             }
         });
-    },
+    }
 };
 const settings = {
     construct() {
@@ -1684,7 +1716,7 @@ const settings = {
     display() {
         swal({
             title: i18n.get('settingsTitle'),
-            html: this.construct(),
+            html: this.construct()
         });
 
         // apply settings
@@ -1697,7 +1729,7 @@ const settings = {
             const $input = $(input);
 
             $input.prop('checked', config.get(input.className));
-            $input.change((e) => {
+            $input.change(e => {
                 swal.showLoading();
 
                 const setting = e.delegateTarget.className;
@@ -1727,7 +1759,7 @@ const settings = {
         });
 
         // language
-        Object.keys(i18n.data).forEach((language) => {
+        Object.keys(i18n.data).forEach(language => {
             $language.append(new Option(i18n.data[language].name, language));
         });
         $panel.find(`option[value=${config.get('language')}]`).prop('selected', true);
@@ -1740,7 +1772,7 @@ const settings = {
 
             setTimeout(swal.hideLoading, 500);
         });
-    },
+    }
 };
 const activator = {
     activated: JSON.parse(GM_getValue('SBSE_activated', '[]')),
@@ -1777,7 +1809,7 @@ const activator = {
                 9: i18n.get('failDetailAlreadyOwned'),
                 24: i18n.get('failDetailMissingBaseGame'),
                 36: i18n.get('failDetailPS3Required'),
-                50: i18n.get('failDetailGiftWallet'),
+                50: i18n.get('failDetailGiftWallet')
             };
 
             if (result.success === 1) {
@@ -1794,7 +1826,7 @@ const activator = {
             const chuncks = [];
 
             if (info && info.line_items) {
-                info.line_items.forEach((item) => {
+                info.line_items.forEach(item => {
                     const chunk = [];
 
                     if (item.packageid > 0) chunk.push(`sub: ${item.packageid}`);
@@ -1830,7 +1862,7 @@ const activator = {
                         sbse: true,
                         key,
                         status: `${i18n.get('skippedStatus')}/${i18n.get('activatedDetail')}`,
-                        descripton: i18n.get('noItemDetails'),
+                        descripton: i18n.get('noItemDetails')
                     }));
                     updateResults();
 
@@ -1840,7 +1872,7 @@ const activator = {
                     const detail = this.getKeyDetails(key);
                     const description = [];
 
-                    ['app', 'sub'].forEach((type) => {
+                    ['app', 'sub'].forEach(type => {
                         if (has.call(detail, type)) description.push(`${type}: ${detail[type]} ${detail.title}`);
                     });
 
@@ -1848,7 +1880,7 @@ const activator = {
                         sbse: true,
                         key,
                         status: `${i18n.get('skippedStatus')}/${i18n.get('failDetailAlreadyOwned')}`,
-                        descripton: description.join(),
+                        descripton: description.join()
                     }));
                     updateResults();
 
@@ -1863,7 +1895,7 @@ const activator = {
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                             Origin: 'https://store.steampowered.com',
-                            Referer: 'https://store.steampowered.com/account/registerkey',
+                            Referer: 'https://store.steampowered.com/account/registerkey'
                         },
                         data: `product_key=${key}&sessionid=${config.get('sessionID')}`,
                         onload(res) {
@@ -1898,21 +1930,21 @@ const activator = {
                                 swal({
                                     title: i18n.get('failTitle'),
                                     html: i18n.get('failDetailRequestFailedNeedUpdate') + eol + errorMsg.join(''),
-                                    type: 'error',
+                                    type: 'error'
                                 });
                                 getSessionID();
                                 if (typeof callback === 'function') callback();
                             }
-                        },
+                        }
                     });
                 }
             } else if (typeof callback === 'function') callback();
         };
 
         activateHandler();
-    },
+    }
 };
-const getContainer = (handlers) => {
+const getContainer = handlers => {
     const $container = $(`
         <div class="SBSE_container">
             <textarea></textarea>
@@ -1962,7 +1994,7 @@ const getContainer = (handlers) => {
         };
     }
     if (typeof handlers.activate !== 'function') {
-        handlers.activate = (e) => {
+        handlers.activate = e => {
             const $textarea = $container.find('textarea');
             const keys = unique($textarea.val().match(regKey));
 
@@ -1992,7 +2024,7 @@ const getContainer = (handlers) => {
         };
     }
     if (typeof handlers.export !== 'function') {
-        handlers.export = (e) => {
+        handlers.export = e => {
             const data = handlers.extract();
 
             if (data.items.length > 0) {
@@ -2001,7 +2033,7 @@ const getContainer = (handlers) => {
                 $exportBtn.removeAttr('href').removeAttr('download');
 
                 const filename = data.filename.replace(/[\\/:*?"<>|!]/g, '');
-                const formattedData = data.items.map((line) => {
+                const formattedData = data.items.map(line => {
                     const temp = [];
 
                     if (line.title) temp.push(line.title.replace(/,/g, ' '));
@@ -2012,7 +2044,7 @@ const getContainer = (handlers) => {
 
                 $exportBtn.attr({
                     href: `data:text/csv;charset=utf-8,\ufeff${encodeURIComponent(formattedData)}`,
-                    download: `${filename}.csv`,
+                    download: `${filename}.csv`
                 });
             }
         };
@@ -2024,7 +2056,7 @@ const getContainer = (handlers) => {
     }
 
     // bind event
-    $container.find('button').click((e) => {
+    $container.find('button').click(e => {
         e.preventDefault();
     });
     $container.find('.SBSE_BtnReveal').click(handlers.reveal);
@@ -2060,7 +2092,7 @@ const siteHandlers = {
                 const data = {
                     title: bundleTitle,
                     filename: `IndieGala ${bundleTitle} Keys`,
-                    items: [],
+                    items: []
                 };
 
                 $(source).find('.game-key-string').each((i, ele) => {
@@ -2105,7 +2137,7 @@ const siteHandlers = {
                             data: {
                                 code,
                                 cache: false,
-                                productId: id,
+                                productId: id
                             },
                             beforeSend() {
                                 $(`#permbutton_${code}, #fetchlink_${code}, #info_key_${code}`).hide();
@@ -2123,7 +2155,7 @@ const siteHandlers = {
                             },
                             error() {
                                 swal(i18n.get('failTitle'), i18n.get('failDetailUnexpected'), 'error');
-                            },
+                            }
                         });
                     } else callback();
                 };
@@ -2134,14 +2166,16 @@ const siteHandlers = {
                     $revealBtn.removeClass('working');
                     $('.SBSE_BtnRetrieve').click();
                 });
-            },
+            }
         };
         const process = () => {
+            const tooltipsData = [];
+
             $('.game-key-string').each((i, ele) => {
                 const $ele = $(ele);
                 const $a = $ele.find('.title_game > a');
                 const d = {
-                    title: $a.text().trim(),
+                    title: $a.text().trim()
                 };
 
                 const matched = $a.attr('href').match(/steam.+\/(app|sub)\/(\d+)/);
@@ -2155,15 +2189,15 @@ const siteHandlers = {
                 if (d.wished) $ele.addClass('SBSE_wished');
 
                 // append icon
-                $a.after(
-                    $('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)),
-                );
+                $a.after($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
 
-                // load SteamCN tooltip
-                steamCNTooltip.load(d);
+                tooltipsData.push(d);
 
                 $ele.attr('data-gameinfo', JSON.stringify(d)).addClass('SBSE_processed');
             });
+
+            // load SteamCN tooltip
+            steamCNTooltip.load(tooltipsData);
         };
         const $container = getContainer(handlers);
 
@@ -2176,9 +2210,9 @@ const siteHandlers = {
         const $node = $('#gift-contents');
 
         if ($node.length > 0) {
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    Array.from(mutation.addedNodes).forEach((addedNode) => {
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    Array.from(mutation.addedNodes).forEach(addedNode => {
                         if (addedNode.id === 'library-contain') {
                             process();
                             $node.prepend($container);
@@ -2230,34 +2264,41 @@ const siteHandlers = {
         `);
 
         let APIData = null;
-        const fetchAPIData = async (s, c) => {
-            let slug = s;
-            let callback = c;
-            if (typeof s === 'function') {
-                callback = s;
-                slug = location.href.split('/').pop();
-            }
+        const fetchAPIData = (() => {
+            var _ref = _asyncToGenerator(function* (s, c) {
+                let slug = s;
+                let callback = c;
+                if (typeof s === 'function') {
+                    callback = s;
+                    slug = location.href.split('/').pop();
+                }
 
-            let JSONString = GM_getValue(`Fanatical-${slug}`, '');
+                let JSONString = GM_getValue(`Fanatical-${slug}`, '');
 
-            if (JSONString.length === 0) {
-                const res = await fetch(`https://api.fanatical.com/api/products/${slug}`);
+                if (JSONString.length === 0) {
+                    const res = yield fetch(`https://api.fanatical.com/api/products/${slug}`);
 
-                if (res.ok) {
-                    JSONString = await res.text();
+                    if (res.ok) {
+                        JSONString = yield res.text();
 
-                    GM_setValue(`Fanatical-${slug}`, JSONString);
-                } else JSONString = '{}';
-            }
+                        GM_setValue(`Fanatical-${slug}`, JSONString);
+                    } else JSONString = '{}';
+                }
 
-            APIData = JSON.parse(JSONString);
+                APIData = JSON.parse(JSONString);
 
-            if (typeof callback === 'function') callback();
-        };
-        const productHandler = async () => {
-            if (Object.keys(APIData).length > 0) {
-                const language = config.get('language');
-                const $priceExt = $(`
+                if (typeof callback === 'function') callback();
+            });
+
+            return function fetchAPIData(_x, _x2) {
+                return _ref.apply(this, arguments);
+            };
+        })();
+        const productHandler = (() => {
+            var _ref2 = _asyncToGenerator(function* () {
+                if (Object.keys(APIData).length > 0) {
+                    const language = config.get('language');
+                    const $priceExt = $(`
                     <div class="cardBlock">
                         <div>
                             <select class="currencyToggler"></select>
@@ -2265,97 +2306,100 @@ const siteHandlers = {
                         </div>
                     </div>
                 `);
-                const $currencyToggler = $priceExt.find('.currencyToggler');
-                const $pricingDetail = $priceExt.find('.pricingDetail');
-                const selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'CNY');
-                const isStarDeal = !!$('.stardeal-purchase-info').length;
-                let starDeal = {};
+                    const $currencyToggler = $priceExt.find('.currencyToggler');
+                    const $pricingDetail = $priceExt.find('.pricingDetail');
+                    const selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'CNY');
+                    const isStarDeal = !!$('.stardeal-purchase-info').length;
+                    let starDeal = {};
 
-                if (isStarDeal) {
-                    $priceExt.toggleClass('cardBlock starDeal');
+                    if (isStarDeal) {
+                        $priceExt.toggleClass('cardBlock starDeal');
 
-                    // fetch star-deal data
-                    const res = await fetch('https://api.fanatical.com/api/star-deal');
+                        // fetch star-deal data
+                        const res = yield fetch('https://api.fanatical.com/api/star-deal');
 
-                    if (res.ok) starDeal = await res.json();
-                }
+                        if (res.ok) starDeal = yield res.json();
+                    }
 
-                Object.keys(xe.currencies).forEach((currency) => {
-                    const selected = currency === selectedCurrency ? ' selected' : '';
+                    Object.keys(xe.currencies).forEach(function (currency) {
+                        const selected = currency === selectedCurrency ? ' selected' : '';
 
-                    $currencyToggler.append(
-                        $(`<option value="${currency}"${selected}>${xe.currencies[currency][language]}</option>`),
-                    );
-                });
+                        $currencyToggler.append($(`<option value="${currency}"${selected}>${xe.currencies[currency][language]}</option>`));
+                    });
 
-                $currencyToggler.change(() => {
-                    xe.update($currencyToggler.val());
-                    GM_setValue('SBSE_selectedCurrency', $currencyToggler.val());
-                });
+                    $currencyToggler.change(function () {
+                        xe.update($currencyToggler.val());
+                        GM_setValue('SBSE_selectedCurrency', $currencyToggler.val());
+                    });
 
-                // bundle page
-                APIData.bundles.forEach((tier, index) => {
-                    if (APIData.bundles.length > 1) $pricingDetail.append(`<tr><th colspan="3">Tier ${index + 1}</th></tr>`);
-                    Object.keys(tier.price).forEach((currency) => {
-                        const value = tier.price[currency];
+                    // bundle page
+                    APIData.bundles.forEach(function (tier, index) {
+                        if (APIData.bundles.length > 1) $pricingDetail.append(`<tr><th colspan="3">Tier ${index + 1}</th></tr>`);
+                        Object.keys(tier.price).forEach(function (currency) {
+                            const value = tier.price[currency];
 
-                        $pricingDetail.append(`
+                            $pricingDetail.append(`
                             <tr class="tier${index + 1}">
                                 <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
-                                <td>${xe.currencies[currency].symbol + (value / 100)}</td>
+                                <td>${xe.currencies[currency].symbol + value / 100}</td>
                                 <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
                             </tr>
                         `);
+                        });
                     });
-                });
 
-                // game page
-                if (location.href.includes('/game/') || location.href.includes('/dlc/')) {
-                    let discount = 1;
+                    // game page
+                    if (location.href.includes('/game/') || location.href.includes('/dlc/')) {
+                        let discount = 1;
 
-                    if (has.call(APIData, 'current_discount') &&
-                        new Date(APIData.current_discount.until).getTime() > Date.now()
-                    ) discount = 1 - APIData.current_discount.percent;
+                        if (has.call(APIData, 'current_discount') && new Date(APIData.current_discount.until).getTime() > Date.now()) discount = 1 - APIData.current_discount.percent;
 
-                    if (isStarDeal) discount = 1 - ($('.discount-percent').text().replace(/\D/g, '') / 100);
+                        if (isStarDeal) discount = 1 - $('.discount-percent').text().replace(/\D/g, '') / 100;
 
-                    Object.keys(APIData.price).forEach((currency) => {
-                        let value = (APIData.price[currency] * discount).toFixed(2);
+                        Object.keys(APIData.price).forEach(function (currency) {
+                            let value = (APIData.price[currency] * discount).toFixed(2);
 
-                        // if star-deal data loaded successfully
-                        if (has.call(starDeal, 'promoPrice')) value = starDeal.promoPrice[currency];
+                            // if star-deal data loaded successfully
+                            if (has.call(starDeal, 'promoPrice')) value = starDeal.promoPrice[currency];
 
-                        $pricingDetail.append(`
+                            $pricingDetail.append(`
                             <tr class="tier1">
                                 <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
                                 <td>${xe.currencies[currency].symbol + (value / 100).toFixed(2)}</td>
                                 <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
                             </tr>
                         `);
-                    });
+                        });
+                    }
+
+                    $('.product-commerce-container').append($priceExt);
+                    $('.stardeal-purchase-info').after($priceExt);
+                    xe.update(selectedCurrency);
+
+                    // highlight the cheapest
+                    for (let i = 1; i < 10; i += 1) {
+                        const $prices = $(`.tier${i} .SBSE_price`);
+
+                        if ($prices.length === 0) break;
+
+                        $($prices.toArray().sort(function (a, b) {
+                            return a.textContent.replace(/\D/g, '') - b.textContent.replace(/\D/g, '');
+                        }).shift()).closest('tr').addClass('cheapest');
+                    }
                 }
+            });
 
-                $('.product-commerce-container').append($priceExt);
-                $('.stardeal-purchase-info').after($priceExt);
-                xe.update(selectedCurrency);
-
-                // highlight the cheapest
-                for (let i = 1; i < 10; i += 1) {
-                    const $prices = $(`.tier${i} .SBSE_price`);
-
-                    if ($prices.length === 0) break;
-
-                    $($prices.toArray().sort((a, b) => a.textContent.replace(/\D/g, '') - b.textContent.replace(/\D/g, '')).shift()).closest('tr').addClass('cheapest');
-                }
-            }
-        };
+            return function productHandler() {
+                return _ref2.apply(this, arguments);
+            };
+        })();
         const handlers = {
             extract() {
                 const bundleTitle = $('h5').eq(0).text().trim();
                 const data = {
                     title: bundleTitle,
                     filename: `Fanatical ${bundleTitle} Keys`,
-                    items: [],
+                    items: []
                 };
 
                 $('.account-content dl:has(input)').each((i, dl) => {
@@ -2395,7 +2439,7 @@ const siteHandlers = {
                     $revealBtn.removeClass('working');
                     $('.SBSE_BtnRetrieve').click();
                 });
-            },
+            }
         };
         const process = () => {
             const title = $('.account-content h5').eq(0).text();
@@ -2407,13 +2451,14 @@ const siteHandlers = {
             if (slug.length > 0) {
                 fetchAPIData(slug, () => {
                     if (Object.keys(APIData).length > 0) {
-                        const matchGame = (data) => {
+                        const tooltipsData = [];
+                        const matchGame = data => {
                             if (has.call(data, 'steam') && data.steam.id) {
                                 const $gameTitle = $(`dd > div.d-flex.flex-column:contains(${data.name})`);
                                 const $dl = $gameTitle.closest('dl');
                                 const d = {
                                     title: data.name,
-                                    app: parseInt(data.steam.id, 10),
+                                    app: parseInt(data.steam.id, 10)
                                 };
 
                                 d.owned = steam.isOwned(d);
@@ -2427,21 +2472,21 @@ const siteHandlers = {
                                 $gameTitle.contents().filter((i, n) => n.nodeType === 3).wrap(`<a href="http:www.steampowered.com/app/${data.steam.id}/"></a>`);
 
                                 // append icon
-                                $gameTitle.append(
-                                    $('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)),
-                                );
+                                $gameTitle.append($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
 
-                                // load SteamCN tooltip
-                                steamCNTooltip.load(d);
+                                tooltipsData.push(d);
 
                                 $dl.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify(d));
                             }
                         };
 
                         matchGame(APIData);
-                        APIData.bundles.forEach((tier) => {
+                        APIData.bundles.forEach(tier => {
                             tier.games.forEach(matchGame);
                         });
+
+                        // load SteamCN tooltip
+                        steamCNTooltip.load(tooltipsData);
                     }
                 });
             }
@@ -2451,9 +2496,14 @@ const siteHandlers = {
         $container.find('button').addClass('narrow'); // narrow buttons
         $container.find('a').attr('href', ''); // dodge from master css selector
 
-        new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                Array.from(mutation.addedNodes).filter(x => x.nodeType === 1).forEach((node) => {
+        // append checkbox for owned game
+        $container.find('#SBSE_BtnSettings').before(`
+            <label><input type="checkbox" class="SBSE_ChkSkipOwned" checked>${i18n.get('checkboxSkipOwned')}</label>
+        `);
+
+        new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                Array.from(mutation.addedNodes).filter(x => x.nodeType === 1).forEach(node => {
                     // url changed
                     if (node.matches('[property="og:url"]')) {
                         const currentURL = location.href;
@@ -2464,10 +2514,7 @@ const siteHandlers = {
 
                             if ($('.SBSE_container').length === 0 && $anchor.length > 0) $anchor.eq(0).before($container);
                         }
-                        if (currentURL.includes('/bundle/') ||
-                            currentURL.includes('/game/') ||
-                            currentURL.includes('/dlc/')
-                        ) fetchAPIData(productHandler);
+                        if (currentURL.includes('/bundle/') || currentURL.includes('/game/') || currentURL.includes('/dlc/')) fetchAPIData(productHandler);
                     }
 
                     // order contents loaded
@@ -2476,7 +2523,7 @@ const siteHandlers = {
             });
         }).observe($('html')[0], {
             childList: true,
-            subtree: true,
+            subtree: true
         });
     },
     humblebundle() {
@@ -2515,26 +2562,29 @@ const siteHandlers = {
             }*/
             .SBSE_activationRestrictions { float: right; margin-right: 5px; cursor: pointer; }
             .swal2-icon-text { font-size: inherit; }
+            .flag-icon { width: 4em; height: 3em; border-radius: 3px; }
+            .flag-icon-unknown { border: 1px solid; text-align: center; line-height: 3em; }
         `);
 
         const atDownload = location.pathname === '/downloads';
-        const fetchKey = async ($node, machineName, callback) => {
-            const res = await fetch('https://www.humblebundle.com/humbler/redeemkey', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                    Origin: 'https://www.humblebundle.com',
-                    Referer: location.href,
-                },
-                body: `keytype=${machineName}&key=${unsafeWindow.gamekeys[0]}&keyindex=0`,
-                credentials: 'same-origin',
-            });
+        const fetchKey = (() => {
+            var _ref3 = _asyncToGenerator(function* ($node, machineName, callback) {
+                const res = yield fetch('https://www.humblebundle.com/humbler/redeemkey', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        Origin: 'https://www.humblebundle.com',
+                        Referer: location.href
+                    },
+                    body: `keytype=${machineName}&key=${unsafeWindow.gamekeys[0]}&keyindex=0`,
+                    credentials: 'same-origin'
+                });
 
-            if (res.ok) {
-                const d = await res.json();
+                if (res.ok) {
+                    const d = yield res.json();
 
-                if (d.success) {
-                    $node.closest('.container').html(`
+                    if (d.success) {
+                        $node.closest('.container').html(`
                         <div title="${d.key}" class="keyfield redeemed">
                             <div class="keyfield-value">${d.key}</div>
                             <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
@@ -2544,18 +2594,23 @@ const siteHandlers = {
                             <div class="spinner"></div>
                         </div>
                     `);
-                } else swal(i18n.get('failTitle'), JSON.stringify(d), 'error');
-            } else $node.click();
+                    } else swal(i18n.get('failTitle'), JSON.stringify(d), 'error');
+                } else $node.click();
 
-            if (typeof callback === 'function') callback();
-        };
+                if (typeof callback === 'function') callback();
+            });
+
+            return function fetchKey(_x3, _x4, _x5) {
+                return _ref3.apply(this, arguments);
+            };
+        })();
         const handlers = {
             extract() {
                 const bundleTitle = $('title').text().split(' (').shift();
                 const data = {
                     title: bundleTitle,
                     filename: `Humble Bundle ${bundleTitle} Keys`,
-                    items: [],
+                    items: []
                 };
 
                 $('.keyfield.redeemed .keyfield-value').each((i, ele) => {
@@ -2610,71 +2665,88 @@ const siteHandlers = {
                     $revealBtn.removeClass('working');
                     $('.SBSE_BtnRetrieve').click();
                 });
-            },
-        };
-        const process = async ($node) => {
-            const gameKey = unsafeWindow.gamekeys[0];
-            let json = GM_getValue(gameKey, '');
-
-            if (json.length === 0) {
-                const res = await fetch(`https://www.humblebundle.com/api/v1/order/${gameKey}?all_tpkds=true`, {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                });
-
-                json = await res.text();
             }
+        };
+        const process = (() => {
+            var _ref4 = _asyncToGenerator(function* ($node) {
+                const gameKey = unsafeWindow.gamekeys[0] || location.href.split('key=').pop().split('&').shift();
+                let json = GM_getValue(gameKey, '');
 
-            const data = JSON.parse(json);
-
-            data.tpkd_dict.all_tpks.forEach((game) => {
-                const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[data-title="${game.human_name}"])`);
-
-                if ($keyRedeemer.length > 0) {
-                    const d = {
-                        title: game.human_name,
-                        app: parseInt(game.steam_app_id, 10),
-                    };
-
-                    d.owned = steam.isOwned(d);
-                    d.wished = steam.isWished(d);
-
-                    // apply owned effect on game title
-                    if (d.owned) $keyRedeemer.addClass('SBSE_owned');
-                    if (d.wished) $keyRedeemer.addClass('SBSE_wished');
-
-                    // load SteamCN tooltip
-                    steamCNTooltip.load(d);
-
-                    // activation restrictions
-                    let html = '';
-                    const disallowed = game.disallowed_countries.map(c => ISO2.get(c));
-                    const exclusive = game.exclusive_countries.map(c => ISO2.get(c));
-                    const separator = config.get('language').includes('chinese') ? '、' : ', ';
-
-                    if (disallowed.length > 0) html += `<p>${i18n.get('HBDisallowedCountries')}<br>${disallowed.join(separator)}</p>`;
-                    if (exclusive.length > 0) html += `<p>${i18n.get('HBExclusiveCountries')}<br>${exclusive.join(separator)}</p>`;
-                    if (disallowed.length > 0 || exclusive.length > 0) {
-                        $(`<span class="SBSE_activationRestrictions">${i18n.get('HBActivationRestrictions')}</span>`).click(() => {
-                            swal({
-                                title: `${game.human_name}<br>${i18n.get('HBActivationRestrictions')}`,
-                                html,
-                                type: 'info',
-                            });
-                        }).insertBefore($keyRedeemer.find('.heading-text > h4'));
-                    }
-
-                    // store data
-                    $keyRedeemer.attr({
-                        'data-machineName': game.machine_name,
-                        'data-humanName': game.human_name,
-                        'data-gameinfo': JSON.stringify(d),
+                if (json.length === 0) {
+                    const res = yield fetch(`https://www.humblebundle.com/api/v1/order/${gameKey}?all_tpkds=true`, {
+                        method: 'GET',
+                        credentials: 'same-origin'
                     });
 
-                    $keyRedeemer.addClass('SBSE_processed');
+                    if (res.ok) json = yield res.text();
+                }
+
+                try {
+                    const data = JSON.parse(json);
+                    const tooltipsData = [];
+
+                    data.tpkd_dict.all_tpks.forEach(function (game) {
+                        const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[data-title="${game.human_name}"])`);
+
+                        if ($keyRedeemer.length > 0) {
+                            const d = {
+                                title: game.human_name,
+                                app: parseInt(game.steam_app_id, 10)
+                            };
+
+                            d.owned = steam.isOwned(d);
+                            d.wished = steam.isWished(d);
+
+                            // apply owned effect on game title
+                            if (d.owned) $keyRedeemer.addClass('SBSE_owned');
+                            if (d.wished) $keyRedeemer.addClass('SBSE_wished');
+
+                            tooltipsData.push(d);
+
+                            // activation restrictions
+                            let html = '';
+                            const disallowed = game.disallowed_countries.map(function (c) {
+                                return ISO2.get(c);
+                            });
+                            const exclusive = game.exclusive_countries.map(function (c) {
+                                return ISO2.get(c);
+                            });
+                            const separator = config.get('language').includes('chinese') ? '、' : ', ';
+
+                            if (disallowed.length > 0) html += `<p>${i18n.get('HBDisallowedCountries')}<br>${disallowed.join(separator)}</p>`;
+                            if (exclusive.length > 0) html += `<p>${i18n.get('HBExclusiveCountries')}<br>${exclusive.join(separator)}</p>`;
+                            if (disallowed.length > 0 || exclusive.length > 0) {
+                                $(`<span class="SBSE_activationRestrictions">${i18n.get('HBActivationRestrictions')}</span>`).click(function () {
+                                    swal({
+                                        title: `${game.human_name}<br>${i18n.get('HBActivationRestrictions')}`,
+                                        html,
+                                        type: 'info'
+                                    });
+                                }).insertBefore($keyRedeemer.find('.heading-text > h4'));
+                            }
+
+                            // store data
+                            $keyRedeemer.attr({
+                                'data-machineName': game.machine_name,
+                                'data-humanName': game.human_name,
+                                'data-gameinfo': JSON.stringify(d)
+                            });
+
+                            $keyRedeemer.addClass('SBSE_processed');
+                        }
+                    });
+
+                    // load SteamCN tooltip
+                    steamCNTooltip.load(tooltipsData);
+                } catch (e) {
+                    throw e;
                 }
             });
-        };
+
+            return function process(_x6) {
+                return _ref4.apply(this, arguments);
+            };
+        })();
         const $container = getContainer(handlers);
         const $keyManager = $('.js-key-manager-holder');
 
@@ -2683,9 +2755,9 @@ const siteHandlers = {
 
         // at home page
         if ($keyManager.length > 0) {
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    Array.from(mutation.addedNodes).forEach((addedNode) => {
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    Array.from(mutation.addedNodes).forEach(addedNode => {
                         if (addedNode.className === 'header') {
                             observer.disconnect();
                             $(addedNode).after($container);
@@ -2695,67 +2767,86 @@ const siteHandlers = {
             });
 
             observer.observe($keyManager[0], { childList: true });
-        // at download page
+            // at download page
         } else {
             // append checkbox for owned game
             $container.find('#SBSE_BtnSettings').before(`
                 <label><input type="checkbox" class="SBSE_ChkSkipOwned" checked>${i18n.get('checkboxSkipOwned')}</label>
             `);
 
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    Array.from(mutation.addedNodes).forEach(async (addedNode) => {
-                        const $node = $(addedNode);
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    Array.from(mutation.addedNodes).forEach((() => {
+                        var _ref5 = _asyncToGenerator(function* (addedNode) {
+                            const $node = $(addedNode);
 
-                        if ($node.hasClass('key-list') || $node.find('.key-list').length > 0) {
-                            observer.disconnect();
-                            $node.closest('.whitebox-redux').before($container);
+                            if ($node.hasClass('key-list') || $node.find('.key-list').length > 0) {
+                                observer.disconnect();
+                                $node.closest('.whitebox-redux').before($container);
 
-                            // fetch game heading & wrap heading
-                            $node.find('.heading-text > h4').each((i, heading) => {
-                                heading.parentElement.dataset.title = heading.innerText.trim();
-                                $(heading.firstChild).wrap('<span/>');
-                                $(heading).append(
-                                    $('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)),
-                                );
-                            });
+                                // fetch game heading & wrap heading
+                                $node.find('.heading-text > h4').each(function (i, heading) {
+                                    heading.parentElement.dataset.title = heading.innerText.trim();
+                                    $(heading.firstChild).wrap('<span/>');
+                                    $(heading).append($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
+                                });
 
-                            // fetch & process key data
-                            process($node);
+                                // fetch & process key data
+                                process($node);
 
-                            // override default popups
-                            document.addEventListener('click', (e) => {
-                                const $target = $(e.target).closest('.keyfield');
+                                // override default popups
+                                document.addEventListener('click', function (e) {
+                                    const $target = $(e.target).closest('.keyfield');
 
-                                if ($target.length > 0 && !$target.hasClass('redeemed')) {
-                                    e.stopPropagation();
+                                    if ($target.length > 0 && !$target.hasClass('redeemed')) {
+                                        e.stopPropagation();
 
-                                    const $keyRedeemer = $target.closest('.key-redeemer');
-                                    const machineName = $keyRedeemer.attr('data-machineName');
+                                        const $keyRedeemer = $target.closest('.key-redeemer');
+                                        const machineName = $keyRedeemer.attr('data-machineName');
 
-                                    if (machineName) {
-                                        if ($keyRedeemer.hasClass('SBSE_owned')) {
-                                            swal({
-                                                title: i18n.get('HBAlreadyOwned'),
-                                                text: i18n.get('HBRedeemAlreadyOwned').replace('%title%', $keyRedeemer.attr('data-humanName')),
-                                                type: 'question',
-                                                showCancelButton: true,
-                                            }).then((result) => {
-                                                if (result.value) fetchKey($target, machineName);
-                                            });
-                                        } else fetchKey($target, machineName);
-                                    } else $target.click();
-                                }
-                            }, true);
-                        }
-                    });
+                                        if (machineName) {
+                                            if ($keyRedeemer.hasClass('SBSE_owned')) {
+                                                swal({
+                                                    title: i18n.get('HBAlreadyOwned'),
+                                                    text: i18n.get('HBRedeemAlreadyOwned').replace('%title%', $keyRedeemer.attr('data-humanName')),
+                                                    type: 'question',
+                                                    showCancelButton: true
+                                                }).then(function (result) {
+                                                    if (result.value) fetchKey($target, machineName);
+                                                });
+                                            } else fetchKey($target, machineName);
+                                        } else $target.click();
+                                    }
+                                }, true);
+                            }
+                        });
+
+                        return function (_x7) {
+                            return _ref5.apply(this, arguments);
+                        };
+                    })());
                 });
             });
 
             observer.observe(document.body, {
                 childList: true,
-                subtree: true,
+                subtree: true
             });
+        }
+
+        // append user's region
+        const countryCode = unsafeWindow.models.request.country_code;
+
+        if (countryCode) {
+            const code = countryCode.toLowerCase();
+            const countryName = ISO2.get(countryCode);
+            const $flag = $(`<span class="flag-icon flag-icon-unknown" tooltip="${i18n.get('HBCurrentLocation')}?"></span>`);
+
+            if (GM_getResourceText('flagIcon').includes(`${code}.svg`)) {
+                $flag.toggleClass(`flag-icon-unknown flag-icon-${code}`).attr('tooltip', i18n.get('HBCurrentLocation') + countryName);
+            } else $flag.text('?');
+
+            $('.navbar-content').prepend($flag);
         }
     },
     dailyindiegame() {
@@ -2785,7 +2876,7 @@ const siteHandlers = {
                     const data = {
                         title: 'DailyIndieGame Keys',
                         filename: 'DailyIndieGame Keys',
-                        items: [],
+                        items: []
                     };
 
                     $('#TableKeys tr').each((i, tr) => {
@@ -2796,7 +2887,7 @@ const siteHandlers = {
                             const d = {
                                 title: $tds.eq(2).text().trim(),
                                 key,
-                                marketListing: $tds.eq(6).text().includes('Cancel trade'),
+                                marketListing: $tds.eq(6).text().includes('Cancel trade')
                             };
 
                             activator.pushKeyDetails(d);
@@ -2816,9 +2907,9 @@ const siteHandlers = {
                         data: $form.serializeArray(),
                         success() {
                             location.reload();
-                        },
+                        }
                     });
-                },
+                }
             };
             const $container = getContainer(handlers);
 
@@ -2836,20 +2927,24 @@ const siteHandlers = {
 
             if ($awaitRatings.length > 0) {
                 $('#TableKeys td:contains(Rate TRADE)').text(i18n.get('DIGRateAllPositive')).css('cursor', 'pointer').click(() => {
-                    $awaitRatings.each(async (i, a) => {
-                        const res = await fetch(a.href, {
-                            method: 'GET',
-                            credentials: 'same-origin',
+                    $awaitRatings.each((() => {
+                        var _ref6 = _asyncToGenerator(function* (i, a) {
+                            const res = yield fetch(a.href, {
+                                method: 'GET',
+                                credentials: 'same-origin'
+                            });
+
+                            if (res.ok) $(a).parent('td').html('<span class="DIG3_14_Orange">Positive</span>');
                         });
 
-                        if (res.ok) $(a).parent('td').html('<span class="DIG3_14_Orange">Positive</span>');
-                    });
+                        return function (_x8, _x9) {
+                            return _ref6.apply(this, arguments);
+                        };
+                    })());
                 });
             }
-        // DIG EasyBuy
-        } else if (pathname === '/account_digstore.html' ||
-                   pathname === '/account_trades.html' ||
-                   pathname === '/account_tradesXT.html') {
+            // DIG EasyBuy
+        } else if (pathname === '/account_digstore.html' || pathname === '/account_trades.html' || pathname === '/account_tradesXT.html') {
             // inject css styles
             GM_addStyle(`
                 .DIGEasyBuy_row { height: 30px; }
@@ -2900,7 +2995,7 @@ const siteHandlers = {
                 if (MPHideList.includes(id)) $tr.addClass('SBSE_hide');
 
                 // append manual hide feature
-                $tr.children().eq(0).attr('title', i18n.get('DIGClickToHideThisRow')).click((e) => {
+                $tr.children().eq(0).attr('title', i18n.get('DIGClickToHideThisRow')).click(e => {
                     e.stopPropagation();
 
                     if (id > 0) {
@@ -2920,13 +3015,13 @@ const siteHandlers = {
                         '<': '&lt;',
                         '>': '&gt;',
                         '"': '&quot;',
-                        "'": '&#039;',
+                        "'": '&#039;'
                     };
 
                     GM_xmlhttpRequest({
                         method: 'GET',
                         url: `https://www.google.com/search?q=steam+${gameTitle}`,
-                        onload: (res) => {
+                        onload: res => {
                             let html = res.responseText;
 
                             // inset style
@@ -2944,26 +3039,23 @@ const siteHandlers = {
                             html = html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
 
                             // manipulate urls
-                            html = html
-                                .replace(/\/images\//g, 'https://www.google.com/images/')
-                                .replace(/\/url\?/g, 'https://www.google.com/url?');
+                            html = html.replace(/\/images\//g, 'https://www.google.com/images/').replace(/\/url\?/g, 'https://www.google.com/url?');
 
                             $tr.after(`
                                 <tr class="SBSE_searchResults">
                                     <td colspan="11"><iframe sandbox="allow-scripts" srcdoc='${html.replace(/[&<>"']/g, m => map[m])}'></frame></td>
                                 </tr>
                             `);
-                        },
+                        }
                     });
 
                     $game.unwrap('a').css({
                         cursor: 'pointer',
-                        color: 'red',
-                    }).click((e) => {
+                        color: 'red'
+                    }).click(e => {
                         e.stopPropagation();
 
-                        $tr.next('.SBSE_searchResults').find('iframe')
-                            .slideToggle('fast');
+                        $tr.next('.SBSE_searchResults').find('iframe').slideToggle('fast');
                     });
                 }
             };
@@ -3003,60 +3095,65 @@ const siteHandlers = {
             `);
 
             // bind button event
-            $('.DIGButtonPurchase').click((e) => {
+            $('.DIGButtonPurchase').click(e => {
                 let bought = 0;
                 let balance = parseFloat($('a[href^="account_transac"]').parent('div').text().slice(19)) || 0;
                 const $self = $(e.currentTarget);
 
                 $self.prop('disabled', true).text(i18n.get('DIGButtonPurchasing'));
 
-                $('.DIGEasyBuy_checked').each(async (i, ele) => {
-                    const $ele = $(ele);
-                    const id = $ele.data('id');
-                    const price = parseInt($ele.data('price'), 10);
+                $('.DIGEasyBuy_checked').each((() => {
+                    var _ref7 = _asyncToGenerator(function* (i, ele) {
+                        const $ele = $(ele);
+                        const id = $ele.data('id');
+                        const price = parseInt($ele.data('price'), 10);
 
-                    if (id && price > 0) {
-                        if (balance - price > 0) {
-                            let url = `${location.origin}/account_buy.html`;
-                            const requestInit = {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: `quantity=1&xgameid=${id}&xgameprice1=${price}&send=Purchase`,
-                                mode: 'same-origin',
-                                credentials: 'same-origin',
-                                cache: 'no-store',
-                                referrer: `${location.origin}/account_buy_${id}.html`,
-                            };
+                        if (id && price > 0) {
+                            if (balance - price > 0) {
+                                let url = `${location.origin}/account_buy.html`;
+                                const requestInit = {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                    body: `quantity=1&xgameid=${id}&xgameprice1=${price}&send=Purchase`,
+                                    mode: 'same-origin',
+                                    credentials: 'same-origin',
+                                    cache: 'no-store',
+                                    referrer: `${location.origin}/account_buy_${id}.html`
+                                };
 
-                            if (pathname === '/account_trades.html' || pathname === '/account_tradesXT.html') {
-                                url = `${location.origin}/account_buytrade_${id}.html`;
-                                requestInit.body = `gameid=${id}&send=Purchase`;
-                                requestInit.referrer = url;
+                                if (pathname === '/account_trades.html' || pathname === '/account_tradesXT.html') {
+                                    url = `${location.origin}/account_buytrade_${id}.html`;
+                                    requestInit.body = `gameid=${id}&send=Purchase`;
+                                    requestInit.referrer = url;
+                                }
+
+                                const res = yield fetch(url, requestInit);
+
+                                if (res.ok) {
+                                    $ele.click();
+                                    bought += 1;
+                                    balance -= price;
+                                }
+                            } else {
+                                swal({
+                                    title: i18n.get('failTitle'),
+                                    text: i18n.get('DIGInsufficientFund'),
+                                    type: 'error'
+                                }).then(function () {
+                                    window.location = `${location.origin}/account_page.html`;
+                                });
                             }
-
-                            const res = await fetch(url, requestInit);
-
-                            if (res.ok) {
-                                $ele.click();
-                                bought += 1;
-                                balance -= price;
-                            }
-                        } else {
-                            swal({
-                                title: i18n.get('failTitle'),
-                                text: i18n.get('DIGInsufficientFund'),
-                                type: 'error',
-                            }).then(() => {
-                                window.location = `${location.origin}/account_page.html`;
-                            });
                         }
-                    }
-                });
+                    });
 
-                if (bought) window.location = `${location.origin}/account_page.html`;
-                else $self.prop('disabled', false).text(i18n.get('DIGButtonPurchase'));
+                    return function (_x10, _x11) {
+                        return _ref7.apply(this, arguments);
+                    };
+                })());
+
+                if (bought) window.location = `${location.origin}/account_page.html`;else $self.prop('disabled', false).text(i18n.get('DIGButtonPurchase'));
             });
-            $('.DIGButtonSelectAll').click((e) => {
+            $('.DIGButtonSelectAll').click(e => {
                 const $self = $(e.currentTarget);
                 const state = !$self.data('state');
                 const selector = $('.DIGEasyBuy_hideOwned').length > 0 ? '.DIGEasyBuy_row:not(.SBSE_hide)' : '.DIGEasyBuy_row';
@@ -3065,7 +3162,7 @@ const siteHandlers = {
                 $self.data('state', state);
                 $self.text(state ? i18n.get('DIGEasyBuySelectCancel') : i18n.get('DIGEasyBuySelectAll'));
             });
-            $('.DIGButtonHideOwned').click((e) => {
+            $('.DIGButtonHideOwned').click(e => {
                 const $self = $(e.currentTarget);
                 const state = !$self.data('state');
 
@@ -3073,35 +3170,40 @@ const siteHandlers = {
                 $self.data('state', state);
                 $self.text(state ? i18n.get('DIGEasyBuyShowOwned') : i18n.get('DIGEasyBuyHideOwned'));
             });
-            $('.DIGButtonLoadAllPages').click((e) => {
+            $('.DIGButtonLoadAllPages').click(e => {
                 // auto load all pages at marketplace
                 const $self = $(e.currentTarget);
                 const $tbody = $('#TableKeys > tbody');
-                const load = async (page, retry = 0) => {
-                    $self.text(i18n.get('DIGEasyBuyLoading').replace('%page%', page));
+                const load = (() => {
+                    var _ref8 = _asyncToGenerator(function* (page, retry = 0) {
+                        $self.text(i18n.get('DIGEasyBuyLoading').replace('%page%', page));
 
-                    const res = await fetch(`${location.origin}/account_tradesXT_${page}.html`, {
-                        method: 'GET',
-                        credentials: 'same-origin',
+                        const res = yield fetch(`${location.origin}/account_tradesXT_${page}.html`, {
+                            method: 'GET',
+                            credentials: 'same-origin'
+                        });
+
+                        if (res.ok) {
+                            const $result = $((yield res.text())).find('#TableKeys tr.DIG3_14_Gray');
+
+                            if ($result.length > 0) {
+                                $result.find('a[href^="account_buy"]').each(easyBuySetup);
+                                $result.find('a[href*="steampowered"]').each(check);
+                                $tbody.append($result);
+                                load(page + 1);
+                            } else $self.text(i18n.get('DIGEasyBuyLoadingComplete'));
+                        } else if (retry < 3) load(page, retry + 1);else load(page + 1);
                     });
 
-                    if (res.ok) {
-                        const $result = $(await res.text()).find('#TableKeys tr.DIG3_14_Gray');
-
-                        if ($result.length > 0) {
-                            $result.find('a[href^="account_buy"]').each(easyBuySetup);
-                            $result.find('a[href*="steampowered"]').each(check);
-                            $tbody.append($result);
-                            load((page + 1));
-                        } else $self.text(i18n.get('DIGEasyBuyLoadingComplete'));
-                    } else if (retry < 3) load(page, (retry + 1));
-                    else load((page + 1));
-                };
+                    return function load(_x12) {
+                        return _ref8.apply(this, arguments);
+                    };
+                })();
 
                 load(1);
                 $self.prop('disabled', true);
             });
-        // extension for creating trade at market place
+            // extension for creating trade at market place
         } else if (pathname === '/account_createtrade.html') {
             const $form = $('#form_createtrade');
 
@@ -3114,7 +3216,7 @@ const siteHandlers = {
                 $gameTitle.blur(() => {
                     unsafeWindow.jQuery('input.typeahead').typeahead('setQuery', $gameTitle.val().trim());
                 });
-                $steamKey.blur((e) => {
+                $steamKey.blur(e => {
                     const $self = $(e.delegateTarget);
                     const key = $self.val().match(regKey);
 
@@ -3122,7 +3224,7 @@ const siteHandlers = {
                 });
                 $steamKey.attr({
                     size: 50,
-                    maxlength: 200,
+                    maxlength: 200
                 });
 
                 // search for current market price when click dropdown menu
@@ -3131,19 +3233,19 @@ const siteHandlers = {
                 $gameTitle.closest('table').after($searchResult);
                 $searchResult.before(`<h3>${i18n.get('DIGMarketSearchResult')}</h3>`);
 
-                $('.tt-dropdown-menu').click(async () => {
+                $('.tt-dropdown-menu').click(_asyncToGenerator(function* () {
                     $searchResult.empty();
 
-                    const res = await fetch(`${location.origin}/account_tradesXT.html`, {
+                    const res = yield fetch(`${location.origin}/account_tradesXT.html`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: `search=${encodeURIComponent($gameTitle.val()).replace(/%20/g, '+')}&button=SEARCH`,
-                        credentials: 'same-origin',
+                        credentials: 'same-origin'
                     });
-                    const result = res.ok ? $(await res.text()).find('#TableKeys') : 'Network response was not ok.';
+                    const result = res.ok ? $((yield res.text())).find('#TableKeys') : 'Network response was not ok.';
 
                     $searchResult.append(result);
-                });
+                }));
 
                 // apply last input price
                 const lastPrice = GM_getValue('SBSE_DIGLastPrice', 20);
@@ -3155,7 +3257,7 @@ const siteHandlers = {
 
                     if (price !== lastPrice) GM_setValue('SBSE_DIGLastPrice', price);
                 });
-            // result page
+                // result page
             } else {
                 GM_addStyle(`
                     .check.icon {
@@ -3180,8 +3282,7 @@ const siteHandlers = {
                 const $anchor = $('td.DIG3_14_Gray > table:first-child');
                 const IsSucceed = !!$('td.DIG3_14_Gray:contains("The game key has been added to the DIG MarketPlace.")').length;
 
-                if (IsSucceed) $anchor.after('<div class="check icon"></div>');
-                else $anchor.after('<div class="remove icon"></div>');
+                if (IsSucceed) $anchor.after('<div class="check icon"></div>');else $anchor.after('<div class="remove icon"></div>');
             }
         }
     },
@@ -3223,14 +3324,14 @@ const siteHandlers = {
                 const data = {
                     title: 'CCYYCN Bundle',
                     filename: 'CCYYCN Bundle',
-                    items: [],
+                    items: []
                 };
 
                 $('.deliver-gkey:contains(-)').each((i, ele) => {
                     const $ele = $(ele);
                     const d = {
                         title: $ele.parent().prev().text().trim(),
-                        key: $ele.text().trim(),
+                        key: $ele.text().trim()
                     };
 
                     activator.pushKeyDetails(d);
@@ -3256,7 +3357,7 @@ const siteHandlers = {
                     $revealBtn.removeClass('working');
                     $('.SBSE_BtnRetrieve').click();
                 });
-            },
+            }
         };
         const $container = getContainer(handlers);
 
@@ -3290,7 +3391,7 @@ const siteHandlers = {
                     const data = {
                         title: bundleTitle,
                         filename: `Groupees ${bundleTitle} Keys`,
-                        items: [],
+                        items: []
                     };
 
                     $('.key-block input.code').each((i, ele) => {
@@ -3302,7 +3403,7 @@ const siteHandlers = {
                             const d = {
                                 title: $titleEle.text().trim(),
                                 key,
-                                used: !!$ele.closest('.key-block').find('.key-status:contains(used)').length,
+                                used: !!$ele.closest('.key-block').find('.key-status:contains(used)').length
                             };
 
                             activator.pushKeyDetails(d);
@@ -3335,7 +3436,7 @@ const siteHandlers = {
                             $('.SBSE_BtnRetrieve').click();
                         });
                     }, timer);
-                },
+                }
             };
             const $container = getContainer(handlers);
 
@@ -3348,13 +3449,19 @@ const siteHandlers = {
             $('.table-products').before($container);
 
             // load details
-            $('img[src*="steam.svg"]').each(async (index, ele) => {
-                $.ajax({
-                    url: $(ele).closest('tr').find('.item-link').attr('href'),
-                    data: { v: 1 },
-                    dataType: 'script',
+            $('img[src*="steam.svg"]').each((() => {
+                var _ref10 = _asyncToGenerator(function* (index, ele) {
+                    $.ajax({
+                        url: $(ele).closest('tr').find('.item-link').attr('href'),
+                        data: { v: 1 },
+                        dataType: 'script'
+                    });
                 });
-            });
+
+                return function (_x13, _x14) {
+                    return _ref10.apply(this, arguments);
+                };
+            })());
 
             // bind custom event
             $(document).on('activated', (e, key, result) => {
@@ -3382,7 +3489,7 @@ const siteHandlers = {
                     const data = {
                         title: bundleTitle,
                         filename: `Groupees ${bundleTitle} Keys`,
-                        items: [],
+                        items: []
                     };
 
                     $('.expanded .code').each((i, ele) => {
@@ -3390,7 +3497,7 @@ const siteHandlers = {
                         const d = {
                             title: $ele.closest('.details').find('h3').text().trim(),
                             key: $ele.val(),
-                            used: $ele.closest('li').find('.usage').prop('checked'),
+                            used: $ele.closest('li').find('.usage').prop('checked')
                         };
 
                         activator.pushKeyDetails(d);
@@ -3422,7 +3529,7 @@ const siteHandlers = {
                             $('.SBSE_BtnRetrieve').click();
                         });
                     }, timer);
-                },
+                }
             };
             const $container = getContainer(handlers);
 
@@ -3437,19 +3544,17 @@ const siteHandlers = {
             $('.container > div').eq(1).before($container);
 
             // append mark all as used button
-            new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    Array.from(mutation.addedNodes).forEach((addedNode) => {
+            new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    Array.from(mutation.addedNodes).forEach(addedNode => {
                         const $orderMeta = $(addedNode).find('.order-meta');
 
                         if ($orderMeta.length > 0) {
-                            $orderMeta.after(
-                                $(`<button class="btn btn-default" style="margin-right: 10px;"><b>${i18n.get('markAllAsUsed')}</b></button>`).click(() => {
-                                    $('.expanded .usage').each((i, checkbox) => {
-                                        if (!checkbox.checked) checkbox.click();
-                                    });
-                                }),
-                            );
+                            $orderMeta.after($(`<button class="btn btn-default" style="margin-right: 10px;"><b>${i18n.get('markAllAsUsed')}</b></button>`).click(() => {
+                                $('.expanded .usage').each((i, checkbox) => {
+                                    if (!checkbox.checked) checkbox.click();
+                                });
+                            }));
                             $orderMeta.parent().addClass('showOrderMeta');
                         }
                     });
@@ -3487,15 +3592,15 @@ const siteHandlers = {
                     const data = {
                         title: bundleTitle,
                         filename: `agiso ${bundleTitle} Keys`,
-                        items: [],
+                        items: []
                     };
 
-                    keys.forEach((key) => {
+                    keys.forEach(key => {
                         data.items.push({ key });
                     });
 
                     return data;
-                },
+                }
             };
             const $container = getContainer(handlers);
 
@@ -3510,6 +3615,181 @@ const siteHandlers = {
             GM_addStyle('body { overflow: hidden; }');
         }
     },
+    yuplay() {
+        // inject css
+        GM_addStyle(`
+            .SBSE_container { margin-top: 20px; }
+            .SBSE_container > textarea { background-color: rgb(230, 230, 229); color: rgb(27, 26, 26); }
+            .SBSE_container > div { text-align: left; }
+            .SBSE_container > div > button, .SBSE_container > div > a {
+                width: 80px;
+                border: 1px solid #b4de0a;
+                background-color: #b4de0a;
+                color: #1a1a1a;
+            }
+            .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
+                border: 1px solid #a4ca09;
+                background-color: #a4ca09;
+            }
+            .SBSE_container > div > a { text-decoration: none; }
+            .SBSE_container label { color: #1a1a1a; font-weight: 400; }
+            .SBSE_appList { margin-bottom: 10px; }
+            .SBSE_appList td { vertical-align: top; }
+            .SBSE_appList a { display: block; margin-bottom: 5px; }
+            .SBSE_icon { position: relative; top: 5px; }
+        `);
+
+        const handlers = {
+            extract() {
+                const data = {
+                    title: 'Yuplay Games',
+                    filename: 'Yuplay Games',
+                    items: []
+                };
+
+                $('.product-info').each((i, ele) => {
+                    const $ele = $(ele);
+                    const d = {
+                        title: $ele.find('.name').text().trim(),
+                        key: $ele.next('.keys').find('input').val()
+                    };
+
+                    activator.pushKeyDetails(d);
+                    data.items.push(d);
+                });
+
+                return data;
+            }
+        };
+        const appListHandler = data => {
+            if (data.length > 0) {
+                const $appList = $('<table class="SBSE_appList"></table>');
+
+                $appList.append('<tr><td colspan="2">App List</td></tr>');
+
+                data.forEach(d => {
+                    const $row = $('<tr/>');
+
+                    $row.append($('<td/>').append($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip))), $(`<td><a href="https://store.steampowered.com/app/${d.app}" target="_blank">${d.title}</a></td>`));
+
+                    d.owned = steam.isOwned(d);
+                    d.wished = steam.isWished(d);
+
+                    if (d.owned) $row.addClass('SBSE_owned');
+                    if (d.wished) $row.addClass('SBSE_wished');
+
+                    $row.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify(d));
+
+                    $appList.append($row);
+                });
+
+                $('.list-character').after($appList);
+
+                // load SteamCN tooltip
+                steamCNTooltip.load(data);
+            }
+        };
+        const $container = getContainer(handlers);
+
+        $container.find('button').addClass('narrow'); // narrow buttons
+        $container.find('.SBSE_BtnReveal').remove(); // remove reveal
+
+        // insert textarea
+        $('.table-light').eq(0).before($container);
+
+        // append info from SteamDB if found subid
+        $('.list-character p').each((i, ele) => {
+            const $ele = $(ele);
+            const text = $ele.text().trim();
+
+            if (text.startsWith('Steam')) {
+                const subID = text.match(/\d+/)[0];
+                const steamDBUrl = `https://steamdb.info/sub/${subID}/`;
+                const steamDBKey = `SBSE_steamDB_sub_${subID}`;
+                const steamDBData = GM_getValue(steamDBKey, '');
+
+                $ele.find('span').replaceWith(`<a href="${steamDBUrl}" target="_blank">${subID}</a>`);
+
+                if (steamDBData.length === 0) {
+                    GM_xmlhttpRequest({
+                        url: steamDBUrl,
+                        method: 'GET',
+                        onload(res) {
+                            if (res.status === 200) {
+                                const data = [];
+
+                                $(res.response).find('#apps .app').each((j, app) => {
+                                    const $app = $(app);
+                                    const d = {
+                                        title: $app.children('td').eq(2).text().trim(),
+                                        app: parseInt($app.attr('data-appid'), 10)
+                                    };
+
+                                    data.push(d);
+                                });
+
+                                GM_setValue(steamDBKey, JSON.stringify(data));
+                                appListHandler(data);
+                            }
+                        }
+                    });
+                } else appListHandler(JSON.parse(steamDBData));
+            }
+        });
+    },
+    'gama-gama': () => {
+        // inject css
+        GM_addStyle(`
+            .SBSE_container {  }
+            .SBSE_container > textarea { background-color: #ededed; color: #33; border-radius: 4px; }
+            .SBSE_container > div > button, .SBSE_container > div > a {
+                width: 80px; height: 35px;
+                border: none; border-radius: 4px;
+                background: linear-gradient(to bottom, #47bceb 0, #18a4dd 30%, #127ba6 100%);
+                color: #fff;
+                box-shadow: 0 1px 3px 1px rgba(0,0,0,.8);
+            }
+            .SBSE_container > div > button { font-family: inherit; font-size: inherit; }
+            .SBSE_container > div > a { line-height: 35px; vertical-align: top; }
+            .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
+                background: linear-gradient(to bottom, #47bceb, #18a4dd);
+            }
+            .SBSE_container > div > a { text-decoration: none; }
+        `);
+
+        const handlers = {
+            extract() {
+                const data = {
+                    title: 'Gama Gama Games',
+                    filename: 'Gama Gama Games',
+                    items: []
+                };
+
+                $('.gift-line').each((i, ele) => {
+                    const $ele = $(ele);
+
+                    $ele.find('.key-list > li').each((j, key) => {
+                        const d = {
+                            title: $ele.find('.gift-header').text().trim(),
+                            key: key.textContent.trim()
+                        };
+
+                        activator.pushKeyDetails(d);
+                        data.items.push(d);
+                    });
+                });
+
+                return data;
+            }
+        };
+        const $container = getContainer(handlers);
+
+        $container.find('button').addClass('narrow'); // narrow buttons
+        $container.find('.SBSE_BtnReveal').remove(); // remove reveal
+
+        // insert textarea
+        $('.user-info').eq(0).after($container);
+    }
 };
 const init = () => {
     config.init();
@@ -3534,7 +3814,7 @@ const init = () => {
                             title: i18n.get('updateSuccessTitle'),
                             text: i18n.get('updateSuccess'),
                             type: 'success',
-                            timer: 3000,
+                            timer: 3000
                         });
                     });
                 }
