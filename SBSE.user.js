@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.2.3
+// @version      2.3.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -15,18 +15,21 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @include      https://www.indiegala.com/profile*
 // @include      https://www.indiegala.com/game*
 // @include      https://www.fanatical.com/*
-// @include      https://www.humblebundle.com/downloads*
-// @include      https://www.humblebundle.com/home/*
+// @include      https://www.humblebundle.com/*
 // @include      http*://*dailyindiegame.com/*
 // @include      http*://bundle.ccyycn.com/order/*
 // @include      https://groupees.com/purchases
 // @include      https://groupees.com/profile/purchases/*
 // @include      http*://*agiso.com/*
 // @include      https://steamdb.steamcn.com/tooltip*
+// @include      https://yuplay.ru/orders/*/
+// @include      https://yuplay.ru/product/*/
+// @include      http://gama-gama.ru/personal/settings/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.js
 // @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.css
 // @resource     currencyFlags https://cdnjs.cloudflare.com/ajax/libs/currency-flags/1.5.0/currency-flags.min.css
+// @resource     flagIcon https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.1.0/css/flag-icon.min.css
 // @connect      store.steampowered.com
 // @connect      www.google.com
 // @connect      www.google.com.tw
@@ -41,6 +44,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @connect      api.fanatical.com
 // @connect      www.ecb.europa.eu
 // @connect      steamdb.steamcn.com
+// @connect      steamdb.info
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -61,6 +65,7 @@ $.fn.shift = [].shift;
 // inject external css styles
 GM_addStyle(GM_getResourceText('sweetalert2CSS'));
 GM_addStyle(GM_getResourceText('currencyFlags'));
+GM_addStyle(GM_getResourceText('flagIcon').replace(/\.\.\//g, 'https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.1.0/'));
 
 // inject script css styles
 GM_addStyle(`
@@ -213,7 +218,7 @@ GM_addStyle(`
         transform-origin :100% 100%;
     }
 
-    /* tooltip */
+    /* Steam Tooltip */
     .SBSE_tooltip {
         width: 308px;
         position: fixed;
@@ -225,6 +230,32 @@ GM_addStyle(`
         z-index: 999;
     }
     .SBSE_tooltip.SBSE_hide { display: none; }
+
+    /* Tooltip */
+    [tooltip]::before, [tooltip]::after {
+        position: absolute;
+        opacity: 0;
+        transition: all 0.15s ease;
+    }
+    [tooltip]::before {
+        width: max-content;
+        content: attr(tooltip);
+        top: calc(100% + 10px); left: 0;
+        padding: 10px;
+        color: #4a4c45;
+        background-color: white;
+        border-radius: 3px;
+        box-shadow: 1px 2px 3px rgba(0,0,0,0.45);
+    }
+    [tooltip]::after {
+        content: "";
+        top: calc(100% + 5px); left: 10px;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-bottom: 5px solid white;
+    }
+    [tooltip]:hover::before, [tooltip]:hover::after { opacity: 1; }
+    [tooltip]:not([tooltip-persistent])::before, [tooltip]:not([tooltip-persistent])::after { pointer-events: none; }
 `);
 
 // load up
@@ -300,6 +331,7 @@ const i18n = {
             HBActivationRestrictions: '啟動限制',
             HBDisallowedCountries: '限制以下地區啟動',
             HBExclusiveCountries: '僅限以下地區啟動',
+            HBCurrentLocation: '當前位於：',
             DIGEasyBuyPurchase: '購買',
             DIGEasyBuySelectAll: '全選',
             DIGEasyBuySelectCancel: '取消',
@@ -377,6 +409,7 @@ const i18n = {
             HBActivationRestrictions: '激活限制',
             HBDisallowedCountries: '限制以下地区激活',
             HBExclusiveCountries: '仅限以下地区激活',
+            HBCurrentLocation: '当前位于：',
             DIGEasyBuyPurchase: '购买',
             DIGEasyBuySelectAll: '全选',
             DIGEasyBuySelectCancel: '取消',
@@ -454,6 +487,7 @@ const i18n = {
             HBActivationRestrictions: 'Activation Restrictions',
             HBDisallowedCountries: 'Cannot be activated in the following regions',
             HBExclusiveCountries: 'Can only be activated in the following regions',
+            HBCurrentLocation: 'Current Location: ',
             DIGEasyBuyPurchase: 'Purchase',
             DIGEasyBuySelectAll: 'Select All',
             DIGEasyBuySelectCancel: 'Cancel',
@@ -1512,15 +1546,23 @@ const getSessionID = () => {
 const steamCNTooltip = {
     timeoutID: 0,
     load(data) {
-        ['app', 'sub'].forEach(type => {
-            if (has.call(data, type) && config.get('enableTooltips')) {
-                const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${data[type]}#steam_info_${type}_${data[type]}_1`;
+        if (config.get('enableTooltips')) {
+            const $container = $('<div/>');
 
-                $('body').append($(`<iframe id="tooltip_${type + data[type]}" class="SBSE_tooltip SBSE_hide" src="${url}"></iframe>`).mouseenter(() => {
-                    clearTimeout(this.timeoutID);
-                }).mouseout(this.hide));
-            }
-        });
+            (Array.isArray(data) ? data : [data]).forEach(d => {
+                ['app', 'sub'].forEach(type => {
+                    if (has.call(d, type)) {
+                        const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${d[type]}#steam_info_${type}_${d[type]}_1`;
+
+                        $container.append($(`<iframe id="tooltip_${type + d[type]}" class="SBSE_tooltip SBSE_hide" data-url="${url}"></iframe>`).mouseenter(() => {
+                            clearTimeout(this.timeoutID);
+                        }).mouseout(this.hide));
+                    }
+                });
+            });
+
+            $('body').append($container);
+        }
     },
     show(e) {
         const $target = $(e.currentTarget);
@@ -1534,6 +1576,9 @@ const steamCNTooltip = {
                 const $tooltip = $(`#tooltip_${type + data[type]}`);
 
                 if ($tooltip.length > 0 && !opened) {
+                    // load tooltip
+                    if (!$tooltip.attr('src')) $tooltip.attr('src', $tooltip.attr('data-url'));
+
                     $tooltip.css({
                         top: e.clientY,
                         left: e.clientX + 10
@@ -2124,6 +2169,8 @@ const siteHandlers = {
             }
         };
         const process = () => {
+            const tooltipsData = [];
+
             $('.game-key-string').each((i, ele) => {
                 const $ele = $(ele);
                 const $a = $ele.find('.title_game > a');
@@ -2144,11 +2191,13 @@ const siteHandlers = {
                 // append icon
                 $a.after($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
 
-                // load SteamCN tooltip
-                steamCNTooltip.load(d);
+                tooltipsData.push(d);
 
                 $ele.attr('data-gameinfo', JSON.stringify(d)).addClass('SBSE_processed');
             });
+
+            // load SteamCN tooltip
+            steamCNTooltip.load(tooltipsData);
         };
         const $container = getContainer(handlers);
 
@@ -2402,6 +2451,7 @@ const siteHandlers = {
             if (slug.length > 0) {
                 fetchAPIData(slug, () => {
                     if (Object.keys(APIData).length > 0) {
+                        const tooltipsData = [];
                         const matchGame = data => {
                             if (has.call(data, 'steam') && data.steam.id) {
                                 const $gameTitle = $(`dd > div.d-flex.flex-column:contains(${data.name})`);
@@ -2424,8 +2474,7 @@ const siteHandlers = {
                                 // append icon
                                 $gameTitle.append($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
 
-                                // load SteamCN tooltip
-                                steamCNTooltip.load(d);
+                                tooltipsData.push(d);
 
                                 $dl.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify(d));
                             }
@@ -2435,6 +2484,9 @@ const siteHandlers = {
                         APIData.bundles.forEach(tier => {
                             tier.games.forEach(matchGame);
                         });
+
+                        // load SteamCN tooltip
+                        steamCNTooltip.load(tooltipsData);
                     }
                 });
             }
@@ -2443,6 +2495,11 @@ const siteHandlers = {
 
         $container.find('button').addClass('narrow'); // narrow buttons
         $container.find('a').attr('href', ''); // dodge from master css selector
+
+        // append checkbox for owned game
+        $container.find('#SBSE_BtnSettings').before(`
+            <label><input type="checkbox" class="SBSE_ChkSkipOwned" checked>${i18n.get('checkboxSkipOwned')}</label>
+        `);
 
         new MutationObserver(mutations => {
             mutations.forEach(mutation => {
@@ -2505,6 +2562,8 @@ const siteHandlers = {
             }*/
             .SBSE_activationRestrictions { float: right; margin-right: 5px; cursor: pointer; }
             .swal2-icon-text { font-size: inherit; }
+            .flag-icon { width: 4em; height: 3em; border-radius: 3px; }
+            .flag-icon-unknown { border: 1px solid; text-align: center; line-height: 3em; }
         `);
 
         const atDownload = location.pathname === '/downloads';
@@ -2610,7 +2669,7 @@ const siteHandlers = {
         };
         const process = (() => {
             var _ref4 = _asyncToGenerator(function* ($node) {
-                const gameKey = unsafeWindow.gamekeys[0];
+                const gameKey = unsafeWindow.gamekeys[0] || location.href.split('key=').pop().split('&').shift();
                 let json = GM_getValue(gameKey, '');
 
                 if (json.length === 0) {
@@ -2619,62 +2678,69 @@ const siteHandlers = {
                         credentials: 'same-origin'
                     });
 
-                    json = yield res.text();
+                    if (res.ok) json = yield res.text();
                 }
 
-                const data = JSON.parse(json);
+                try {
+                    const data = JSON.parse(json);
+                    const tooltipsData = [];
 
-                data.tpkd_dict.all_tpks.forEach(function (game) {
-                    const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[data-title="${game.human_name}"])`);
+                    data.tpkd_dict.all_tpks.forEach(function (game) {
+                        const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[data-title="${game.human_name}"])`);
 
-                    if ($keyRedeemer.length > 0) {
-                        const d = {
-                            title: game.human_name,
-                            app: parseInt(game.steam_app_id, 10)
-                        };
+                        if ($keyRedeemer.length > 0) {
+                            const d = {
+                                title: game.human_name,
+                                app: parseInt(game.steam_app_id, 10)
+                            };
 
-                        d.owned = steam.isOwned(d);
-                        d.wished = steam.isWished(d);
+                            d.owned = steam.isOwned(d);
+                            d.wished = steam.isWished(d);
 
-                        // apply owned effect on game title
-                        if (d.owned) $keyRedeemer.addClass('SBSE_owned');
-                        if (d.wished) $keyRedeemer.addClass('SBSE_wished');
+                            // apply owned effect on game title
+                            if (d.owned) $keyRedeemer.addClass('SBSE_owned');
+                            if (d.wished) $keyRedeemer.addClass('SBSE_wished');
 
-                        // load SteamCN tooltip
-                        steamCNTooltip.load(d);
+                            tooltipsData.push(d);
 
-                        // activation restrictions
-                        let html = '';
-                        const disallowed = game.disallowed_countries.map(function (c) {
-                            return ISO2.get(c);
-                        });
-                        const exclusive = game.exclusive_countries.map(function (c) {
-                            return ISO2.get(c);
-                        });
-                        const separator = config.get('language').includes('chinese') ? '、' : ', ';
+                            // activation restrictions
+                            let html = '';
+                            const disallowed = game.disallowed_countries.map(function (c) {
+                                return ISO2.get(c);
+                            });
+                            const exclusive = game.exclusive_countries.map(function (c) {
+                                return ISO2.get(c);
+                            });
+                            const separator = config.get('language').includes('chinese') ? '、' : ', ';
 
-                        if (disallowed.length > 0) html += `<p>${i18n.get('HBDisallowedCountries')}<br>${disallowed.join(separator)}</p>`;
-                        if (exclusive.length > 0) html += `<p>${i18n.get('HBExclusiveCountries')}<br>${exclusive.join(separator)}</p>`;
-                        if (disallowed.length > 0 || exclusive.length > 0) {
-                            $(`<span class="SBSE_activationRestrictions">${i18n.get('HBActivationRestrictions')}</span>`).click(function () {
-                                swal({
-                                    title: `${game.human_name}<br>${i18n.get('HBActivationRestrictions')}`,
-                                    html,
-                                    type: 'info'
-                                });
-                            }).insertBefore($keyRedeemer.find('.heading-text > h4'));
+                            if (disallowed.length > 0) html += `<p>${i18n.get('HBDisallowedCountries')}<br>${disallowed.join(separator)}</p>`;
+                            if (exclusive.length > 0) html += `<p>${i18n.get('HBExclusiveCountries')}<br>${exclusive.join(separator)}</p>`;
+                            if (disallowed.length > 0 || exclusive.length > 0) {
+                                $(`<span class="SBSE_activationRestrictions">${i18n.get('HBActivationRestrictions')}</span>`).click(function () {
+                                    swal({
+                                        title: `${game.human_name}<br>${i18n.get('HBActivationRestrictions')}`,
+                                        html,
+                                        type: 'info'
+                                    });
+                                }).insertBefore($keyRedeemer.find('.heading-text > h4'));
+                            }
+
+                            // store data
+                            $keyRedeemer.attr({
+                                'data-machineName': game.machine_name,
+                                'data-humanName': game.human_name,
+                                'data-gameinfo': JSON.stringify(d)
+                            });
+
+                            $keyRedeemer.addClass('SBSE_processed');
                         }
+                    });
 
-                        // store data
-                        $keyRedeemer.attr({
-                            'data-machineName': game.machine_name,
-                            'data-humanName': game.human_name,
-                            'data-gameinfo': JSON.stringify(d)
-                        });
-
-                        $keyRedeemer.addClass('SBSE_processed');
-                    }
-                });
+                    // load SteamCN tooltip
+                    steamCNTooltip.load(tooltipsData);
+                } catch (e) {
+                    throw e;
+                }
             });
 
             return function process(_x6) {
@@ -2766,6 +2832,21 @@ const siteHandlers = {
                 childList: true,
                 subtree: true
             });
+        }
+
+        // append user's region
+        const countryCode = unsafeWindow.models.request.country_code;
+
+        if (countryCode) {
+            const code = countryCode.toLowerCase();
+            const countryName = ISO2.get(countryCode);
+            const $flag = $(`<span class="flag-icon flag-icon-unknown" tooltip="${i18n.get('HBCurrentLocation')}?"></span>`);
+
+            if (GM_getResourceText('flagIcon').includes(`${code}.svg`)) {
+                $flag.toggleClass(`flag-icon-unknown flag-icon-${code}`).attr('tooltip', i18n.get('HBCurrentLocation') + countryName);
+            } else $flag.text('?');
+
+            $('.navbar-content').prepend($flag);
         }
     },
     dailyindiegame() {
@@ -3533,6 +3614,181 @@ const siteHandlers = {
         if (location.pathname.startsWith('/tooltip')) {
             GM_addStyle('body { overflow: hidden; }');
         }
+    },
+    yuplay() {
+        // inject css
+        GM_addStyle(`
+            .SBSE_container { margin-top: 20px; }
+            .SBSE_container > textarea { background-color: rgb(230, 230, 229); color: rgb(27, 26, 26); }
+            .SBSE_container > div { text-align: left; }
+            .SBSE_container > div > button, .SBSE_container > div > a {
+                width: 80px;
+                border: 1px solid #b4de0a;
+                background-color: #b4de0a;
+                color: #1a1a1a;
+            }
+            .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
+                border: 1px solid #a4ca09;
+                background-color: #a4ca09;
+            }
+            .SBSE_container > div > a { text-decoration: none; }
+            .SBSE_container label { color: #1a1a1a; font-weight: 400; }
+            .SBSE_appList { margin-bottom: 10px; }
+            .SBSE_appList td { vertical-align: top; }
+            .SBSE_appList a { display: block; margin-bottom: 5px; }
+            .SBSE_icon { position: relative; top: 5px; }
+        `);
+
+        const handlers = {
+            extract() {
+                const data = {
+                    title: 'Yuplay Games',
+                    filename: 'Yuplay Games',
+                    items: []
+                };
+
+                $('.product-info').each((i, ele) => {
+                    const $ele = $(ele);
+                    const d = {
+                        title: $ele.find('.name').text().trim(),
+                        key: $ele.next('.keys').find('input').val()
+                    };
+
+                    activator.pushKeyDetails(d);
+                    data.items.push(d);
+                });
+
+                return data;
+            }
+        };
+        const appListHandler = data => {
+            if (data.length > 0) {
+                const $appList = $('<table class="SBSE_appList"></table>');
+
+                $appList.append('<tr><td colspan="2">App List</td></tr>');
+
+                data.forEach(d => {
+                    const $row = $('<tr/>');
+
+                    $row.append($('<td/>').append($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip))), $(`<td><a href="https://store.steampowered.com/app/${d.app}" target="_blank">${d.title}</a></td>`));
+
+                    d.owned = steam.isOwned(d);
+                    d.wished = steam.isWished(d);
+
+                    if (d.owned) $row.addClass('SBSE_owned');
+                    if (d.wished) $row.addClass('SBSE_wished');
+
+                    $row.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify(d));
+
+                    $appList.append($row);
+                });
+
+                $('.list-character').after($appList);
+
+                // load SteamCN tooltip
+                steamCNTooltip.load(data);
+            }
+        };
+        const $container = getContainer(handlers);
+
+        $container.find('button').addClass('narrow'); // narrow buttons
+        $container.find('.SBSE_BtnReveal').remove(); // remove reveal
+
+        // insert textarea
+        $('.table-light').eq(0).before($container);
+
+        // append info from SteamDB if found subid
+        $('.list-character p').each((i, ele) => {
+            const $ele = $(ele);
+            const text = $ele.text().trim();
+
+            if (text.startsWith('Steam')) {
+                const subID = text.match(/\d+/)[0];
+                const steamDBUrl = `https://steamdb.info/sub/${subID}/`;
+                const steamDBKey = `SBSE_steamDB_sub_${subID}`;
+                const steamDBData = GM_getValue(steamDBKey, '');
+
+                $ele.find('span').replaceWith(`<a href="${steamDBUrl}" target="_blank">${subID}</a>`);
+
+                if (steamDBData.length === 0) {
+                    GM_xmlhttpRequest({
+                        url: steamDBUrl,
+                        method: 'GET',
+                        onload(res) {
+                            if (res.status === 200) {
+                                const data = [];
+
+                                $(res.response).find('#apps .app').each((j, app) => {
+                                    const $app = $(app);
+                                    const d = {
+                                        title: $app.children('td').eq(2).text().trim(),
+                                        app: parseInt($app.attr('data-appid'), 10)
+                                    };
+
+                                    data.push(d);
+                                });
+
+                                GM_setValue(steamDBKey, JSON.stringify(data));
+                                appListHandler(data);
+                            }
+                        }
+                    });
+                } else appListHandler(JSON.parse(steamDBData));
+            }
+        });
+    },
+    'gama-gama': () => {
+        // inject css
+        GM_addStyle(`
+            .SBSE_container {  }
+            .SBSE_container > textarea { background-color: #ededed; color: #33; border-radius: 4px; }
+            .SBSE_container > div > button, .SBSE_container > div > a {
+                width: 80px; height: 35px;
+                border: none; border-radius: 4px;
+                background: linear-gradient(to bottom, #47bceb 0, #18a4dd 30%, #127ba6 100%);
+                color: #fff;
+                box-shadow: 0 1px 3px 1px rgba(0,0,0,.8);
+            }
+            .SBSE_container > div > button { font-family: inherit; font-size: inherit; }
+            .SBSE_container > div > a { line-height: 35px; vertical-align: top; }
+            .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
+                background: linear-gradient(to bottom, #47bceb, #18a4dd);
+            }
+            .SBSE_container > div > a { text-decoration: none; }
+        `);
+
+        const handlers = {
+            extract() {
+                const data = {
+                    title: 'Gama Gama Games',
+                    filename: 'Gama Gama Games',
+                    items: []
+                };
+
+                $('.gift-line').each((i, ele) => {
+                    const $ele = $(ele);
+
+                    $ele.find('.key-list > li').each((j, key) => {
+                        const d = {
+                            title: $ele.find('.gift-header').text().trim(),
+                            key: key.textContent.trim()
+                        };
+
+                        activator.pushKeyDetails(d);
+                        data.items.push(d);
+                    });
+                });
+
+                return data;
+            }
+        };
+        const $container = getContainer(handlers);
+
+        $container.find('button').addClass('narrow'); // narrow buttons
+        $container.find('.SBSE_BtnReveal').remove(); // remove reveal
+
+        // insert textarea
+        $('.user-info').eq(0).after($container);
     }
 };
 const init = () => {
