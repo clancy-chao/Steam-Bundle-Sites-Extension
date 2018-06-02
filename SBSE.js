@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.3.0
+// @version      2.3.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2843,7 +2843,7 @@ const siteHandlers = {
         const MPHideList = JSON.parse(GM_getValue('SBSE_DIGMPHideList') || '[]');
         const pathname = location.pathname;
 
-        if (pathname.includes('/account_page')) {
+        if (pathname.includes('/account_page') || pathname.includes('/account_update')) {
             // force sync library
             steam.sync(false);
 
@@ -2928,9 +2928,11 @@ const siteHandlers = {
                 });
             }
         // DIG EasyBuy
-        } else if (pathname === '/account_digstore.html' ||
-                   pathname === '/account_trades.html' ||
-                   pathname === '/account_tradesXT.html') {
+        } else if (pathname.includes('/account_digstore') ||
+                   pathname.includes('/account_trades') ||
+                   pathname.includes('/account_tradesXT') ||
+                   pathname.includes('/store_update') ||
+                   pathname.includes('/storeXT_update')) {
             // inject css styles
             GM_addStyle(`
                 .DIGEasyBuy_row { height: 30px; }
@@ -3086,7 +3088,7 @@ const siteHandlers = {
             // bind button event
             $('.DIGButtonPurchase').click((e) => {
                 let bought = 0;
-                let balance = parseFloat($('a[href^="account_transac"]').parent('div').text().slice(19)) || 0;
+                let balance = parseInt($('div:contains(Usable DIG Points) > span').text().split(' ').shift().replace(/\D/g, ''), 10);
                 const $self = $(e.currentTarget);
 
                 $self.prop('disabled', true).text(i18n.get('DIGButtonPurchasing'));
