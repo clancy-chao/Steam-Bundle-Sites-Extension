@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.3.1
+// @version      2.3.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -172,7 +172,7 @@ GM_addStyle(`
     /* icons */
     .SBSE_icon {
         width: 20px; height: 20px;
-        display: inline-block;
+        display: none;
         border-radius: 50%;
         background-color: #E87A90;
         transform: rotate(45deg);
@@ -187,9 +187,7 @@ GM_addStyle(`
         border-radius: 5px;
         pointer-events: none;
     }
-    .SBSE_icon:after {
-        transform: translate(-50%, -50%) rotate(-90deg);
-    }
+    .SBSE_icon:after { transform: translate(-50%, -50%) rotate(-90deg); }
     .SBSE_owned .SBSE_icon { background-color: #9CCC65; }
     .SBSE_owned .SBSE_icon:before, .SBSE_owned .SBSE_icon:after { transform: none; }
     .SBSE_owned .SBSE_icon:before {
@@ -215,6 +213,7 @@ GM_addStyle(`
         transform: rotate(45deg);
         transform-origin :100% 100%;
     }
+    .isSteam .SBSE_icon { display: inline-block; }
 
     /* Steam Tooltip */
     .SBSE_tooltip {
@@ -2208,7 +2207,7 @@ const siteHandlers = {
 
                 tooltipsData.push(d);
 
-                $ele.attr('data-gameinfo', JSON.stringify(d)).addClass('SBSE_processed');
+                $ele.attr('data-gameinfo', JSON.stringify(d)).addClass('SBSE_processed isSteam');
             });
 
             // load SteamCN tooltip
@@ -2483,7 +2482,7 @@ const siteHandlers = {
 
                                 tooltipsData.push(d);
 
-                                $dl.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify(d));
+                                $dl.addClass('SBSE_processed isSteam').attr('data-gameinfo', JSON.stringify(d));
                             }
                         };
 
@@ -2692,19 +2691,30 @@ const siteHandlers = {
                     const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[data-title="${game.human_name}"])`);
 
                     if ($keyRedeemer.length > 0) {
-                        const d = {
-                            title: game.human_name,
-                            app: parseInt(game.steam_app_id, 10),
-                        };
+                        if (game.key_type === 'steam') {
+                            $keyRedeemer.addClass('isSteam');
 
-                        d.owned = steam.isOwned(d);
-                        d.wished = steam.isWished(d);
+                            const d = {
+                                title: game.human_name,
+                                app: parseInt(game.steam_app_id, 10),
+                            };
 
-                        // apply owned effect on game title
-                        if (d.owned) $keyRedeemer.addClass('SBSE_owned');
-                        if (d.wished) $keyRedeemer.addClass('SBSE_wished');
+                            d.owned = steam.isOwned(d);
+                            d.wished = steam.isWished(d);
 
-                        tooltipsData.push(d);
+                            // apply owned effect on game title
+                            if (d.owned) $keyRedeemer.addClass('SBSE_owned');
+                            if (d.wished) $keyRedeemer.addClass('SBSE_wished');
+
+                            // store data
+                            $keyRedeemer.attr({
+                                'data-machineName': game.machine_name,
+                                'data-humanName': game.human_name,
+                                'data-gameinfo': JSON.stringify(d),
+                            });
+
+                            tooltipsData.push(d);
+                        }
 
                         // activation restrictions
                         let html = '';
@@ -2724,16 +2734,31 @@ const siteHandlers = {
                             }).insertBefore($keyRedeemer.find('.heading-text > h4'));
                         }
 
-                        // store data
-                        $keyRedeemer.attr({
-                            'data-machineName': game.machine_name,
-                            'data-humanName': game.human_name,
-                            'data-gameinfo': JSON.stringify(d),
-                        });
-
                         $keyRedeemer.addClass('SBSE_processed');
                     }
                 });
+
+                // override default popups
+                document.addEventListener('click', (e) => {
+                    const $target = $(e.target).closest('.keyfield:not(.redeemed)');
+                    const $keyRedeemer = $target.closest('.key-redeemer.isSteam');
+                    const machineName = $keyRedeemer.attr('data-machineName');
+
+                    if ($target.length > 0 && $keyRedeemer.length > 0 && machineName) {
+                        e.stopPropagation();
+
+                        if ($keyRedeemer.hasClass('SBSE_owned')) {
+                            swal({
+                                title: i18n.get('HBAlreadyOwned'),
+                                text: i18n.get('HBRedeemAlreadyOwned').replace('%title%', $keyRedeemer.attr('data-humanName')),
+                                type: 'question',
+                                showCancelButton: true,
+                            }).then((result) => {
+                                if (result.value) fetchKey($target, machineName);
+                            });
+                        } else fetchKey($target, machineName);
+                    }
+                }, true);
 
                 // load SteamCN tooltip
                 steamCNTooltip.load(tooltipsData);
@@ -2788,31 +2813,6 @@ const siteHandlers = {
 
                             // fetch & process key data
                             process($node);
-
-                            // override default popups
-                            document.addEventListener('click', (e) => {
-                                const $target = $(e.target).closest('.keyfield');
-
-                                if ($target.length > 0 && !$target.hasClass('redeemed')) {
-                                    e.stopPropagation();
-
-                                    const $keyRedeemer = $target.closest('.key-redeemer');
-                                    const machineName = $keyRedeemer.attr('data-machineName');
-
-                                    if (machineName) {
-                                        if ($keyRedeemer.hasClass('SBSE_owned')) {
-                                            swal({
-                                                title: i18n.get('HBAlreadyOwned'),
-                                                text: i18n.get('HBRedeemAlreadyOwned').replace('%title%', $keyRedeemer.attr('data-humanName')),
-                                                type: 'question',
-                                                showCancelButton: true,
-                                            }).then((result) => {
-                                                if (result.value) fetchKey($target, machineName);
-                                            });
-                                        } else fetchKey($target, machineName);
-                                    } else $target.click();
-                                }
-                            }, true);
                         }
                     });
                 });
@@ -3659,7 +3659,7 @@ const siteHandlers = {
                     if (d.owned) $row.addClass('SBSE_owned');
                     if (d.wished) $row.addClass('SBSE_wished');
 
-                    $row.addClass('SBSE_processed').attr('data-gameinfo', JSON.stringify(d));
+                    $row.addClass('SBSE_processed isSteam').attr('data-gameinfo', JSON.stringify(d));
 
                     $appList.append($row);
                 });
