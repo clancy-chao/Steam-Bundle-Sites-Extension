@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.3.2
+// @version      2.3.3
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2440,8 +2440,8 @@ const siteHandlers = {
                 });
             }
         };
-        const process = () => {
-            const title = $('.account-content h5').eq(0).text();
+        const process = $node => {
+            const title = $node.find('h5').eq(0).text();
             const slug = title.trim().toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
 
             // empty textarea
@@ -2453,7 +2453,7 @@ const siteHandlers = {
                         const tooltipsData = [];
                         const matchGame = data => {
                             if (has.call(data, 'steam') && data.steam.id) {
-                                const $gameTitle = $(`dd > div.d-flex.flex-column:contains(${data.name})`);
+                                const $gameTitle = $node.find(`dd > div:contains(${data.name})`).filter((index, name) => data.name === name.textContent.trim());
                                 const $dl = $gameTitle.closest('dl');
                                 const d = {
                                     title: data.name,
@@ -2469,6 +2469,11 @@ const siteHandlers = {
 
                                 // wrap link
                                 $gameTitle.contents().filter((i, n) => n.nodeType === 3).wrap(`<a href="http:www.steampowered.com/app/${data.steam.id}/"></a>`);
+
+                                // insert filler
+                                if ($gameTitle.find('.drm-container-steam').length === 0) {
+                                    $gameTitle.append('<div class="drm-container-steam"></div>');
+                                }
 
                                 // append icon
                                 $gameTitle.append($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
@@ -2503,6 +2508,8 @@ const siteHandlers = {
         new MutationObserver(mutations => {
             mutations.forEach(mutation => {
                 Array.from(mutation.addedNodes).filter(x => x.nodeType === 1).forEach(node => {
+                    const $node = $(node);
+
                     // url changed
                     if (node.matches('[property="og:url"]')) {
                         const currentURL = location.href;
@@ -2517,7 +2524,7 @@ const siteHandlers = {
                     }
 
                     // order contents loaded
-                    if ($(node).find('dl').length > 0) process();
+                    if ($node.find('dl').length > 0) process($node);
                 });
             });
         }).observe($('html')[0], {
