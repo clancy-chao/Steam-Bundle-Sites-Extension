@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.3.3
+// @version      2.3.4
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -41,7 +41,6 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @connect      www.google.de
 // @connect      www.google.it
 // @connect      www.google.fr
-// @connect      api.fanatical.com
 // @connect      www.ecb.europa.eu
 // @connect      steamdb.steamcn.com
 // @connect      steamdb.info
@@ -2275,7 +2274,7 @@ const siteHandlers = {
                 let JSONString = GM_getValue(`Fanatical-${slug}`, '');
 
                 if (JSONString.length === 0) {
-                    const res = yield fetch(`https://api.fanatical.com/api/products/${slug}`);
+                    const res = yield fetch(`https://www.fanatical.com/api/products/${slug}`);
 
                     if (res.ok) {
                         JSONString = yield res.text();
@@ -2315,7 +2314,7 @@ const siteHandlers = {
                         $priceExt.toggleClass('cardBlock starDeal');
 
                         // fetch star-deal data
-                        const res = yield fetch('https://api.fanatical.com/api/star-deal');
+                        const res = yield fetch('https://www.fanatical.com/api/star-deal');
 
                         if (res.ok) starDeal = yield res.json();
                     }
