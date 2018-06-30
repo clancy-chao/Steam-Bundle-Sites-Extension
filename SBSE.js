@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.3.4
+// @version      2.4.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -121,6 +121,7 @@ GM_addStyle(`
         cursor: pointer;
     }
     .SBSE_container > div > a { display: inline-block; text-align: center; }
+    .SBSE_container select { max-width:120px; height: 30px; }
     .SBSE_container label { margin-right: 10px; }
     #SBSE_BtnSettings {
         width: 20px; height: 20px;
@@ -350,8 +351,10 @@ const i18n = {
             checkboxIncludeGameTitle: '遊戲名',
             checkboxJoinKeys: '合併',
             checkboxSkipUsed: '跳過已使用',
-            checkboxSkipOwned: '跳過已擁有',
             checkboxMarketListings: '上架於市集',
+            selectFilterAll: '選取全部',
+            selectFilterOwned: '選取已擁有',
+            selectFilterNotOwned: '選取未擁有',
             selectConnector: '至',
             markAllAsUsed: '標記全部已使用',
             syncSuccessTitle: '同步成功',
@@ -428,8 +431,10 @@ const i18n = {
             checkboxIncludeGameTitle: '游戏名',
             checkboxJoinKeys: '合并',
             checkboxSkipUsed: '跳过已使用',
-            checkboxSkipOwned: '跳过已拥有',
             checkboxMarketListings: '上架于市集',
+            selectFilterAll: '选取全部',
+            selectFilterOwned: '选取已拥有',
+            selectFilterNotOwned: '选取未拥有',
             selectConnector: '至',
             markAllAsUsed: '标记全部已使用',
             syncSuccessTitle: '同步成功',
@@ -506,8 +511,10 @@ const i18n = {
             checkboxIncludeGameTitle: 'Game Title',
             checkboxJoinKeys: 'Join',
             checkboxSkipUsed: 'Skip Used',
-            checkboxSkipOwned: 'Skip Owned',
             checkboxMarketListings: 'Market Listings',
+            selectFilterAll: 'Select All',
+            selectFilterOwned: 'Select Owned',
+            selectFilterNotOwned: 'Select Not Owned',
             selectConnector: 'to',
             markAllAsUsed: 'Mark All as Used',
             syncSuccessTitle: 'Sync Successful',
@@ -1968,6 +1975,11 @@ const getContainer = (handlers) => {
                 <a class="SBSE_BtnExport">${i18n.get('buttonExport')}</a>
                 <label><input type="checkbox" class="SBSE_ChkTitle">${i18n.get('checkboxIncludeGameTitle')}</label>
                 <label><input type="checkbox" class="SBSE_ChkJoin">${i18n.get('checkboxJoinKeys')}</label>
+                <select class="SBSE_SelFilter">
+                    <option value="All" selected>${i18n.get('selectFilterAll')}</option>
+                    <option value="Owned">${i18n.get('selectFilterOwned')}</option>
+                    <option value="NotOwned">${i18n.get('selectFilterNotOwned')}</option>
+                </select>
                 <button id="SBSE_BtnSettings"> </button>
             </div>
         </div>
@@ -1980,7 +1992,7 @@ const getContainer = (handlers) => {
             const keys = [];
             const includeTitle = !!$('.SBSE_ChkTitle:checked').length;
             const joinKeys = !!$('.SBSE_ChkJoin:checked').length;
-            const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
+            const selected = $('.SBSE_SelFilter').val() || 'All';
             const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
             const skipMarketListing = !$('.SBSE_ChkMarketListings:checked').length;
             const separator = joinKeys ? ',' : eol;
@@ -1989,9 +2001,10 @@ const getContainer = (handlers) => {
             for (let i = 0; i < data.items.length; i += 1) {
                 const item = data.items[i];
 
-                if (item.owned && skipOwned) continue;
-                if (item.used && skipUsed) continue;
-                if (item.marketListing && skipMarketListing) continue;
+                if (selected === 'Owned' && !item.owned) continue;
+                if (selected === 'NotOwned' && item.owned) continue;
+                if (skipUsed && item.used) continue;
+                if (skipMarketListing && item.marketListing) continue;
 
                 const temp = [item.key];
 
@@ -2133,6 +2146,7 @@ const siteHandlers = {
             reveal(e) {
                 const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
                 const $revealBtn = $(e.currentTarget);
+                const selected = $('.SBSE_SelFilter').val() || 'All';
                 const handler = ($games, callback) => {
                     const game = $games.shift();
 
@@ -2140,34 +2154,37 @@ const siteHandlers = {
                         const $game = $(game);
                         const code = $game.attr('id').split('_').pop();
                         const id = $game.attr('onclick').match(/steampowered\.com\/(app|sub)\/(\d+)/)[2];
+                        const d = JSON.parse($game.closest('.SBSE_processed').attr('data-gameinfo') || '{}');
 
-                        $.ajax({
-                            method: 'GET',
-                            url: '/myserials/syncget',
-                            dataType: 'json',
-                            data: {
-                                code,
-                                cache: false,
-                                productId: id,
-                            },
-                            beforeSend() {
-                                $(`#permbutton_${code}, #fetchlink_${code}, #info_key_${code}`).hide();
-                                $(`#fetching_${code}`).fadeIn();
-                                $(`#ajax_loader_${code}`).show();
-                                $(`#container_activate_${code}`).html('');
-                            },
-                            success(data) {
-                                $(`#ajax_loader_${code}, #fetching_${code}, #info_key_${code}`).hide();
-                                $(`#serial_${code}`).fadeIn();
-                                $(`#serial_n_${code}`).val(data.serial_number);
-                                $game.parent().prev().find('.btn-convert-to-trade').remove();
+                        if (selected === 'All' || (selected === 'Owned' && d.owned) || (selected === 'NotOwned' && !d.owned)) {
+                            $.ajax({
+                                method: 'GET',
+                                url: '/myserials/syncget',
+                                dataType: 'json',
+                                data: {
+                                    code,
+                                    cache: false,
+                                    productId: id,
+                                },
+                                beforeSend() {
+                                    $(`#permbutton_${code}, #fetchlink_${code}, #info_key_${code}`).hide();
+                                    $(`#fetching_${code}`).fadeIn();
+                                    $(`#ajax_loader_${code}`).show();
+                                    $(`#container_activate_${code}`).html('');
+                                },
+                                success(data) {
+                                    $(`#ajax_loader_${code}, #fetching_${code}, #info_key_${code}`).hide();
+                                    $(`#serial_${code}`).fadeIn();
+                                    $(`#serial_n_${code}`).val(data.serial_number);
+                                    $game.parent().prev().find('.btn-convert-to-trade').remove();
 
-                                handler($games, callback);
-                            },
-                            error() {
-                                swal(i18n.get('failTitle'), i18n.get('failDetailUnexpected'), 'error');
-                            },
-                        });
+                                    handler($games, callback);
+                                },
+                                error() {
+                                    swal(i18n.get('failTitle'), i18n.get('failDetailUnexpected'), 'error');
+                                },
+                            });
+                        } else handler($games, callback);
                     } else callback();
                 };
 
@@ -2248,8 +2265,7 @@ const siteHandlers = {
             .SBSE_container > div > button:hover, .SBSE_container select:hover, .SBSE_container > div > a:hover { color: #A8A8A8; }
             .SBSE_container > div > a { text-decoration: none; }
             .SBSE_container label { color: #DEDEDE; }
-            .SBSE_container select { max-width:120px; height: 30px; }
-            .SBSE_container select, .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
+            .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
             .SBSE_container span { margin-top: 5px; }
 
             /* product page */
@@ -2427,12 +2443,17 @@ const siteHandlers = {
             },
             reveal(e) {
                 const $revealBtn = $(e.currentTarget);
+                const selected = $('.SBSE_SelFilter').val() || 'All';
                 const handler = ($games, callback) => {
                     const game = $games.shift();
 
                     if (game) {
-                        game.click();
-                        setTimeout(handler.bind(null, $games, callback), 300);
+                        const d = JSON.parse($(game).closest('.SBSE_processed').attr('data-gameinfo') || '{}');
+
+                        if (selected === 'All' || (selected === 'Owned' && d.owned) || (selected === 'NotOwned' && !d.owned)) {
+                            game.click();
+                            setTimeout(handler.bind(null, $games, callback), 300);
+                        } else setTimeout(handler.bind(null, $games, callback), 1);
                     } else setTimeout(callback, 500);
                 };
 
@@ -2505,11 +2526,6 @@ const siteHandlers = {
 
         $container.find('button').addClass('narrow'); // narrow buttons
         $container.find('a').attr('href', ''); // dodge from master css selector
-
-        // append checkbox for owned game
-        $container.find('#SBSE_BtnSettings').before(`
-            <label><input type="checkbox" class="SBSE_ChkSkipOwned" checked>${i18n.get('checkboxSkipOwned')}</label>
-        `);
 
         new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
@@ -2646,19 +2662,21 @@ const siteHandlers = {
             },
             reveal(e) {
                 const $revealBtn = $(e.currentTarget);
-                const skipOwned = !!$('.SBSE_ChkSkipOwned:checked').length;
-                const notSelector = skipOwned ? ':not(.SBSE_owned)' : '';
+                const selected = $('.SBSE_SelFilter').val() || 'All';
                 const handler = ($games, callback) => {
                     const game = $games.shift();
 
                     if (game) {
                         const $game = $(game);
                         const machineName = $game.closest('.key-redeemer').attr('data-machineName');
+                        const d = JSON.parse($(game).closest('.SBSE_processed').attr('data-gameinfo') || '{}');
 
                         if (atDownload && machineName) {
-                            fetchKey($game, machineName, () => {
-                                handler($games, callback);
-                            });
+                            if (selected === 'All' || (selected === 'Owned' && d.owned) || (selected === 'NotOwned' && !d.owned)) {
+                                fetchKey($game, machineName, () => {
+                                    handler($games, callback);
+                                });
+                            } else setTimeout(handler.bind(null, $games, callback), 1);
                         } else {
                             game.click();
                             $('.sr-warning-modal-confirm-button').click();
@@ -2670,7 +2688,7 @@ const siteHandlers = {
 
                 $revealBtn.addClass('working');
 
-                handler($(`.key-redeemer${notSelector} .keyfield:not(.redeemed)`), () => {
+                handler($('.key-redeemer.isSteam .keyfield:not(.redeemed)'), () => {
                     $revealBtn.removeClass('working');
                     $('.SBSE_BtnRetrieve').click();
                 });
@@ -2794,11 +2812,6 @@ const siteHandlers = {
             observer.observe($keyManager[0], { childList: true });
         // at download page
         } else {
-            // append checkbox for owned game
-            $container.find('#SBSE_BtnSettings').before(`
-                <label><input type="checkbox" class="SBSE_ChkSkipOwned" checked>${i18n.get('checkboxSkipOwned')}</label>
-            `);
-
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
                     Array.from(mutation.addedNodes).forEach(async (addedNode) => {
@@ -2909,12 +2922,11 @@ const siteHandlers = {
             };
             const $container = getContainer(handlers);
 
-            // remove export button
-            $container.find('.SBSE_BtnExport').remove();
-            // append checkbox for market keys
+            $container.find('.SBSE_SelFilter').hide(); // hide filter selector
+            $container.find('.SBSE_BtnExport').remove(); // remove export button
             $container.find('#SBSE_BtnSettings').before(`
                 <label><input type="checkbox" class="SBSE_ChkMarketListings">${i18n.get('checkboxMarketListings')}</label>
-            `);
+            `); // append checkbox for market keys
 
             $('#TableKeys').eq(0).before($container);
 
@@ -3349,8 +3361,8 @@ const siteHandlers = {
         };
         const $container = getContainer(handlers);
 
-        // narrow buttons
-        $container.find('button').addClass('narrow');
+        $container.find('.SBSE_SelFilter').hide(); // hide filter selector
+        $container.find('button').addClass('narrow'); // narrow buttons
 
         // insert textarea
         $('.featurette-divider').eq(0).after($container);
@@ -3427,6 +3439,8 @@ const siteHandlers = {
                 },
             };
             const $container = getContainer(handlers);
+
+            $container.find('.SBSE_SelFilter').hide(); // hide filter selector
 
             // append checkbox for used-key
             $('#SBSE_BtnSettings').before(`
@@ -3588,6 +3602,7 @@ const siteHandlers = {
             };
             const $container = getContainer(handlers);
 
+            $container.find('.SBSE_SelFilter').hide(); // hide filter selector
             $container.find('.SBSE_BtnReveal').remove(); // remove reveal
 
             // insert container
@@ -3678,6 +3693,7 @@ const siteHandlers = {
         };
         const $container = getContainer(handlers);
 
+        $container.find('.SBSE_SelFilter').hide(); // hide filter selector
         $container.find('button').addClass('narrow'); // narrow buttons
         $container.find('.SBSE_BtnReveal').remove(); // remove reveal
 
@@ -3771,6 +3787,7 @@ const siteHandlers = {
         };
         const $container = getContainer(handlers);
 
+        $container.find('.SBSE_SelFilter').hide(); // hide filter selector
         $container.find('button').addClass('narrow'); // narrow buttons
         $container.find('.SBSE_BtnReveal').remove(); // remove reveal
 
