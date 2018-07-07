@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.4.0
+// @version      2.5.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -110,7 +110,7 @@ GM_addStyle(`
         outline: none;
     }
     .SBSE_container > div { width: 100%; padding-top: 5px; box-sizing: border-box; }
-    .SBSE_container > div > button, .SBSE_container > div > a {
+    .SBSE_container > div button {
         width: 120px;
         position: relative;
         margin-right: 10px;
@@ -120,9 +120,25 @@ GM_addStyle(`
         outline: none;
         cursor: pointer;
     }
-    .SBSE_container > div > a { display: inline-block; text-align: center; }
     .SBSE_container select { max-width:120px; height: 30px; }
     .SBSE_container label { margin-right: 10px; }
+    .SBSE_ExportMenu { display: inline-block; position: relative; }
+    .SBSE_ExportList {
+        width: calc(100% - 10px);
+        max-height: 0;
+        display: inline-block;
+        position: absolute;
+        top: 35px; left: 0;
+        padding: 0;
+        transition: max-height 0.5s ease;
+        overflow: hidden;
+        list-style-type: none;
+        background-color: #EEE;
+    }
+    .SBSE_ExportList > li { width: 100%; display: block; padding: 3px 0; text-align: center; }
+    .SBSE_ExportList a { text-decoration: none; color: #333; transition: color 0.3s ease; }
+    .SBSE_ExportList a:hover { text-decoration: none; color: #787878; }
+    .SBSE_ExportMenu:hover > .SBSE_ExportList { max-height: 300px; }
     #SBSE_BtnSettings {
         width: 20px; height: 20px;
         float: right;
@@ -257,7 +273,7 @@ GM_addStyle(`
 
 // load up
 const regKey = /(?:(?:([A-Z0-9])(?!\1{4})){5}-){2,5}[A-Z0-9]{5}/g;
-const eol = "\r\n";
+const eol = "\n";
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
 
@@ -274,10 +290,8 @@ const config = {
     },
     init() {
         if (!has.call(this.data, 'autoUpdateSessionID')) this.data.autoUpdateSessionID = true;
-        if (!has.call(this.data, 'preselectIncludeTitle')) this.data.preselectIncludeTitle = false;
+        if (!has.call(this.data, 'ASFFormat')) this.data.ASFFormat = false;
         if (!has.call(this.data, 'titleComesLast')) this.data.titleComesLast = false;
-        if (!has.call(this.data, 'preselectJoinKeys')) this.data.preselectJoinKeys = false;
-        if (!has.call(this.data, 'joinKeysASFStyle')) this.data.joinKeysASFStyle = true;
         if (!has.call(this.data, 'activateAllKeys')) this.data.activateAllKeys = false;
         if (!has.call(this.data, 'enableTooltips')) this.data.enableTooltips = this.get('language') !== 'english';
     },
@@ -289,6 +303,7 @@ const i18n = {
             updateSuccessTitle: '更新成功！',
             updateSuccess: '成功更新Steam sessionID',
             successStatus: '成功',
+            successTitle: '好極了！',
             successDetail: '無資料',
             skippedStatus: '跳過',
             activatedDetail: '已啟動',
@@ -317,10 +332,8 @@ const i18n = {
             settingsSyncLibrary: '同步遊戲庫資料',
             settingsSyncLibraryButton: '同步',
             settingsLanguage: '語言',
-            settingsPreselectIncludeTitle: '預選包括遊戲名',
+            settingsASFFormat: '啟用ASF 格式',
             settingsTitleComesLast: '遊戲名置後',
-            settingsPreselectJoinKeys: '預選合併序號',
-            settingsJoinKeysASFStyle: '合併ASF 格式序號',
             settingsActivateAllKeys: '不跳過、啟動所有序號',
             settingsEnableTooltips: 'SteamCN 論壇提示框',
             HBAlreadyOwned: '遊戲已擁有',
@@ -338,7 +351,8 @@ const i18n = {
             DIGEasyBuyLoading: '加載第%page%頁中',
             DIGEasyBuyLoadingComplete: '加載完成',
             DIGButtonPurchasing: '購買中',
-            DIGInsufficientFund: '餘額不足，準備回到帳號頁',
+            DIGInsufficientFund: '餘額不足',
+            DIGFinishedPurchasing: '購買完成',
             DIGMarketSearchResult: '目前市集上架中',
             DIGRateAllPositive: '全部好評',
             DIGClickToHideThisRow: '隱藏此上架遊戲',
@@ -369,6 +383,7 @@ const i18n = {
             updateSuccessTitle: '更新成功',
             updateSuccess: '成功更新Steam sessionID',
             successStatus: '成功',
+            successTitle: '好极了！',
             successDetail: '无信息',
             activatedDetail: '已激活',
             skippedStatus: '跳过',
@@ -397,10 +412,8 @@ const i18n = {
             settingsSyncLibrary: '同步游戏库资料',
             settingsSyncLibraryButton: '同步',
             settingsLanguage: '语言',
-            settingsPreselectIncludeTitle: '预选包括游戏名',
+            settingsASFFormat: '启用ASF 格式',
             settingsTitleComesLast: '游戏名置后',
-            settingsPreselectJoinKeys: '预选合并激活码',
-            settingsJoinKeysASFStyle: '合并ASF 格式激活码',
             settingsActivateAllKeys: '不跳过、激活所有激活码',
             settingsEnableTooltips: 'SteamCN 论坛提示窗',
             HBAlreadyOwned: '游戏已拥有',
@@ -418,7 +431,8 @@ const i18n = {
             DIGEasyBuyLoading: '加载第%page%页中',
             DIGEasyBuyLoadingComplete: '加载完成',
             DIGButtonPurchasing: '购买中',
-            DIGInsufficientFund: '余额不足，准备回到账号页',
+            DIGInsufficientFund: '余额不足',
+            DIGFinishedPurchasing: '购买完成',
             DIGMarketSearchResult: '目前市集上架中',
             DIGRateAllPositive: '全部好评',
             DIGClickToHideThisRow: '隐藏此上架游戏',
@@ -449,6 +463,7 @@ const i18n = {
             updateSuccessTitle: 'Update Successful!',
             updateSuccess: 'Steam sessionID is successfully updated',
             successStatus: 'Success',
+            successTitle: 'Hurray!',
             successDetail: 'No Detail',
             activatedDetail: 'Activated',
             skippedStatus: 'Skipped',
@@ -477,10 +492,8 @@ const i18n = {
             settingsSyncLibrary: 'Sync Library Data',
             settingsSyncLibraryButton: 'Sync',
             settingsLanguage: 'Language',
-            settingsPreselectIncludeTitle: 'Pre-select Include Title',
+            settingsASFFormat: 'Enable ASF Format',
             settingsTitleComesLast: 'Title Comes Last',
-            settingsPreselectJoinKeys: 'Pre-select Join Keys',
-            settingsJoinKeysASFStyle: 'Join Keys w/ ASF Style',
             settingsActivateAllKeys: 'No skip & activate all keys',
             settingsEnableTooltips: 'Tooltips from SteamCN',
             HBAlreadyOwned: 'Game Already Owned',
@@ -498,7 +511,8 @@ const i18n = {
             DIGEasyBuyLoading: 'Loading page %page%',
             DIGEasyBuyLoadingComplete: 'Loaded',
             DIGButtonPurchasing: 'Purchassing',
-            DIGInsufficientFund: 'Insufficient fund, returning to account page',
+            DIGInsufficientFund: 'Insufficient fund',
+            DIGFinishedPurchasing: 'Finished Purchasing',
             DIGMarketSearchResult: 'Currently listing in marketplace',
             DIGRateAllPositive: 'Mark All Positive',
             DIGClickToHideThisRow: 'Hide this game from listings',
@@ -1672,10 +1686,10 @@ const settings = {
                         </td>
                     </tr>
                     <tr>
-                        <td class="name">${i18n.get('settingsPreselectIncludeTitle')}</td>
+                        <td class="name">${i18n.get('settingsASFFormat')}</td>
                         <td class="value">
                             <label class="switch">
-                                <input type="checkbox" class="preselectIncludeTitle">
+                                <input type="checkbox" class="ASFFormat">
                                 <span class="slider"></span>
                             </label>
                         </td>
@@ -1685,24 +1699,6 @@ const settings = {
                         <td class="value">
                             <label class="switch">
                                 <input type="checkbox" class="titleComesLast">
-                                <span class="slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="name">${i18n.get('settingsPreselectJoinKeys')}</td>
-                        <td class="value">
-                            <label class="switch">
-                                <input type="checkbox" class="preselectJoinKeys">
-                                <span class="slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="name">${i18n.get('settingsJoinKeysASFStyle')}</td>
-                        <td class="value">
-                            <label class="switch">
-                                <input type="checkbox" class="joinKeysASFStyle">
                                 <span class="slider"></span>
                             </label>
                         </td>
@@ -1972,7 +1968,14 @@ const getContainer = (handlers) => {
                 <button class="SBSE_BtnActivate">${i18n.get('buttonActivate')}</button>
                 <button class="SBSE_BtnCopy">${i18n.get('buttonCopy')}</button>
                 <button class="SBSE_BtnReset">${i18n.get('buttonReset')}</button>
-                <a class="SBSE_BtnExport">${i18n.get('buttonExport')}</a>
+                <div class="SBSE_ExportMenu">
+                    <button class="SBSE_BtnExport">${i18n.get('buttonExport')}</button>
+                    <ul class="SBSE_ExportList">
+                        <li><a data-fileType="txt">.txt</a></li>
+                        <li><a data-fileType="csv">.csv</a></li>
+                        <li><a data-fileType="keys">.keys</a></li>
+                    </ul>
+                </div>
                 <label><input type="checkbox" class="SBSE_ChkTitle">${i18n.get('checkboxIncludeGameTitle')}</label>
                 <label><input type="checkbox" class="SBSE_ChkJoin">${i18n.get('checkboxJoinKeys')}</label>
                 <select class="SBSE_SelFilter">
@@ -1996,7 +1999,7 @@ const getContainer = (handlers) => {
             const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
             const skipMarketListing = !$('.SBSE_ChkMarketListings:checked').length;
             const separator = joinKeys ? ',' : eol;
-            const prefix = joinKeys && config.get('joinKeysASFStyle') ? '!redeem ' : '';
+            const prefix = joinKeys && config.get('ASFFormat') ? '!redeem ' : '';
 
             for (let i = 0; i < data.items.length; i += 1) {
                 const item = data.items[i];
@@ -2008,10 +2011,16 @@ const getContainer = (handlers) => {
 
                 const temp = [item.key];
 
-                if (includeTitle) temp.unshift(item.title);
-                if (config.get('titleComesLast')) temp.reverse();
+                if (config.get('ASFFormat')) {
+                    if (!joinKeys) temp.unshift(item.title);
 
-                keys.push(temp.join(', '));
+                    keys.push(temp.join("\t"));
+                } else {
+                    if (includeTitle) temp.unshift(item.title);
+                    if (config.get('titleComesLast')) temp.reverse();
+
+                    keys.push(temp.join(', '));
+                }
             }
 
             $('.SBSE_container > textarea').val(prefix + keys.join(separator));
@@ -2052,24 +2061,29 @@ const getContainer = (handlers) => {
             const data = handlers.extract();
 
             if (data.items.length > 0) {
-                const $exportBtn = $(e.currentTarget);
+                const exportBtn = e.target;
 
-                $exportBtn.removeAttr('href').removeAttr('download');
+                exportBtn.removeAttribute('href');
+                exportBtn.removeAttribute('download');
 
+                const fileType = exportBtn.dataset.filetype || 'txt';
                 const filename = data.filename.replace(/[\\/:*?"<>|!]/g, '');
+                const separator = {
+                    txt: ', ',
+                    csv: ',',
+                    keys: "\t",
+                };
                 const formattedData = data.items.map((line) => {
                     const temp = [];
 
                     if (line.title) temp.push(line.title.replace(/,/g, ' '));
                     temp.push(line.key);
 
-                    return temp.join();
+                    return temp.join(separator[fileType]);
                 }).join(eol);
 
-                $exportBtn.attr({
-                    href: `data:text/csv;charset=utf-8,\ufeff${encodeURIComponent(formattedData)}`,
-                    download: `${filename}.csv`,
-                });
+                exportBtn.href = `data:text/${fileType};charset=utf-8,\ufeff${encodeURIComponent(formattedData)}`;
+                exportBtn.download = `${filename}.${fileType}`;
             }
         };
     }
@@ -2088,12 +2102,17 @@ const getContainer = (handlers) => {
     $container.find('.SBSE_BtnActivate').click(handlers.activate);
     $container.find('.SBSE_BtnCopy').click(handlers.copy);
     $container.find('.SBSE_BtnReset').click(handlers.reset);
-    $container.find('.SBSE_BtnExport').click(handlers.export);
+    $container.find('.SBSE_ExportList').click(handlers.export);
     $container.find('#SBSE_BtnSettings').click(handlers.settings);
+    $container.find('input[type="checkbox"]').change((e) => {
+        const key = e.currentTarget.className.trim();
+
+        if (key.length > 0) config.set(key, e.currentTarget.checked);
+    });
 
     // apply settings
-    if (config.get('preselectIncludeTitle')) $container.find('.SBSE_ChkTitle').prop('checked', true);
-    if (config.get('preselectJoinKeys')) $container.find('.SBSE_ChkJoin').prop('checked', true);
+    if (config.get('SBSE_ChkTitle')) $container.find('.SBSE_ChkTitle').prop('checked', 'checked');
+    if (config.get('SBSE_ChkJoin')) $container.find('.SBSE_ChkJoin').prop('checked', 'checked');
 
     return $container;
 };
@@ -2103,8 +2122,7 @@ const siteHandlers = {
         GM_addStyle(`
             .SBSE_container { margin-top: 10px; }
             .SBSE_container > textarea { border: 1px solid #CC001D; border-radius: 3px; }
-            .SBSE_container > div > button, .SBSE_container > div > a { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
-            .SBSE_container > div > a:hover { color: white; }
+            .SBSE_container > div button { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
             .swal2-popup .slider { margin: 0; }
             .SBSE_icon { vertical-align: middle; }
         `);
@@ -2260,10 +2278,9 @@ const siteHandlers = {
         GM_addStyle(`
             .SBSE_container { margin-top: 10px; }
             .SBSE_container > textarea { background-color: #434343; color: #eee; }
-            .SBSE_container > div > button, .SBSE_container > div > a { width: 80px; }
-            .SBSE_container > div > button, .SBSE_container select, .SBSE_container > div > a { border: 1px solid transparent; background-color: #1c1c1c; color: #eee; }
-            .SBSE_container > div > button:hover, .SBSE_container select:hover, .SBSE_container > div > a:hover { color: #A8A8A8; }
-            .SBSE_container > div > a { text-decoration: none; }
+            .SBSE_container > div button { width: 80px; }
+            .SBSE_container > div button, .SBSE_container select { border: 1px solid transparent; background-color: #1c1c1c; color: #eee; }
+            .SBSE_container > div button:hover, .SBSE_container select:hover { color: #A8A8A8; }
             .SBSE_container label { color: #DEDEDE; }
             .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
             .SBSE_container span { margin-top: 5px; }
@@ -2567,7 +2584,7 @@ const siteHandlers = {
                 color: #4a4c45;
                 text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
             }
-            .SBSE_container > div > button, .SBSE_container > div > a {
+            .SBSE_container > div button {
                 width: 70px;
                 border: 1px solid #C9CCD3;
                 border-radius: 3px;
@@ -2575,12 +2592,12 @@ const siteHandlers = {
                 background: linear-gradient(to top, #cacaca, #e7e7e7);
                 color: #4a4c45 !important;
             }
-            .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
+            .SBSE_container > div button:hover {
                 border: 1px solid #b7bac0;
                 background-color: #fafcff;
                 color: #555961 !important;
             }
-            .SBSE_container > div > button.narrow.working { width: 76px; padding-right: 36px; }
+            .SBSE_container > div button.narrow.working { width: 76px; padding-right: 36px; }
             #SBSE_BtnSettings { position: absolute; right: 0; }
             .SBSE_owned .sr-unredeemed-steam-button {
                 background-color: #F3F3F3;
@@ -2870,7 +2887,7 @@ const siteHandlers = {
             GM_addStyle(`
                 .SBSE_container { padding: 5px; border: 1px solid #424242; }
                 .SBSE_container > textarea { border: 1px solid #000; }
-                .SBSE_container > div > button {
+                .SBSE_container > div button {
                     border: none;
                     background-color: #FD5E0F;
                     color: rgb(49, 49, 49);
@@ -2967,8 +2984,8 @@ const siteHandlers = {
                 }
                 .SBSE_owned a[href*="steam"] .DIG3_14_Gray { color: #9ccc65; }
                 .SBSE_wished a[href*="steam"] .DIG3_14_Gray { color: #29b6f6; }
-                .SBSE_ignored a[href*="steam"] .DIG3_14_Gray { text-decoration: line-through;}
-                #form3 #sortby { width: 250px; }
+                .SBSE_ignored a[href*="steam"] .DIG3_14_Gray { text-decoration: line-through; }
+                .DIG2content select { max-width: 200px; }
             `);
 
             // setup row data & event
@@ -2978,6 +2995,7 @@ const siteHandlers = {
 
                 $row.attr('data-id', $game.attr('href').replace(/\D/g, ''));
                 $row.attr('data-price', parseInt($row.find('td:contains(DIG Points)').text(), 10) || 0);
+                $row.attr('data-title', $row.children('td').eq(pathname.includes('/account_digstore') ? 3 : 1).text().trim());
                 $row.click(() => {
                     $row.toggleClass('DIGEasyBuy_checked');
                 });
@@ -3104,58 +3122,72 @@ const siteHandlers = {
             `);
 
             // bind button event
-            $('.DIGButtonPurchase').click((e) => {
-                let bought = 0;
+            $('.DIGButtonPurchase').click(() => {
                 let balance = parseInt($('div:contains(Usable DIG Points) > span').text().split(' ').shift().replace(/\D/g, ''), 10);
-                const $self = $(e.currentTarget);
+                const $games = $('.DIGEasyBuy_checked:visible');
 
-                $self.prop('disabled', true).text(i18n.get('DIGButtonPurchasing'));
-
-                $('.DIGEasyBuy_checked').each(async (i, ele) => {
-                    const $ele = $(ele);
-                    const id = $ele.data('id');
-                    const price = parseInt($ele.data('price'), 10);
-
-                    if (id && price > 0) {
-                        if (balance - price > 0) {
-                            let url = `${location.origin}/account_buy.html`;
-                            const requestInit = {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: `quantity=1&xgameid=${id}&xgameprice1=${price}&send=Purchase`,
-                                mode: 'same-origin',
-                                credentials: 'same-origin',
-                                cache: 'no-store',
-                                referrer: `${location.origin}/account_buy_${id}.html`,
-                            };
-
-                            if (pathname === '/account_trades.html' || pathname === '/account_tradesXT.html') {
-                                url = `${location.origin}/account_buytrade_${id}.html`;
-                                requestInit.body = `gameid=${id}&send=Purchase`;
-                                requestInit.referrer = url;
-                            }
-
-                            const res = await fetch(url, requestInit);
-
-                            if (res.ok) {
-                                $ele.click();
-                                bought += 1;
-                                balance -= price;
-                            }
-                        } else {
-                            swal({
-                                title: i18n.get('failTitle'),
-                                text: i18n.get('DIGInsufficientFund'),
-                                type: 'error',
-                            }).then(() => {
-                                window.location = `${location.origin}/account_page.html`;
-                            });
-                        }
-                    }
+                swal({
+                    title: i18n.get('DIGButtonPurchasing'),
+                    html: '<p></p>',
+                    onOpen: () => {
+                        swal.showLoading();
+                    },
                 });
 
-                if (bought) window.location = `${location.origin}/account_page.html`;
-                else $self.prop('disabled', false).text(i18n.get('DIGButtonPurchase'));
+                (async function purchaseHandler() {
+                    const game = $games.shift();
+
+                    if (game) {
+                        const $game = $(game);
+                        const id = $game.data('id');
+                        const price = parseInt($game.data('price'), 10);
+                        const title = $game.data('title');
+
+                        if (title.length > 0) swal.getContent().querySelector('p').textContent = title;
+
+                        if (id && price > 0) {
+                            if (balance - price > 0) {
+                                let url = `${location.origin}/account_buy.html`;
+                                const requestInit = {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                    body: `quantity=1&xgameid=${id}&xgameprice1=${price}&send=Purchase`,
+                                    mode: 'same-origin',
+                                    credentials: 'same-origin',
+                                    cache: 'no-store',
+                                    referrer: `${location.origin}/account_buy_${id}.html`,
+                                };
+
+                                if (pathname === '/account_trades.html' || pathname === '/account_tradesXT.html') {
+                                    url = `${location.origin}/account_buytrade_${id}.html`;
+                                    requestInit.body = `gameid=${id}&send=Purchase`;
+                                    requestInit.referrer = url;
+                                }
+
+                                const res = await fetch(url, requestInit);
+
+                                if (res.ok) {
+                                    $game.click();
+                                    balance -= price;
+                                }
+
+                                purchaseHandler();
+                            } else {
+                                swal({
+                                    title: i18n.get('failTitle'),
+                                    text: i18n.get('DIGInsufficientFund'),
+                                    type: 'error',
+                                });
+                            }
+                        } else purchaseHandler();
+                    } else {
+                        swal({
+                            title: i18n.get('successTitle'),
+                            text: i18n.get('DIGFinishedPurchasing'),
+                            type: 'success',
+                        });
+                    }
+                }());
             });
             $('.DIGButtonSelectAll').click((e) => {
                 const $self = $(e.currentTarget);
@@ -3301,14 +3333,13 @@ const siteHandlers = {
                 border-radius: 5px;
             }
             .SBSE_container > div { text-align: left; }
-            .SBSE_container > div > button, .SBSE_container > div > a {
+            .SBSE_container > div button {
                 width: 80px;
                 border: 1px solid #2e6da4;
                 border-radius: 5px;
                 background-color: #337ab7;
                 color: #FFF;
             }
-            .SBSE_container > div > a:hover { text-decoration: none; opacity: 0.9; }
             .SBSE_container label { color: #EEE; }
             .expanded .showOrderMeta {
                 display: block !important;
@@ -3371,14 +3402,14 @@ const siteHandlers = {
         if (location.pathname.startsWith('/profile/')) {
             // inject css
             GM_addStyle(`
-                .SBSE_container > textarea, .SBSE_container > div > button, .SBSE_container > div > a {
+                .SBSE_container > textarea, .SBSE_container > div button {
                     background: transparent;
                     border: 1px solid #8cc53f;
                     border-radius: 3px;
                     color: #8cc53f;
                     transition: all 0.8s ease;
                 }
-                .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
+                .SBSE_container > div button:hover {
                     background-color: #8cc53f;
                     color: white;
                     text-decoration: none;
@@ -3468,14 +3499,7 @@ const siteHandlers = {
             GM_addStyle(`
                 .SBSE_container { margin-bottom: 20px; }
                 .SBSE_container > textarea { background-color: #EEE; border-radius: 3px; }
-                .SBSE_container > div > button, .SBSE_container > div > a { outline: none !important; }
-                .SBSE_container > div > a {
-                    -webkit-appearance: button;
-                    -moz-appearance: button;
-                    padding: 3px 6px;
-                    color: inherit;
-                    text-decoration: none;
-                }
+                .SBSE_container > div button { outline: none !important; }
                 #SBSE_BtnSettings { margin-top: 8px; }
             `);
 
@@ -3572,12 +3596,12 @@ const siteHandlers = {
             // inject css
             GM_addStyle(`
                 .SBSE_container > textarea { border: 1px solid #AAAAAA; }
-                .SBSE_container > div > button, .SBSE_container > div > a {
+                .SBSE_container > div button {
                     border: 1px solid #d3d3d3;
                     background: #e6e6e6 url(images/ui-bg_glass_75_e6e6e6_1x400.png) 50% 50% repeat-x;
                     color: #555555;
                 }
-                .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
+                .SBSE_container > div button:hover {
                     border-color: #999999;
                     background: #dadada url(images/ui-bg_glass_75_dadada_1x400.png) 50% 50% repeat-x;
                     color: #212121;
@@ -3620,17 +3644,16 @@ const siteHandlers = {
             .SBSE_container { margin-top: 20px; }
             .SBSE_container > textarea { background-color: rgb(230, 230, 229); color: rgb(27, 26, 26); }
             .SBSE_container > div { text-align: left; }
-            .SBSE_container > div > button, .SBSE_container > div > a {
+            .SBSE_container > div button {
                 width: 80px;
                 border: 1px solid #b4de0a;
                 background-color: #b4de0a;
                 color: #1a1a1a;
             }
-            .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
+            .SBSE_container > div button:hover {
                 border: 1px solid #a4ca09;
                 background-color: #a4ca09;
             }
-            .SBSE_container > div > a { text-decoration: none; }
             .SBSE_container label { color: #1a1a1a; font-weight: 400; }
             .SBSE_appList { margin-bottom: 10px; }
             .SBSE_appList td { vertical-align: top; }
@@ -3743,21 +3766,16 @@ const siteHandlers = {
     'gama-gama': () => {
         // inject css
         GM_addStyle(`
-            .SBSE_container {  }
             .SBSE_container > textarea { background-color: #ededed; color: #33; border-radius: 4px; }
-            .SBSE_container > div > button, .SBSE_container > div > a {
+            .SBSE_container > div button {
                 width: 80px; height: 35px;
                 border: none; border-radius: 4px;
                 background: linear-gradient(to bottom, #47bceb 0, #18a4dd 30%, #127ba6 100%);
                 color: #fff;
                 box-shadow: 0 1px 3px 1px rgba(0,0,0,.8);
             }
-            .SBSE_container > div > button { font-family: inherit; font-size: inherit; }
-            .SBSE_container > div > a { line-height: 35px; vertical-align: top; }
-            .SBSE_container > div > button:hover, .SBSE_container > div > a:hover {
-                background: linear-gradient(to bottom, #47bceb, #18a4dd);
-            }
-            .SBSE_container > div > a { text-decoration: none; }
+            .SBSE_container > div button { font-family: inherit; font-size: inherit; }
+            .SBSE_container > div button:hover { background: linear-gradient(to bottom, #47bceb, #18a4dd); }
         `);
 
         const handlers = {
