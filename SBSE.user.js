@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.5.0
+// @version      2.5.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2936,7 +2936,7 @@ const siteHandlers = {
                 reveal() {
                     const $form = $('#form3');
 
-                    $('.quickaction').val(1);
+                    $('#quickaction').val(1);
                     $.ajax({
                         method: 'POST',
                         url: $form.attr('action'),
@@ -3006,8 +3006,26 @@ const siteHandlers = {
                 const $row = $game.closest('tr');
 
                 $row.attr('data-id', $game.attr('href').replace(/\D/g, ''));
-                $row.attr('data-price', parseInt($row.find('td:contains(DIG Points)').text(), 10) || 0);
                 $row.attr('data-title', $row.children('td').eq(pathname.includes('/account_digstore') ? 3 : 1).text().trim());
+                $row.attr('data-price', () => {
+                    let price = 0;
+                    const $DIGPoints = $row.find('td:contains( DIG Points)');
+
+                    if ($DIGPoints.length === 1) price = $DIGPoints.text();else {
+                        const tds = $row.children('td').get();
+
+                        for (let j = tds.length - 1; j >= 0; j -= 1) {
+                            const text = tds[j].textContent.trim();
+
+                            if (text.startsWith('$')) {
+                                price = text.replace(/\D/g, '');
+                                break;
+                            }
+                        }
+                    }
+
+                    return parseInt(price, 10);
+                });
                 $row.click(() => {
                     $row.toggleClass('DIGEasyBuy_checked');
                 });
