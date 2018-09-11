@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.5.1
+// @version      2.5.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -1533,9 +1533,9 @@ const steam = {
     },
     init() {
         if (Object.keys(this.library).length === 0) {
-            this.library.owned = { app: {}, sub: {} };
-            this.library.wished = { app: {}, sub: {} };
-            this.library.ignored = { app: {}, sub: {} };
+            this.library.owned = { app: [], sub: [] };
+            this.library.wished = { app: [], sub: [] };
+            this.library.ignored = { app: [], sub: [] };
             this.set();
         }
 
