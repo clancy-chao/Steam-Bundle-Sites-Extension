@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.5.2
+// @version      2.5.3
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -1532,12 +1532,9 @@ const steam = {
         return this.library.lastSync;
     },
     init() {
-        if (Object.keys(this.library).length === 0) {
-            this.library.owned = { app: [], sub: [] };
-            this.library.wished = { app: [], sub: [] };
-            this.library.ignored = { app: [], sub: [] };
-            this.set();
-        }
+        if (!has.call(this.library, 'owned')) this.library.owned = { app: [], sub: [] };
+        if (!has.call(this.library, 'wished')) this.library.wished = { app: [], sub: [] };
+        if (!has.call(this.library, 'ignored')) this.library.ignored = { app: [], sub: [] };
 
         // update steam library every 10 min
         const updateTimer = 10 * 60 * 1000;
