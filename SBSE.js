@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.5.3
+// @version      2.5.4
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -274,6 +274,7 @@ GM_addStyle(`
 // load up
 const regKey = /(?:(?:([A-Z0-9])(?!\1{4})){5}-){2,5}[A-Z0-9]{5}/g;
 const eol = "\n";
+const tab = "\t";
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
 
@@ -1328,78 +1329,91 @@ const xe = {
             tchinese: '澳幣',
             schinese: '澳元',
             symbol: 'AU$',
+            decimal: true,
         },
         CAD: {
             english: 'Canadian Dollar',
             tchinese: '加幣',
             schinese: '加元',
             symbol: 'CA$',
+            decimal: true,
         },
         CNY: {
             english: 'Chinese Yuan',
             tchinese: '人民幣',
             schinese: '人民币',
             symbol: 'CN¥',
+            decimal: true,
         },
         EUR: {
             english: 'Euro',
             tchinese: '歐元',
             schinese: '欧元',
             symbol: '€',
+            decimal: true,
         },
         GBP: {
             english: 'Great Britain Pound',
             tchinese: '英鎊',
             schinese: '英镑',
             symbol: '£',
+            decimal: true,
         },
         HKD: {
             english: 'Hong Kong Dollar',
             tchinese: '港幣',
             schinese: '港元',
             symbol: 'HK$',
+            decimal: false,
         },
         JPY: {
             english: 'Japanese Yen',
             tchinese: '日圓',
             schinese: '日元',
             symbol: 'JP¥',
+            decimal: false,
         },
         KRW: {
             english: 'South Korean Won',
             tchinese: '韓圓',
             schinese: '韩币',
             symbol: '₩',
+            decimal: false,
         },
         MYR: {
             english: 'Malaysian Ringgit',
             tchinese: '令吉',
             schinese: '林吉特',
             symbol: 'RM',
+            decimal: true,
         },
         NTD: {
             english: 'New Taiwan Dollar',
             tchinese: '台幣',
             schinese: '台币',
             symbol: 'NT$',
+            decimal: false,
         },
         NZD: {
             english: 'New Zealand Dollar',
             tchinese: '紐幣',
             schinese: '新西兰元',
             symbol: 'NZ$',
+            decimal: true,
         },
         RUB: {
             english: 'Russian Ruble',
             tchinese: '盧布',
             schinese: '卢布',
-            symbol: 'руб',
+            symbol: '₽',
+            decimal: false,
         },
         USD: {
             english: 'United States Dollar',
             tchinese: '美元',
             schinese: '美元',
             symbol: 'US$',
+            decimal: true,
         },
     },
     getRate() {
@@ -1416,7 +1430,7 @@ const xe = {
                             rates: {},
                         };
 
-                        res.response.split("\n").forEach((line) => {
+                        res.response.split(eol).forEach((line) => {
                             if (line.includes('currency=')) {
                                 const currency = line.split('currency=\'').pop().slice(0, 3);
                                 const rate = line.trim().split('rate=\'').pop().slice(0, -3);
@@ -1462,9 +1476,11 @@ const xe = {
             const originalValue = parseInt(ele.dataset.value, 10);
             const originalRate = this.exchangeRate.rates[originalCurrency];
             const targetRate = this.exchangeRate.rates[targetCurrency];
-            const exchangedValue = (originalValue / originalRate) * targetRate;
+            const exchangedValue = Math.trunc((originalValue / originalRate) * targetRate);
+            const symbol = this.currencies[targetCurrency].symbol;
+            const decimalPlace = this.currencies[targetCurrency].decimal ? 2 : 0;
 
-            $(ele).text(this.currencies[targetCurrency].symbol + (exchangedValue / 100).toFixed(2));
+            $(ele).text(symbol + (exchangedValue / 100).toFixed(decimalPlace));
         });
     },
     init() {
@@ -2011,7 +2027,7 @@ const getContainer = (handlers) => {
                 if (config.get('ASFFormat')) {
                     if (!joinKeys) temp.unshift(item.title);
 
-                    keys.push(temp.join("\t"));
+                    keys.push(temp.join(tab));
                 } else {
                     if (includeTitle) temp.unshift(item.title);
                     if (config.get('titleComesLast')) temp.reverse();
@@ -2068,7 +2084,7 @@ const getContainer = (handlers) => {
                 const separator = {
                     txt: ', ',
                     csv: ',',
-                    keys: "\t",
+                    keys: tab,
                 };
                 const formattedData = data.items.map((line) => {
                     const temp = [];
@@ -2282,18 +2298,20 @@ const siteHandlers = {
             .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
             .SBSE_container span { margin-top: 5px; }
 
-            /* product page */
-            .cardBlock { width: 100%; padding: 0 .875rem 0 .875rem; }
-            .cardBlock > div { padding: 1rem; }
-            .cardBlock .currencyToggler {
+            /* currency converter */
+            .priceExt { positon: relative; }
+            .priceExt ~ .priceExt { display: none; }
+            .portrait { width: 100%; padding: 0 .875rem 0 .875rem; }
+            .portrait > div { padding: 1rem; }
+            .portrait .currencyToggler {
                 width: 100%; height: 40px;
                 margin-bottom: 10px;
                 font-size: 20px;
                 border-radius: 3px;
             }
-            .starDeal { padding: 1rem; }
-            .starDeal > div { display: flex; align-items: center; justify-content: space-evenly; }
-            .starDeal .currencyToggler {
+            .landscape { padding: 1rem; }
+            .landscape > div { display: flex; align-items: center; justify-content: space-evenly; }
+            .landscape .currencyToggler {
                 width: 300px; height: 40px;
                 font-size: 20px;
                 border-radius: 3px;
@@ -2335,26 +2353,28 @@ const siteHandlers = {
             if (Object.keys(APIData).length > 0) {
                 const language = config.get('language');
                 const $priceExt = $(`
-                    <div class="cardBlock">
+                    <div class="priceExt portrait">
                         <div>
                             <select class="currencyToggler"></select>
-                            <table class="pricingDetail"></table>
                         </div>
                     </div>
                 `);
                 const $currencyToggler = $priceExt.find('.currencyToggler');
-                const $pricingDetail = $priceExt.find('.pricingDetail');
+                const $pricingDetail = $('<table class="pricingDetail"></table>');
                 const selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'CNY');
                 const isStarDeal = !!$('.stardeal-purchase-info').length;
                 let starDeal = {};
 
                 if (isStarDeal) {
-                    $priceExt.toggleClass('cardBlock starDeal');
-
                     // fetch star-deal data
                     const res = await fetch('https://www.fanatical.com/api/star-deal');
 
                     if (res.ok) starDeal = await res.json();
+                }
+
+                // change orientation
+                if (isStarDeal || $('.background-bundle, .bundle-header.container-fluid').length > 0) {
+                    $priceExt.toggleClass('portrait landscape container');
                 }
 
                 Object.keys(xe.currencies).forEach((currency) => {
@@ -2372,18 +2392,24 @@ const siteHandlers = {
 
                 // bundle page
                 APIData.bundles.forEach((tier, index) => {
-                    if (APIData.bundles.length > 1) $pricingDetail.append(`<tr><th colspan="3">Tier ${index + 1}</th></tr>`);
-                    Object.keys(tier.price).forEach((currency) => {
-                        const value = tier.price[currency];
+                    const $detail = $pricingDetail.clone();
 
-                        $pricingDetail.append(`
+                    if (APIData.bundles.length > 1) $detail.append(`<tr><th colspan="3">Tier ${index + 1}</th></tr>`);
+                    Object.keys(tier.price).sort().forEach((currency) => {
+                        const value = tier.price[currency];
+                        const symbol = xe.currencies[currency].symbol;
+                        const decimalPlace = xe.currencies[currency].decimal ? 2 : 0;
+
+                        $detail.append(`
                             <tr class="tier${index + 1}">
                                 <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
-                                <td>${xe.currencies[currency].symbol + (value / 100)}</td>
+                                <td>${symbol + (value / 100).toFixed(decimalPlace)}</td>
                                 <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
                             </tr>
                         `);
                     });
+
+                    $detail.appendTo($currencyToggler.parent());
                 });
 
                 // game page
@@ -2396,8 +2422,10 @@ const siteHandlers = {
 
                     if (isStarDeal) discount = 1 - ($('.discount-percent').text().replace(/\D/g, '') / 100);
 
-                    Object.keys(APIData.price).forEach((currency) => {
-                        let value = (APIData.price[currency] * discount).toFixed(2);
+                    Object.keys(APIData.price).sort().forEach((currency) => {
+                        let value = Math.trunc(APIData.price[currency] * discount);
+                        const symbol = xe.currencies[currency].symbol;
+                        const decimalPlace = xe.currencies[currency].decimal ? 2 : 0;
 
                         // if star-deal data loaded successfully
                         if (has.call(starDeal, 'promoPrice')) value = starDeal.promoPrice[currency];
@@ -2405,15 +2433,15 @@ const siteHandlers = {
                         $pricingDetail.append(`
                             <tr class="tier1">
                                 <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
-                                <td>${xe.currencies[currency].symbol + (value / 100).toFixed(2)}</td>
+                                <td>${symbol + (value / 100).toFixed(decimalPlace)}</td>
                                 <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
                             </tr>
-                        `);
+                        `).appendTo($currencyToggler.parent());
                     });
                 }
 
                 $('.product-commerce-container').append($priceExt);
-                $('.stardeal-purchase-info').after($priceExt);
+                $('.stardeal-purchase-info, .bundle-header').filter(':visible').eq(0).after($priceExt);
                 xe.update(selectedCurrency);
 
                 // highlight the cheapest
@@ -2612,36 +2640,39 @@ const siteHandlers = {
         `);
 
         const atDownload = location.pathname === '/downloads';
+        const gamekey = new URLSearchParams(location.search).get('key');
         const fetchKey = async ($node, machineName, callback) => {
-            const res = await fetch('https://www.humblebundle.com/humbler/redeemkey', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                    Origin: 'https://www.humblebundle.com',
-                    Referer: location.href,
-                },
-                body: `keytype=${machineName}&key=${unsafeWindow.gamekeys[0]}&keyindex=0`,
-                credentials: 'same-origin',
-            });
+            if (gamekey) {
+                const res = await fetch('https://www.humblebundle.com/humbler/redeemkey', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        Origin: 'https://www.humblebundle.com',
+                        Referer: location.href,
+                    },
+                    body: `keytype=${machineName}&key=${gamekey}&keyindex=0`,
+                    credentials: 'same-origin',
+                });
 
-            if (res.ok) {
-                const d = await res.json();
+                if (res.ok) {
+                    const d = await res.json();
 
-                if (d.success) {
-                    $node.closest('.container').html(`
-                        <div title="${d.key}" class="keyfield redeemed">
-                            <div class="keyfield-value">${d.key}</div>
-                            <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
-                                <div class="steam-redeem-text">Redeem</div>
-                                <span class="tooltiptext">Redeem on Steam</span>
-                            </a>
-                            <div class="spinner"></div>
-                        </div>
-                    `);
-                } else swal(i18n.get('failTitle'), JSON.stringify(d), 'error');
+                    if (d.success) {
+                        $node.closest('.container').html(`
+                            <div title="${d.key}" class="keyfield redeemed">
+                                <div class="keyfield-value">${d.key}</div>
+                                <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
+                                    <div class="steam-redeem-text">Redeem</div>
+                                    <span class="tooltiptext">Redeem on Steam</span>
+                                </a>
+                                <div class="spinner"></div>
+                            </div>
+                        `);
+                    } else swal(i18n.get('failTitle'), JSON.stringify(d), 'error');
+                } else $node.click();
+
+                if (typeof callback === 'function') callback();
             } else $node.click();
-
-            if (typeof callback === 'function') callback();
         };
         const handlers = {
             extract() {
@@ -2709,11 +2740,10 @@ const siteHandlers = {
             },
         };
         const process = async ($node) => {
-            const gameKey = unsafeWindow.gamekeys[0] || location.href.split('key=').pop().split('&').shift();
-            let json = GM_getValue(gameKey, '');
+            let json = GM_getValue(gamekey, '');
 
             if (json.length === 0) {
-                const res = await fetch(`https://www.humblebundle.com/api/v1/order/${gameKey}?all_tpkds=true`, {
+                const res = await fetch(`https://www.humblebundle.com/api/v1/order/${gamekey}?all_tpkds=true`, {
                     method: 'GET',
                     credentials: 'same-origin',
                 });
