@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.5.4
+// @version      2.6.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -25,6 +25,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @include      https://yuplay.ru/orders/*/
 // @include      https://yuplay.ru/product/*/
 // @include      http://gama-gama.ru/personal/settings/*
+// @include      https://plati.market/seller/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.js
 // @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.css
@@ -70,20 +71,17 @@ GM_addStyle(GM_getResourceText('flagIcon').replace(/\.\.\//g, 'https://cdnjs.clo
 GM_addStyle(`
     pre.SBSE_errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
 
-    /* settings */
-    .SBSE_settings .name { text-align: right; vertical-align: top; }
-    .SBSE_settings .value { text-align: left; }
-    .SBSE_settings .value > * { height: 30px; margin: 0 20px 10px; }
-    .SBSE_settings .switch { position: relative; display: inline-block; width: 60px; }
-    .SBSE_settings .switch input { display: none; }
-    .SBSE_settings .slider {
+    /* switch */
+    .SBSE_switch { position: relative; display: inline-block; width: 60px; height: 30px; }
+    .SBSE_switch input { display: none; }
+    .SBSE_slider {
         position: absolute;
         top: 0; right: 0; bottom: 0; left: 0;
         background-color: #CCC;
         transition: 0.4s;
         cursor: pointer;
     }
-    .SBSE_settings .slider:before {
+    .SBSE_slider:before {
         width: 26px; height: 26px;
         position: absolute;
         bottom: 2px; left: 2px;
@@ -91,9 +89,34 @@ GM_addStyle(`
         transition: 0.4s;
         content: "";
     }
-    .SBSE_settings input:checked + .slider { background-color: #2196F3; }
-    .SBSE_settings input:focus + .slider { box-shadow: 0 0 1px #2196F3; }
-    .SBSE_settings input:checked + .slider:before { transform: translateX(30px); }
+    .SBSE_switch input:checked + .SBSE_slider { background-color: #2196F3; }
+    .SBSE_switch input:focus + .SBSE_slider { box-shadow: 0 0 1px #2196F3; }
+    .SBSE_switch input:checked + .SBSE_slider:before { transform: translateX(30px); }
+    .SBSE_switch-small { width: 40px; height: 20px; }
+    .SBSE_switch-small .SBSE_slider:before { width: 16px; height: 16px; }
+    .SBSE_switch-small input:checked + .SBSE_slider:before { transform: translateX(20px); }
+
+    /* dropdown */
+    .SBSE_dropdown { display: inline-block; position: relative; }
+    .SBSE_dropdown_list {
+        width: calc(100% - 10px);
+        max-height: 0;
+        display: inline-block;
+        position: absolute;
+        top: 35px; left: 0;
+        padding: 0;
+        transition: max-height 0.5s ease;
+        overflow: hidden;
+        list-style-type: none;
+        background-color: #EEE;
+    }
+    .SBSE_dropdown_list > li { width: 100%; display: block; padding: 3px 0; text-align: center; }
+    .SBSE_dropdown:hover > .SBSE_dropdown_list { max-height: 500px; }
+
+    /* settings */
+    .SBSE_settings .name { text-align: right; vertical-align: top; }
+    .SBSE_settings .value { text-align: left; }
+    .SBSE_settings .value > * { height: 30px; margin: 0 20px 10px; }
     .SBSE_settings > span { display: inline-block; color: white; cursor: pointer; }
 
     /* container */
@@ -124,23 +147,8 @@ GM_addStyle(`
     }
     .SBSE_container select { max-width:120px; height: 30px; }
     .SBSE_container label { margin-right: 10px; }
-    .SBSE_ExportMenu { display: inline-block; position: relative; }
-    .SBSE_ExportList {
-        width: calc(100% - 10px);
-        max-height: 0;
-        display: inline-block;
-        position: absolute;
-        top: 35px; left: 0;
-        padding: 0;
-        transition: max-height 0.5s ease;
-        overflow: hidden;
-        list-style-type: none;
-        background-color: #EEE;
-    }
-    .SBSE_ExportList > li { width: 100%; display: block; padding: 3px 0; text-align: center; }
     .SBSE_ExportList a { text-decoration: none; color: #333; transition: color 0.3s ease; }
     .SBSE_ExportList a:hover { text-decoration: none; color: #787878; }
-    .SBSE_ExportMenu:hover > .SBSE_ExportList { max-height: 300px; }
     #SBSE_BtnSettings {
         width: 20px; height: 20px;
         float: right;
@@ -231,7 +239,44 @@ GM_addStyle(`
         transform: rotate(45deg);
         transform-origin :100% 100%;
     }
-    .isSteam .SBSE_icon { display: inline-block; }
+    .SBSE_ignored .SBSE_icon { background-color: rgb(135, 173, 189); }
+    .SBSE_notApplicable .SBSE_icon { transform: rotate(0); background-color: rgb(248, 187, 134); }
+    .SBSE_notApplicable .SBSE_icon:before {
+        content: '?';
+        width: 0; height: 10px;
+        top: 5px; left: 7px;
+        color: white;
+        font-size: 16px; font-weight: 900;
+    }
+    .SBSE_notApplicable .SBSE_icon:after { display: none; }
+    .SBSE_fetching .SBSE_icon { transform: rotate(0); background-color: transparent; }
+    .SBSE_fetching .SBSE_icon:before {
+        width: 20px; height: 20px;
+        top: 0; left: 0;
+        border: 3px solid grey;
+        border-left-color: transparent;
+        border-radius: 50%;
+        box-sizing: border-box;
+        transition: opacity 0.5s;
+        animation-duration: 1s;
+        animation-iteration-count: infinite;
+        animation-name: rotate;
+        animation-timing-function: linear;
+    }
+    .SBSE_fetching .SBSE_icon:after { display: none; }
+    .SBSE_notFetched .SBSE_icon { background-color: transparent; }
+    .SBSE_wished .SBSE_icon:before, .SBSE_wished .SBSE_icon:after { display: none; }
+    .SBSE_failed .SBSE_icon { transform: rotate(0); }
+    .SBSE_failed .SBSE_icon:before {
+        content: '!';
+        width: 0; height: 10px;
+        top: 5px; left: 8.5px;
+        color: white;
+        font-size: 16px; font-weight: 900;
+    }
+    .SBSE_failed .SBSE_icon:after { display: none; }
+    .isSteam .SBSE_icon, .showIcon .SBSE_icon { display: inline-block; }
+    .SBSE_icon-vMiddle .SBSE_icon { vertical-align: middle; }
 
     /* Steam Tooltip */
     .SBSE_tooltip {
@@ -274,11 +319,13 @@ GM_addStyle(`
 `);
 
 // load up
+const regURL = /(https?:\/\/)?([.\w]*steam[-.\w]*){1}\/.*?(apps?|subs?){1}\/(\d+){1}(\/.*\/?)?/m;
 const regKey = /(?:(?:([A-Z0-9])(?!\1{4})){5}-){2,5}[A-Z0-9]{5}/g;
 const eol = "\n";
 const tab = "\t";
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
+const isObject = value => Object(value) === value;
 
 const config = {
     data: JSON.parse(GM_getValue('SBSE_config', '{}')),
@@ -379,7 +426,17 @@ const i18n = {
             syncFailTitle: '同步失敗',
             syncFail: '失敗同步Steam 遊戲庫資料',
             visitSteam: '前往Steam',
-            lastSyncTime: '已於%seconds% 秒前同步收藏庫'
+            lastSyncTime: '已於%seconds% 秒前同步收藏庫',
+            owned: '已擁有',
+            wished: '於願望清單',
+            ignored: '已忽略',
+            notOwned: '未擁有',
+            notApplicable: '無資料',
+            notFetched: '未檢查',
+            enablePlatiFeature: '啟用腳本',
+            platiFetchOnStart: '自動檢查',
+            platiFetchButton: '檢查',
+            platiFilter: '顯示'
         },
         schinese: {
             name: '简体中文',
@@ -459,7 +516,17 @@ const i18n = {
             syncFailTitle: '同步失败',
             syncFail: '失败同步Steam 游戏库资料',
             visitSteam: '前往Steam',
-            lastSyncTime: '已于%seconds% 秒前同步游戏库'
+            lastSyncTime: '已于%seconds% 秒前同步游戏库',
+            owned: '已拥有',
+            wished: '于愿望清单',
+            ignored: '已忽略',
+            notOwned: '未拥有',
+            notApplicable: '无资料',
+            notFetched: '未检查',
+            enablePlatiFeature: '启用脚本',
+            platiFetchOnStart: '自动检查',
+            platiFetchButton: '检查',
+            platiFilter: '显示'
         },
         english: {
             name: 'English',
@@ -539,7 +606,17 @@ const i18n = {
             syncFailTitle: 'Sync failed',
             syncFail: 'Failed to sync Steam library data',
             visitSteam: 'Visit Steam',
-            lastSyncTime: 'Library data synced %seconds% seconds ago'
+            lastSyncTime: 'Library data synced %seconds% seconds ago',
+            owned: 'Owned',
+            wished: 'Wishlisted',
+            ignored: 'Ignored',
+            notOwned: 'Not Owned',
+            notApplicable: 'Not Applicable',
+            notFetched: 'Not Checked',
+            enablePlatiFeature: 'Enable Script',
+            platiFetchOnStart: 'Auto Check',
+            platiFetchButton: 'Check',
+            platiFilter: 'Show'
         }
     },
     language: null,
@@ -1440,6 +1517,7 @@ const xe = {
                                 exchangeRate.rates[currency] = parseFloat(rate);
                             }
                         });
+                        exchangeRate.rates.EUR = 1;
 
                         // get NTD
                         GM_xmlhttpRequest({
@@ -1450,7 +1528,20 @@ const xe = {
                                 const NTDRate = isNaN(rate) ? exchangeRate.rates.HKD * 3.75 : rate;
 
                                 exchangeRate.rates.NTD = NTDRate;
-                                exchangeRate.rates.EUR = 1;
+                                self.exchangeRate = exchangeRate;
+                                GM_setValue('SBSE_xe', JSON.stringify(exchangeRate));
+                            }
+                        });
+
+                        // get UAH
+                        GM_xmlhttpRequest({
+                            method: 'GET',
+                            url: 'https://www.google.com/search?q=1+EUR+%3D+UAH',
+                            onload: searchRes => {
+                                const rate = parseFloat(searchRes.response.split('<div class="vk_ans vk_bk">').pop().slice(0, 7).trim());
+                                const UAHRate = isNaN(rate) ? 32.85 : rate;
+
+                                exchangeRate.rates.UAH = UAHRate;
                                 self.exchangeRate = exchangeRate;
                                 GM_setValue('SBSE_xe', JSON.stringify(exchangeRate));
                             }
@@ -1476,11 +1567,13 @@ const xe = {
 
             $(ele).text(symbol + (exchangedValue / 100).toFixed(decimalPlace));
         });
+        GM_setValue('SBSE_selectedCurrency', targetCurrency);
     },
     init() {
         const updateTimer = 12 * 60 * 60 * 1000; // update every 12 hours
+        const newRate = ['UAH'];
 
-        if (Object.keys(this.exchangeRate).length === 0 || this.exchangeRate.lastUpdate < Date.now() - updateTimer) this.getRate();
+        if (Object.keys(this.exchangeRate).length === 0 || this.exchangeRate.lastUpdate < Date.now() - updateTimer || newRate.filter(x => !has.call(this.exchangeRate.rates, x)).length > 0) this.getRate();
     }
 };
 const steam = {
@@ -1661,9 +1754,9 @@ const settings = {
                     <tr>
                         <td class="name">${i18n.get('settingsAutoUpdateSessionID')}</td>
                         <td class="value">
-                            <label class="switch">
+                            <label class="SBSE_switch">
                                 <input type="checkbox" class="autoUpdateSessionID">
-                                <span class="slider"></span>
+                                <span class="SBSE_slider"></span>
                             </label>
                         </td>
                     </tr>
@@ -1688,36 +1781,36 @@ const settings = {
                     <tr>
                         <td class="name">${i18n.get('settingsASFFormat')}</td>
                         <td class="value">
-                            <label class="switch">
+                            <label class="SBSE_switch">
                                 <input type="checkbox" class="ASFFormat">
-                                <span class="slider"></span>
+                                <span class="SBSE_slider"></span>
                             </label>
                         </td>
                     </tr>
                     <tr>
                         <td class="name">${i18n.get('settingsTitleComesLast')}</td>
                         <td class="value">
-                            <label class="switch">
+                            <label class="SBSE_switch">
                                 <input type="checkbox" class="titleComesLast">
-                                <span class="slider"></span>
+                                <span class="SBSE_slider"></span>
                             </label>
                         </td>
                     </tr>
                     <tr>
                         <td class="name">${i18n.get('settingsActivateAllKeys')}</td>
                         <td class="value">
-                            <label class="switch">
+                            <label class="SBSE_switch">
                                 <input type="checkbox" class="activateAllKeys">
-                                <span class="slider"></span>
+                                <span class="SBSE_slider"></span>
                             </label>
                         </td>
                     </tr>
                     <tr>
                         <td class="name">${i18n.get('settingsEnableTooltips')}</td>
                         <td class="value">
-                            <label class="switch">
+                            <label class="SBSE_switch">
                                 <input type="checkbox" class="enableTooltips">
-                                <span class="slider"></span>
+                                <span class="SBSE_slider"></span>
                             </label>
                         </td>
                     </tr>
@@ -1968,9 +2061,9 @@ const getContainer = handlers => {
                 <button class="SBSE_BtnActivate">${i18n.get('buttonActivate')}</button>
                 <button class="SBSE_BtnCopy">${i18n.get('buttonCopy')}</button>
                 <button class="SBSE_BtnReset">${i18n.get('buttonReset')}</button>
-                <div class="SBSE_ExportMenu">
+                <div class="SBSE_ExportMenu SBSE_dropdown">
                     <button class="SBSE_BtnExport">${i18n.get('buttonExport')}</button>
-                    <ul class="SBSE_ExportList">
+                    <ul class="SBSE_ExportList SBSE_dropdown_list">
                         <li><a data-fileType="txt">.txt</a></li>
                         <li><a data-fileType="csv">.csv</a></li>
                         <li><a data-fileType="keys">.keys</a></li>
@@ -2123,7 +2216,7 @@ const siteHandlers = {
             .SBSE_container { margin-top: 10px; }
             .SBSE_container > textarea { border: 1px solid #CC001D; border-radius: 3px; }
             .SBSE_container > div button { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
-            .swal2-popup .slider { margin: 0; }
+            .swal2-popup .SBSE_slider { margin: 0; }
             .SBSE_icon { vertical-align: middle; }
         `);
 
@@ -2353,7 +2446,7 @@ const siteHandlers = {
                 `);
                     const $currencyToggler = $priceExt.find('.currencyToggler');
                     const $pricingDetail = $('<table class="pricingDetail"></table>');
-                    const selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'CNY');
+                    const selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'USD');
                     const isStarDeal = !!$('.stardeal-purchase-info').length;
                     let starDeal = {};
 
@@ -2377,7 +2470,6 @@ const siteHandlers = {
 
                     $currencyToggler.change(function () {
                         xe.update($currencyToggler.val());
-                        GM_setValue('SBSE_selectedCurrency', $currencyToggler.val());
                     });
 
                     // bundle page
@@ -3878,6 +3970,277 @@ const siteHandlers = {
 
         // insert textarea
         $('.user-info').eq(0).after($container);
+    },
+    plati() {
+        const plati = {
+            data: JSON.parse(GM_getValue('SBSE_plati', '{}')),
+            save(callback) {
+                GM_setValue('SBSE_plati', JSON.stringify(this.data));
+
+                if (typeof callback === 'function') callback();
+            },
+            set(key, value, callback) {
+                this.data[key] = value;
+                this.save(callback);
+            },
+            setItem(id, value, save) {
+                this.data.itemData[id] = value;
+                if (save) this.save();
+            },
+            get(key) {
+                return has.call(this.data, key) ? this.data[key] : null;
+            },
+            getItem(id) {
+                return has.call(this.data.itemData, id) ? this.data.itemData[id] : null;
+            },
+            init() {
+                if (!has.call(this.data, 'enablePlatiFeature')) this.data.enablePlatiFeature = true;
+                if (!has.call(this.data, 'fetchOnStart')) this.data.fetchOnStart = true;
+                if (!has.call(this.data, 'itemData')) this.data.itemData = {};
+                if (!has.call(this.data, 'filterOwned')) this.data.filterOwned = true;
+                if (!has.call(this.data, 'filterWished')) this.data.filterWished = true;
+                if (!has.call(this.data, 'filterIgnored')) this.data.filterIgnored = true;
+                if (!has.call(this.data, 'filterNotOwned')) this.data.filterNotOwned = true;
+                if (!has.call(this.data, 'filterNotApplicable')) this.data.filterNotApplicable = true;
+                if (!has.call(this.data, 'filterNotFetched')) this.data.filterNotFetched = true;
+
+                this.save();
+            }
+        };
+
+        plati.init();
+
+        if (location.pathname.startsWith('/seller/')) {
+            // inject css styles
+            GM_addStyle(`
+                li[class*="hide"] { display: none; }
+                .SBSE_plati_menu { display: flex; margin-bottom: 10px; }
+                .SBSE_plati_menu > li { height: 30px; line-height: 30px; padding-right: 50px; }
+                .SBSE_plati_menu > li > .SBSE_switch { vertical-align: text-bottom; }
+                .SBSE_plati_menu > li > * { cursor: pointer; }
+                .SBSE_dropdown_list { width: max-content; z-index: 999; box-shadow: 5px 5px 10px grey; }
+                .SBSE_dropdown_list li { cursor: default; }
+                .SBSE_dropdown_list li > label, .SBSE_dropdown_list li > span { width: 100%; display: inline-block; margin: 0 10px; cursor: pointer; text-align: left; }
+                tr.SBSE_processed:hover { background-color: #f3f3f3; }
+                tr.SBSE_processed:hover .product-title > div::after { display: none; }
+                .filterOwned tr.SBSE_owned,
+                .filterWished tr.SBSE_wished,
+                .filterIgnored tr.SBSE_ignored,
+                .filterNotOwned tr.SBSE_notOwned,
+                .filterNotApplicable tr.SBSE_notApplicable,
+                .filterNotFetched tr.SBSE_notFetched { display: none; }
+            `);
+            // preparing
+            let selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'USD');
+            let platiCurrency = $('th.product-price select option:selected').text().trim();
+            const language = config.get('language');
+            const fetchItem = (() => {
+                var _ref11 = _asyncToGenerator(function* (queue) {
+                    const tr = queue.shift();
+
+                    if (tr) {
+                        const $tr = $(tr);
+                        const url = $tr.attr('data-url');
+                        const id = parseInt($tr.attr('data-id'), 10);
+                        const classes = ['SBSE_fetching'];
+
+                        if (url.length > 0 && id > 0) {
+                            const res = yield fetch(url);
+
+                            if (res.ok) {
+                                const itemPageHTML = yield res.text();
+                                const description = itemPageHTML.slice(itemPageHTML.indexOf('goods-descr-text'), itemPageHTML.indexOf('descr_additional_description'));
+                                const found = description.match(regURL);
+
+                                if (found) {
+                                    const type = found[3].slice(0, 3).toLowerCase();
+                                    const steamID = parseInt(found[4], 10);
+                                    const item = {};
+                                    item[type] = steamID;
+
+                                    plati.setItem(id, item);
+                                    if (steam.isOwned(item)) classes.push('SBSE_owned');
+                                    if (steam.isWished(item)) classes.push('SBSE_wished');
+                                    if (steam.isIgnored(item)) classes.push('SBSE_ignored');
+                                } else {
+                                    plati.setItem(id, {});
+                                    classes.push('SBSE_notApplicable');
+                                }
+                            } else classes.push('SBSE_failed');
+                        }
+
+                        $tr.toggleClass(classes.join(' '));
+                        fetchItem(queue);
+                    } else plati.save();
+                });
+
+                return function fetchItem(_x13) {
+                    return _ref11.apply(this, arguments);
+                };
+            })();
+            const fetchItems = items => {
+                const $trs = (items && items.length > 0 ? $(items) : $('.goods-table tbody > tr')).filter(':not(.SBSE_fetched)');
+                const queue = $trs.get();
+
+                $trs.addClass('SBSE_fetching').removeClass('SBSE_notFetched');
+                fetchItem(queue);
+            };
+            const process = table => {
+                if (plati.get('enablePlatiFeature')) {
+                    const $table = table ? $(table) : $('.goods-table');
+                    platiCurrency = $table.find('th.product-price select option:selected').text().trim();
+
+                    $table.addClass('showIcon SBSE_icon-vMiddle').find('thead tr:not(:has(.status)) > .product-sold').before('<th class="status"></th>');
+
+                    $table.find('tbody > tr:not(.SBSE_processed)').each((i, tr) => {
+                        const $tr = $(tr);
+                        const url = $tr.find('.product-title a').attr('href');
+                        const id = parseInt(url.split('/').pop(), 10);
+
+                        if (url.length > 0 && id > 0) {
+                            const classes = [];
+                            const item = plati.getItem(id);
+
+                            if (item !== null) {
+                                classes.push('SBSE_fetched');
+                                if (item.app || item.sub) {
+                                    if (steam.isOwned(item)) classes.push('SBSE_owned');
+                                    if (steam.isWished(item)) classes.push('SBSE_wished');
+                                    if (steam.isIgnored(item)) classes.push('SBSE_ignored');
+                                    if (classes.length === 1) classes.push('SBSE_notOwned');
+                                } else classes.push('SBSE_notApplicable');
+
+                                $tr.attr('data-item', JSON.stringify(item));
+                            }
+
+                            if (classes.length > 0) $tr.addClass(classes.join(' '));else $tr.addClass('SBSE_notFetched');
+
+                            $tr.attr({
+                                'data-id': id,
+                                'data-url': location.origin + url
+                            });
+                        }
+
+                        // setup price node
+                        const $price = $tr.find('.product-price div');
+                        const value = parseFloat($price.text().trim()) * 100;
+
+                        $price.replaceWith(`<span class="SBSE_price" data-currency="${platiCurrency}" data-value="${value}"></span>`);
+                    }).addClass('SBSE_processed').find('.product-sold').before('<td><span class="SBSE_icon"></span></td>');
+
+                    // auto fetch on page visit
+                    if (plati.get('fetchOnStart')) fetchItems($table.find('tbody > tr'));
+
+                    xe.update(selectedCurrency);
+                }
+            };
+
+            // set up menu
+            const $menu = $(`
+                <ul class="SBSE_plati_menu">
+                    <li data-config="enablePlatiFeature">
+                        <label class="SBSE_switch SBSE_switch-small">
+                            <input type="checkbox" id="enablePlatiFeature">
+                            <span class="SBSE_slider"></span>
+                        </label>
+                        <label for="enablePlatiFeature"><span>${i18n.get('enablePlatiFeature')}</span></label>
+                    </li>
+                    <li data-config="fetchOnStart">
+                        <label class="SBSE_switch SBSE_switch-small">
+                            <input type="checkbox" id="fetchOnStart">
+                            <span class="SBSE_slider"></span>
+                        </label>
+                        <label for="fetchOnStart"><span>${i18n.get('platiFetchOnStart')}</span></label>
+                    </li>
+                    <li data-config="fetchButton"><span>${i18n.get('platiFetchButton')}</span></li>
+                    <li data-config="filter" class="SBSE_dropdown">
+                        <span>${i18n.get('platiFilter')}</span>
+                        <ul class="SBSE_dropdown_list">
+                            <li><label><input type="checkbox" data-filter="filterOwned"><span>${i18n.get('owned')}</span></label></li>
+                            <li><label><input type="checkbox" data-filter="filterWished"><span>${i18n.get('wished')}</span></label></li>
+                            <li><label><input type="checkbox" data-filter="filterIgnored"><span>${i18n.get('ignored')}</span></label></li>
+                            <li><label><input type="checkbox" data-filter="filterNotOwned"><span>${i18n.get('notOwned')}</span></label></li>
+                            <li><label><input type="checkbox" data-filter="filterNotApplicable"><span>${i18n.get('notApplicable')}</span></label></li>
+                            <li><label><input type="checkbox" data-filter="filterNotFetched"><span>${i18n.get('notFetched')}</span></label></li>
+                        </ul>
+                    </li>
+                    <li data-config="currency" class="SBSE_dropdown">
+                        <span class="selectedCurrency">${xe.currencies[selectedCurrency][language]}</span>
+                        <ul class="SBSE_dropdown_list"></ul>
+                    </li>
+                </ul>
+            `);
+            const $enablePlatiFeature = $menu.find('[data-config="enablePlatiFeature"] input');
+            const $fetchOnStart = $menu.find('[data-config="fetchOnStart"] input');
+            const $fetchButton = $menu.find('[data-config="fetchButton"] span');
+            const $filters = $menu.find('[data-config="filter"] input');
+            const $currencyToggler = $menu.find('[data-config="currency"] ul');
+
+            $enablePlatiFeature.change(() => {
+                const state = $enablePlatiFeature.prop('checked');
+
+                plati.set('enablePlatiFeature', state);
+                $menu.find('li:not([data-config="enablePlatiFeature"])').toggleClass('hide1', !state);
+
+                if (state) process();
+            });
+            $fetchOnStart.change(() => {
+                const state = $fetchOnStart.prop('checked');
+
+                plati.set('fetchOnStart', state);
+                $fetchButton.parent().toggleClass('hide2', state);
+            });
+            $fetchButton.click(fetchItems);
+            $filters.change(e => {
+                const input = e.delegateTarget;
+                const filter = input.dataset.filter;
+                const state = input.checked;
+
+                plati.set(filter, state);
+                $('.goods-table').toggleClass(filter, !state);
+            });
+            Object.keys(xe.currencies).forEach(currency => {
+                const currencyName = xe.currencies[currency][language];
+
+                $currencyToggler.append($(`<span>${currencyName}</span>`).click(() => {
+                    xe.update(currency);
+                    selectedCurrency = currency;
+                    $currencyToggler.prev('.selectedCurrency').text(currencyName);
+                }));
+            });
+            $currencyToggler.find('span').wrap('<li></li>');
+
+            // apply config
+            $enablePlatiFeature.prop('checked', plati.get('enablePlatiFeature'));
+            $menu.find('li:not([data-config="enablePlatiFeature"])').toggleClass('hide1', !plati.get('enablePlatiFeature'));
+            $fetchOnStart.prop('checked', plati.get('fetchOnStart'));
+            $fetchButton.parent().toggleClass('hide2', plati.get('fetchOnStart'));
+            $filters.each((i, input) => {
+                const filter = input.dataset.filter;
+                const state = plati.get(filter);
+
+                input.checked = state;
+                $('.goods-table').toggleClass(filter, !state);
+            });
+
+            $('.merchant_products').prepend($menu);
+
+            process();
+
+            // detect list changes
+            new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    Array.from(mutation.addedNodes).forEach(addedNode => {
+                        const $addedNode = $(addedNode);
+
+                        if ($addedNode.is('table.goods-table')) process($addedNode);
+                    });
+                });
+            }).observe($('#GoodsBlock')[0], {
+                childList: true,
+                subtree: true
+            });
+        }
     }
 };
 const init = () => {
