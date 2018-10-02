@@ -3501,7 +3501,7 @@ const siteHandlers = {
                     const $ele = $(ele);
                     const d = {
                         title: $ele.parent().prev().text().trim(),
-                        key: $ele.text().trim(),
+                        key: $ele.children("span").text().trim()
                     };
 
                     activator.pushKeyDetails(d);
