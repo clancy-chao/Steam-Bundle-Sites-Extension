@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.6.1
+// @version      2.6.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -323,6 +323,7 @@ const eol = "\n";
 const tab = "\t";
 const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
+const isArray = value => Array.isArray(value);
 const isObject = value => Object(value) === value;
 
 const config = {
@@ -1586,7 +1587,7 @@ const xe = {
     },
 };
 const steam = {
-    library: JSON.parse(localStorage.getItem('SBSE_steam') || '{}'),
+    library: JSON.parse(GM_getValue('SBSE_steam', '{}')),
     sync(notify = true) {
         const self = this;
         GM_xmlhttpRequest({
@@ -1595,14 +1596,22 @@ const steam = {
             onload(res) {
                 const data = JSON.parse(res.response);
 
-                self.library.owned.app = data.rgOwnedApps;
-                self.library.owned.sub = data.rgOwnedPackages;
-                self.library.wished.app = data.rgWishlist;
-                self.library.wished.sub = [];
-                self.library.ignored.app = data.rgIgnoredApps;
-                self.library.ignored.sub = data.rgIgnoredPackages;
+                if (!isObject(self.library)) self.reset();
+
+                self.library.owned = {
+                    app: isArray(data.rgOwnedApps) ? data.rgOwnedApps : [],
+                    sub: isArray(data.rgOwnedPackages) ? data.rgOwnedPackages : [],
+                };
+                self.library.wished = {
+                    app: isArray(data.rgWishlist) ? data.rgWishlist : [],
+                    sub: [],
+                };
+                self.library.ignored = {
+                    app: isArray(data.rgIgnoredApps) ? data.rgIgnoredApps : [],
+                    sub: isArray(data.rgIgnoredPackages) ? data.rgIgnoredPackages : [],
+                };
                 self.library.lastSync = Date.now();
-                self.set();
+                self.save();
 
                 if (notify === true) {
                     swal({
@@ -1626,8 +1635,18 @@ const steam = {
             },
         });
     },
-    set() {
-        localStorage.setItem('SBSE_steam', JSON.stringify(this.library));
+    reset(save = false) {
+        this.library = {
+            lastSync: 0,
+            owned: { app: [], sub: [] },
+            wished: { app: [], sub: [] },
+            ignored: { app: [], sub: [] },
+        };
+
+        if (save === true) this.save();
+    },
+    save() {
+        GM_setValue('SBSE_steam', JSON.stringify(this.library));
     },
     isOwned(o) {
         return this.library.owned.app.includes(o.app) || this.library.owned.sub.includes(o.sub);
@@ -1642,9 +1661,10 @@ const steam = {
         return this.library.lastSync;
     },
     init() {
-        if (!has.call(this.library, 'owned')) this.library.owned = { app: [], sub: [] };
-        if (!has.call(this.library, 'wished')) this.library.wished = { app: [], sub: [] };
-        if (!has.call(this.library, 'ignored')) this.library.ignored = { app: [], sub: [] };
+        if (!isObject(this.library) ||
+            !has.call(this.library, 'owned') ||
+            !has.call(this.library, 'wished') ||
+            !has.call(this.library, 'ignored')) this.reset(true);
 
         // update steam library every 10 min
         const updateTimer = 10 * 60 * 1000;
