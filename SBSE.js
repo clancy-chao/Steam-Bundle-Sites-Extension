@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.6.4
+// @version      2.7.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -23,8 +23,10 @@
 // @include      https://yuplay.ru/orders/*/
 // @include      https://yuplay.ru/product/*/
 // @include      http://gama-gama.ru/personal/settings/*
-// @include      http*://plati.ru/seller/*
-// @include      http*://plati.market/seller/*
+// @include      https://plati.ru/seller/*
+// @include      https://plati.market/seller/*
+// @include      https://po.plati.ru/seller/*
+// @include      https://po.plati.market/seller/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.js
 // @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.css
@@ -44,9 +46,11 @@
 // @connect      www.ecb.europa.eu
 // @connect      steamdb.steamcn.com
 // @connect      steamdb.info
+// @connect      steamspy.com
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_deleteValue
 // @grant        GM_addStyle
 // @grant        GM_getResourceText
 // @grant        unsafeWindow
@@ -194,6 +198,39 @@ GM_addStyle(`
         100% { transform: rotate(360deg); }
     }
 
+    /* types */
+    .SBSE_type {
+        height: 20px;
+        display: none;
+        margin-right: 5px;
+        justify-content: center;
+    }
+    .SBSE_type:before, .SBSE_type:after {
+        content: '';
+        box-sizing: border-box;
+        pointer-events: none;
+    }
+    .SBSE_type:after { padding: 0 2px; }
+    .SBSE_game .SBSE_type { background-color: rgba(97,100,101,0.3); }
+    .SBSE_game .SBSE_type:after { content: 'Game'; }
+    .SBSE_DLC .SBSE_type { background-color: rgba(165,84,177,0.8); }
+    .SBSE_DLC .SBSE_type:before {
+        content: 'ꜜ';
+        width: 14px; height: 14px;
+        margin: 3px 0 0 2px;
+        border-radius: 50%;
+        background-color: #000;
+        color: rgba(165,84,177,0.8);
+        text-align: center;
+        font-size: 28px;
+        line-height: 28px;
+    }
+    .SBSE_DLC .SBSE_type:after { content: 'DLC'; }
+    .SBSE_package .SBSE_type { background-color: rgba(47,137,188,0.8); }
+    .SBSE_package .SBSE_type:after { content: 'Package'; }
+    .isSteam .SBSE_type, .showType .SBSE_type { display: flex; }
+    .SBSE_type-vMiddle .SBSE_type { vertical-align: middle; }
+
     /* icons */
     .SBSE_icon {
         width: 20px; height: 20px;
@@ -264,6 +301,7 @@ GM_addStyle(`
     }
     .SBSE_fetching .SBSE_icon:after { display: none; }
     .SBSE_notFetched .SBSE_icon { background-color: transparent; }
+    .SBSE_notFetched .SBSE_icon:before, .SBSE_notFetched .SBSE_icon:after { display: none; }
     .SBSE_wished .SBSE_icon:before, .SBSE_wished .SBSE_icon:after { display: none; }
     .SBSE_failed .SBSE_icon { transform: rotate(0); }
     .SBSE_failed .SBSE_icon:before {
@@ -427,6 +465,10 @@ const i18n = {
             syncFail: '失敗同步Steam 遊戲庫資料',
             visitSteam: '前往Steam',
             lastSyncTime: '已於%seconds% 秒前同步收藏庫',
+            game: '遊戲',
+            dlc: 'DLC',
+            package: '合集',
+            bundle: '組合包',
             owned: '已擁有',
             wished: '於願望清單',
             ignored: '已忽略',
@@ -436,7 +478,8 @@ const i18n = {
             enablePlatiFeature: '啟用腳本',
             platiFetchOnStart: '自動檢查',
             platiFetchButton: '檢查',
-            platiFilter: '顯示',
+            platiFilterType: '顯示類型',
+            platiFilterStatus: '顯示狀態',
         },
         schinese: {
             name: '简体中文',
@@ -517,6 +560,10 @@ const i18n = {
             syncFail: '失败同步Steam 游戏库资料',
             visitSteam: '前往Steam',
             lastSyncTime: '已于%seconds% 秒前同步游戏库',
+            game: '游戏',
+            dlc: 'DLC',
+            package: '礼包',
+            bundle: '捆绑包',
             owned: '已拥有',
             wished: '于愿望清单',
             ignored: '已忽略',
@@ -526,7 +573,8 @@ const i18n = {
             enablePlatiFeature: '启用脚本',
             platiFetchOnStart: '自动检查',
             platiFetchButton: '检查',
-            platiFilter: '显示',
+            platiFilterType: '显示类型',
+            platiFilterStatus: '显示状态',
         },
         english: {
             name: 'English',
@@ -607,6 +655,10 @@ const i18n = {
             syncFail: 'Failed to sync Steam library data',
             visitSteam: 'Visit Steam',
             lastSyncTime: 'Library data synced %seconds% seconds ago',
+            game: 'Game',
+            dlc: 'DLC',
+            package: 'Package',
+            bundle: 'Bundle',
             owned: 'Owned',
             wished: 'Wishlisted',
             ignored: 'Ignored',
@@ -616,7 +668,8 @@ const i18n = {
             enablePlatiFeature: 'Enable Script',
             platiFetchOnStart: 'Auto Check',
             platiFetchButton: 'Check',
-            platiFilter: 'Show',
+            platiFilterType: 'Show Type',
+            platiFilterStatus: 'Show Status',
         },
     },
     language: null,
@@ -1588,66 +1641,130 @@ const xe = {
     },
 };
 const steam = {
-    library: JSON.parse(GM_getValue('SBSE_steam', '{}')),
-    sync(notify = true) {
+    library: JSON.parse(GM_getValue('SBSE_steam_library', '{}')),
+    games: JSON.parse(GM_getValue('SBSE_steam_games', '{}')),
+    sync(a = []) {
+        if (!isArray(a) || a.length === 0) {
+            a.push(
+                { key: 'library', sync: true, save: true },
+                { key: 'games', sync: true, save: true },
+            );
+        }
+
         const self = this;
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: `https://store.steampowered.com/dynamicstore/userdata/t=${Math.random()}`,
-            onload(res) {
-                const data = JSON.parse(res.response);
 
-                if (!isObject(self.library)) self.reset();
+        a.forEach((o) => {
+            if (o.key === 'library' && o.sync !== false) {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: `https://store.steampowered.com/dynamicstore/userdata/t=${Math.random()}`,
+                    onload(res) {
+                        const data = JSON.parse(res.response);
 
-                self.library.owned = {
-                    app: isArray(data.rgOwnedApps) ? data.rgOwnedApps : [],
-                    sub: isArray(data.rgOwnedPackages) ? data.rgOwnedPackages : [],
-                };
-                self.library.wished = {
-                    app: isArray(data.rgWishlist) ? data.rgWishlist : [],
-                    sub: [],
-                };
-                self.library.ignored = {
-                    app: isArray(data.rgIgnoredApps) ? data.rgIgnoredApps : [],
-                    sub: isArray(data.rgIgnoredPackages) ? data.rgIgnoredPackages : [],
-                };
-                self.library.lastSync = Date.now();
-                self.save();
+                        if (!isObject(self.library)) self.reset([o]);
 
-                if (notify === true) {
-                    swal({
-                        title: i18n.get('syncSuccessTitle'),
-                        text: i18n.get('syncSuccess'),
-                        type: 'success',
-                        timer: 3000,
-                    });
-                }
-            },
-            onerror() {
-                swal({
-                    title: i18n.get('syncFailTitle'),
-                    text: i18n.get('syncFail'),
-                    type: 'error',
-                    confirmButtonText: i18n.get('visitSteam'),
-                    showCancelButton: true,
-                }).then((result) => {
-                    if (result.value === true) window.open('https://store.steampowered.com/');
+                        self.library.owned = {
+                            app: isArray(data.rgOwnedApps) ? data.rgOwnedApps : [],
+                            sub: isArray(data.rgOwnedPackages) ? data.rgOwnedPackages : [],
+                        };
+                        self.library.wished = {
+                            app: isArray(data.rgWishlist) ? data.rgWishlist : [],
+                            sub: [],
+                        };
+                        self.library.ignored = {
+                            app: isArray(data.rgIgnoredApps) ? data.rgIgnoredApps : [],
+                            sub: isArray(data.rgIgnoredPackages) ? data.rgIgnoredPackages : [],
+                        };
+                        self.library.lastSync = Date.now();
+                        self.save([o]);
+
+                        if (o.notify === true) {
+                            swal({
+                                title: i18n.get('syncSuccessTitle'),
+                                text: i18n.get('syncSuccess'),
+                                type: 'success',
+                                timer: 3000,
+                            });
+                        }
+                    },
+                    onerror() {
+                        swal({
+                            title: i18n.get('syncFailTitle'),
+                            text: i18n.get('syncFail'),
+                            type: 'error',
+                            confirmButtonText: i18n.get('visitSteam'),
+                            showCancelButton: true,
+                        }).then((result) => {
+                            if (result.value === true) window.open('https://store.steampowered.com/');
+                        });
+                    },
                 });
-            },
+            }
+            if (o.key === 'games' && o.sync !== false) {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: 'http://steamspy.com/api.php?request=all',
+                    onload(res) {
+                        try {
+                            const data = JSON.parse(res.response);
+
+                            self.games = {
+                                list: Object.keys(data).map(x => parseInt(x, 10)),
+                                lastSync: Date.now(),
+                            };
+                            self.save([o]);
+                        } catch (e) {
+                            throw e.stack;
+                        }
+                    },
+                });
+            }
         });
     },
-    reset(save = false) {
-        this.library = {
-            lastSync: 0,
-            owned: { app: [], sub: [] },
-            wished: { app: [], sub: [] },
-            ignored: { app: [], sub: [] },
-        };
+    reset(a = []) {
+        if (!isArray(a) || a.length === 0) {
+            a.push(
+                { key: 'library', reset: true, save: true },
+                { key: 'games', reset: true, save: true },
+            );
+        }
 
-        if (save === true) this.save();
+        a.forEach((o) => {
+            if (o.key === 'library' && o.reset !== false) {
+                this.library = {
+                    lastSync: 0,
+                    owned: { app: [], sub: [] },
+                    wished: { app: [], sub: [] },
+                    ignored: { app: [], sub: [] },
+                };
+            }
+            if (o.key === 'games' && o.reset !== false) {
+                this.games = {
+                    lastSync: 0,
+                    list: [],
+                };
+            }
+
+            if (o.save !== false) this.save([o]);
+        });
     },
-    save() {
-        GM_setValue('SBSE_steam', JSON.stringify(this.library));
+    save(a = []) {
+        if (!isArray(a) || a.length === 0) {
+            a.push(
+                { key: 'library', save: true },
+                { key: 'games', save: true },
+            );
+        }
+
+        a.forEach((o) => {
+            if (has.call(this, o.key) && o.save !== false) {
+                GM_setValue(`SBSE_steam_${o.key}`, JSON.stringify(this[o.key]));
+                if (typeof o.callback === 'function') o.callback();
+            }
+        });
+    },
+    lastSync(key) {
+        return has.call(this, key) ? this[key].lastSync : null;
     },
     isOwned(o) {
         return this.library.owned.app.includes(o.app) || this.library.owned.sub.includes(o.sub);
@@ -1658,19 +1775,38 @@ const steam = {
     isIgnored(o) {
         return this.library.ignored.app.includes(o.app) || this.library.ignored.sub.includes(o.sub);
     },
-    lastSync() {
-        return this.library.lastSync;
+    isGame(o) {
+        return this.games.list.length > 0 && this.games.list.includes(o.app);
+    },
+    isDLC(o) {
+        return has.call(o, 'app') && this.games.list.length > 0 && !this.games.list.includes(o.app);
+    },
+    isPackage(o) {
+        return has.call(o, 'sub');
     },
     init() {
         if (!isObject(this.library) ||
             !has.call(this.library, 'owned') ||
             !has.call(this.library, 'wished') ||
-            !has.call(this.library, 'ignored')) this.reset(true);
+            !has.call(this.library, 'ignored')) this.reset([{ key: 'library' }]);
 
-        // update steam library every 10 min
-        const updateTimer = 10 * 60 * 1000;
+        if (!isObject(this.games) ||
+            !has.call(this.games, 'list')) this.reset([{ key: 'games' }]);
 
-        if (!this.lastSync() || this.lastSync() < (Date.now() - updateTimer)) this.sync(false);
+        // update Steam library every 10 min
+        const libraryTimer = 10 * 60 * 1000;
+        const libraryLastSync = this.lastSync('library');
+
+        if (!libraryLastSync || libraryLastSync < (Date.now() - libraryTimer)) this.sync([{ key: 'library' }]);
+
+        // update Steam games list every day
+        const gamesTimer = 1 * 24 * 60 * 60 * 1000;
+        const gamesLastSync = this.lastSync('games');
+
+        if (!gamesLastSync || gamesLastSync < (Date.now() - gamesTimer) || this.games.list.length === 0) this.sync([{ key: 'games' }]);
+
+        // delete odd values
+        GM_deleteValue('SBSE_steam');
     },
 };
 
@@ -1897,7 +2033,7 @@ const settings = {
 
         // sync library
         $panel.find('.syncLibrary').click(() => {
-            steam.sync();
+            steam.sync([{ key: 'library', notify: true }]);
         });
 
         // language
@@ -3022,7 +3158,7 @@ const siteHandlers = {
 
         if (pathname.includes('/account_page') || pathname.includes('/account_update')) {
             // force sync library
-            steam.sync(false);
+            steam.sync([{ key: 'library' }]);
 
             // inject css
             GM_addStyle(`
@@ -3275,7 +3411,7 @@ const siteHandlers = {
             }
 
             // append sync time and event
-            const seconds = Math.round((Date.now() - steam.lastSync()) / 1000);
+            const seconds = Math.round((Date.now() - steam.lastSync('library')) / 1000);
 
             $DIGEasyBuy.append(`
                 <span> ${i18n.get('lastSyncTime').replace('%seconds%', seconds)}</span>
@@ -3998,6 +4134,10 @@ const siteHandlers = {
                 if (!has.call(this.data, 'enablePlatiFeature')) this.data.enablePlatiFeature = true;
                 if (!has.call(this.data, 'fetchOnStart')) this.data.fetchOnStart = true;
                 if (!has.call(this.data, 'itemData')) this.data.itemData = {};
+                if (!has.call(this.data, 'filterGame')) this.data.filterGame = true;
+                if (!has.call(this.data, 'filterDLC')) this.data.filterDLC = true;
+                if (!has.call(this.data, 'filterPackage')) this.data.filterPackage = true;
+                if (!has.call(this.data, 'filterBundle')) this.data.filterBundle = true;
                 if (!has.call(this.data, 'filterOwned')) this.data.filterOwned = true;
                 if (!has.call(this.data, 'filterWished')) this.data.filterWished = true;
                 if (!has.call(this.data, 'filterIgnored')) this.data.filterIgnored = true;
@@ -4024,6 +4164,10 @@ const siteHandlers = {
                 .SBSE_dropdown_list li > label, .SBSE_dropdown_list li > span { width: 100%; display: inline-block; margin: 0 10px; cursor: pointer; text-align: left; }
                 tr.SBSE_processed:hover { background-color: #f3f3f3; }
                 tr.SBSE_processed:hover .product-title > div::after { display: none; }
+                .filterGame tr.SBSE_game,
+                .filterDLC tr.SBSE_DLC,
+                .filterPackage tr.SBSE_package,
+                .filterBundle tr.SBSE_bundle,
                 .filterOwned tr.SBSE_owned,
                 .filterWished tr.SBSE_wished,
                 .filterIgnored tr.SBSE_ignored,
@@ -4049,7 +4193,7 @@ const siteHandlers = {
 
                         if (res.ok) {
                             const itemPageHTML = await res.text();
-                            const description = itemPageHTML.slice(itemPageHTML.indexOf('goods-descr-text'), itemPageHTML.indexOf('descr_additional_description'));
+                            const description = itemPageHTML.slice(itemPageHTML.indexOf('goods-descr-text'), itemPageHTML.indexOf('goods_reviews'));
                             const found = description.match(regURL);
 
                             if (found) {
@@ -4062,6 +4206,10 @@ const siteHandlers = {
                                 if (steam.isOwned(item)) classes.push('SBSE_owned');
                                 if (steam.isWished(item)) classes.push('SBSE_wished');
                                 if (steam.isIgnored(item)) classes.push('SBSE_ignored');
+                                if (classes.length === 1) classes.push('SBSE_notOwned');
+                                if (steam.isGame(item)) classes.push('SBSE_game');
+                                if (steam.isDLC(item)) classes.push('SBSE_DLC');
+                                if (steam.isPackage(item)) classes.push('SBSE_package');
                             } else {
                                 plati.setItem(id, {});
                                 classes.push('SBSE_notApplicable');
@@ -4069,12 +4217,14 @@ const siteHandlers = {
                         } else classes.push('SBSE_failed');
                     }
 
+                    $tr.removeClass('SBSE_owned SBSE_wished SBSE_ignored SBSE_notOwned SBSE_notApplicable');
                     $tr.toggleClass(classes.join(' '));
                     fetchItem(queue);
                 } else plati.save();
             };
             const fetchItems = (items) => {
-                const $trs = (items && items.length > 0 ? $(items) : $('.goods-table tbody > tr')).filter(':not(.SBSE_fetched)');
+                const filter = plati.get('fetchOnStart') ? ':not(.SBSE_fetched)' : '';
+                const $trs = items && items.length > 0 ? $(items).filter(filter) : $(`.goods-table tbody > tr${filter}`);
                 const queue = $trs.get();
 
                 $trs.addClass('SBSE_fetching').removeClass('SBSE_notFetched');
@@ -4086,8 +4236,8 @@ const siteHandlers = {
                     platiCurrency = $table.find('th.product-price select option:selected').text().trim();
 
                     $table
-                        .addClass('showIcon SBSE_icon-vMiddle')
-                        .find('thead tr:not(:has(.status)) > .product-sold').before('<th class="status"></th>');
+                        .addClass('showType showIcon SBSE_icon-vMiddle')
+                        .find('thead tr:not(:has(.status)) > .product-sold').before('<th class="type"></th><th class="status"></th>');
 
                     $table.find('tbody > tr:not(.SBSE_processed)')
                         .each((i, tr) => {
@@ -4106,6 +4256,9 @@ const siteHandlers = {
                                         if (steam.isWished(item)) classes.push('SBSE_wished');
                                         if (steam.isIgnored(item)) classes.push('SBSE_ignored');
                                         if (classes.length === 1) classes.push('SBSE_notOwned');
+                                        if (steam.isGame(item)) classes.push('SBSE_game');
+                                        if (steam.isDLC(item)) classes.push('SBSE_DLC');
+                                        if (steam.isPackage(item)) classes.push('SBSE_package');
                                     } else classes.push('SBSE_notApplicable');
 
                                     $tr.attr('data-item', JSON.stringify(item));
@@ -4128,7 +4281,7 @@ const siteHandlers = {
                         })
                         .addClass('SBSE_processed')
                         .find('.product-sold')
-                        .before('<td><span class="SBSE_icon"></span></td>');
+                        .before('<td><span class="SBSE_type"></span></td><td><span class="SBSE_icon"></span></td>');
 
                     // auto fetch on page visit
                     if (plati.get('fetchOnStart')) fetchItems($table.find('tbody > tr'));
@@ -4155,8 +4308,17 @@ const siteHandlers = {
                         <label for="fetchOnStart"><span>${i18n.get('platiFetchOnStart')}</span></label>
                     </li>
                     <li data-config="fetchButton"><span>${i18n.get('platiFetchButton')}</span></li>
-                    <li data-config="filter" class="SBSE_dropdown">
-                        <span>${i18n.get('platiFilter')}</span>
+                    <li data-config="filterType" class="SBSE_dropdown">
+                        <span>${i18n.get('platiFilterType')}</span>
+                        <ul class="SBSE_dropdown_list">
+                            <li><label><input type="checkbox" data-filter="filterGame"><span>${i18n.get('game')}</span></label></li>
+                            <li><label><input type="checkbox" data-filter="filterDLC"><span>${i18n.get('dlc')}</span></label></li>
+                            <li><label><input type="checkbox" data-filter="filterPackage"><span>${i18n.get('package')}</span></label></li>
+                            <li><label><input type="checkbox" data-filter="filterBundle"><span>${i18n.get('bundle')}</span></label></li>
+                        </ul>
+                    </li>
+                    <li data-config="filterStatus" class="SBSE_dropdown">
+                        <span>${i18n.get('platiFilterStatus')}</span>
                         <ul class="SBSE_dropdown_list">
                             <li><label><input type="checkbox" data-filter="filterOwned"><span>${i18n.get('owned')}</span></label></li>
                             <li><label><input type="checkbox" data-filter="filterWished"><span>${i18n.get('wished')}</span></label></li>
@@ -4175,7 +4337,7 @@ const siteHandlers = {
             const $enablePlatiFeature = $menu.find('[data-config="enablePlatiFeature"] input');
             const $fetchOnStart = $menu.find('[data-config="fetchOnStart"] input');
             const $fetchButton = $menu.find('[data-config="fetchButton"] span');
-            const $filters = $menu.find('[data-config="filter"] input');
+            const $filters = $menu.find('[data-config="filterType"] input, [data-config="filterStatus"] input');
             const $currencyToggler = $menu.find('[data-config="currency"] ul');
 
             $enablePlatiFeature.change(() => {
