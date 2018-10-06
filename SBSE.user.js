@@ -304,7 +304,6 @@ GM_addStyle(`
     .SBSE_fetching .SBSE_icon:after { display: none; }
     .SBSE_notFetched .SBSE_icon { background-color: transparent; }
     .SBSE_notFetched .SBSE_icon:before, .SBSE_notFetched .SBSE_icon:after { display: none; }
-    .SBSE_wished .SBSE_icon:before, .SBSE_wished .SBSE_icon:after { display: none; }
     .SBSE_failed .SBSE_icon { transform: rotate(0); }
     .SBSE_failed .SBSE_icon:before {
         content: '!';
