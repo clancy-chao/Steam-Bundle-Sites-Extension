@@ -75,6 +75,8 @@ GM_addStyle(GM_getResourceText('flagIcon').replace(/\.\.\//g, 'https://cdnjs.clo
 // inject script css styles
 GM_addStyle(`
     pre.SBSE_errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
+    a.SBSE_steamStore { text-decoration: none; font-size: smaller; }
+    a.SBSE_steamStore:hover { text-decoration: none; }
 
     /* switch */
     .SBSE_switch { position: relative; display: inline-block; width: 60px; height: 30px; }
@@ -237,6 +239,7 @@ GM_addStyle(`
     .SBSE_icon {
         width: 20px; height: 20px;
         display: none;
+        margin-left: 5px;
         border-radius: 50%;
         background-color: #E87A90;
         transform: rotate(45deg);
@@ -427,6 +430,7 @@ const i18n = {
             settingsEnableTooltips: 'SteamCN 論壇提示框',
             HBAlreadyOwned: '遊戲已擁有',
             HBRedeemAlreadyOwned: '確定刮開 %title% Steam 序號？',
+            steamStore: 'Steam 商店',
             HBActivationRestrictions: '啟動限制',
             HBDisallowedCountries: '限制以下地區啟動',
             HBExclusiveCountries: '僅限以下地區啟動',
@@ -522,6 +526,7 @@ const i18n = {
             settingsEnableTooltips: 'SteamCN 论坛提示窗',
             HBAlreadyOwned: '游戏已拥有',
             HBRedeemAlreadyOwned: '确定刮开 %title% Steam 激活码？',
+            steamStore: 'Steam 商店',
             HBActivationRestrictions: '激活限制',
             HBDisallowedCountries: '限制以下地区激活',
             HBExclusiveCountries: '仅限以下地区激活',
@@ -617,6 +622,7 @@ const i18n = {
             settingsEnableTooltips: 'Tooltips from SteamCN',
             HBAlreadyOwned: 'Game Already Owned',
             HBRedeemAlreadyOwned: 'Are you sure to redeem %title% Steam Key?',
+            steamStore: 'Steam Store',
             HBActivationRestrictions: 'Activation Restrictions',
             HBDisallowedCountries: 'Cannot be activated in the following regions',
             HBExclusiveCountries: 'Can only be activated in the following regions',
@@ -2542,7 +2548,7 @@ const siteHandlers = {
             .pricingDetail .cheapest { border-bottom: 1px solid #ff9800; font-weight: bold; }
             .pricingDetail .currency-flag { vertical-align: text-bottom; }
             .swal2-popup table { background-color: white; }
-            .SBSE_icon { margin-top: -16px; align-self: flex-end; }
+            .SBSE_icon { vertical-align: bottom; }
         `);
 
         let APIData = null;
@@ -2764,16 +2770,8 @@ const siteHandlers = {
                                 if (d.owned) $dl.addClass('SBSE_owned');
                                 if (d.wished) $dl.addClass('SBSE_wished');
 
-                                // wrap link
-                                $gameTitle.contents().filter((i, n) => n.nodeType === 3).wrap(`<a href="http:www.steampowered.com/app/${data.steam.id}/"></a>`);
-
-                                // insert filler
-                                if ($gameTitle.find('.drm-container-steam').length === 0) {
-                                    $gameTitle.append('<div class="drm-container-steam"></div>');
-                                }
-
-                                // append icon
-                                $gameTitle.append($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
+                                // append Steam store link
+                                $gameTitle.find('.game-name').append(`<span> | </span><a class="SBSE_steamStore" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`, $('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
 
                                 tooltipsData.push(d);
 
@@ -2862,10 +2860,12 @@ const siteHandlers = {
             .swal2-icon-text { font-size: inherit; }
             .flag-icon { width: 4em; height: 3em; border-radius: 3px; }
             .flag-icon-unknown { border: 1px solid; text-align: center; line-height: 3em; }
+            .key-redeemer h4 { position: relative; }
+            .key-redeemer .SBSE_icon { position: absolute; top: 50%; margin-top: -10px; }
         `);
 
+        let gamekey;
         const atDownload = location.pathname === '/downloads';
-        const gamekey = new URLSearchParams(location.search).get('key');
         const fetchKey = (() => {
             var _ref3 = _asyncToGenerator(function* ($node, machineName, callback) {
                 if (gamekey) {
@@ -2972,6 +2972,7 @@ const siteHandlers = {
         };
         const process = (() => {
             var _ref4 = _asyncToGenerator(function* ($node) {
+                gamekey = new URLSearchParams(location.search).get('key');
                 let json = GM_getValue(gamekey, '');
 
                 if (json.length === 0) {
@@ -3012,6 +3013,9 @@ const siteHandlers = {
                                     'data-humanName': game.human_name,
                                     'data-gameinfo': JSON.stringify(d)
                                 });
+
+                                // append Steam store link
+                                $keyRedeemer.find('h4 > span').eq(0).after(`<span> | </span><a class="SBSE_steamStore" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`);
 
                                 tooltipsData.push(d);
                             }
