@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.8.0
+// @version      2.9.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -25,8 +25,8 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @include      https://yuplay.ru/orders/*/
 // @include      https://yuplay.ru/product/*/
 // @include      http*://gama-gama.ru/personal/settings/*
-// @include      http*://plati.ru/seller/*
-// @include      http*://plati.market/seller/*
+// @include      http*://*plati.ru/seller/*
+// @include      http*://*plati.market/seller/*
 // @include      http*://po.plati.ru/seller/*
 // @include      http*://po.plati.market/seller/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js
@@ -421,7 +421,7 @@ const i18n = {
             settingsTitle: '設定',
             settingsAutoUpdateSessionID: '自動更新SessionID',
             settingsSessionID: '我的SessionID',
-            settingsSyncLibrary: '同步遊戲庫資料',
+            settingsSyncLibrary: '同步遊戲庫',
             settingsSyncLibraryButton: '同步',
             settingsLanguage: '語言',
             settingsASFFormat: '啟用ASF 格式',
@@ -518,7 +518,7 @@ const i18n = {
             settingsTitle: '设置',
             settingsAutoUpdateSessionID: '自动更新SessionID',
             settingsSessionID: '我的SessionID',
-            settingsSyncLibrary: '同步游戏库资料',
+            settingsSyncLibrary: '同步游戏库',
             settingsSyncLibraryButton: '同步',
             settingsLanguage: '语言',
             settingsASFFormat: '启用ASF 格式',
@@ -615,7 +615,7 @@ const i18n = {
             settingsTitle: 'Settings',
             settingsAutoUpdateSessionID: 'Auto Update SessionID',
             settingsSessionID: 'Your sessionID',
-            settingsSyncLibrary: 'Sync Library Data',
+            settingsSyncLibrary: 'Sync Library',
             settingsSyncLibraryButton: 'Sync',
             settingsLanguage: 'Language',
             settingsASFFormat: 'Enable ASF Format',
@@ -1651,6 +1651,7 @@ const steam = {
 
         a.forEach(o => {
             if (o.key === 'library' && o.sync !== false) {
+                if (o.notify === true) swal.showLoading();
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: `https://store.steampowered.com/dynamicstore/userdata/t=${Math.random()}`,
@@ -1682,6 +1683,8 @@ const steam = {
                                 timer: 3000
                             });
                         }
+
+                        if (typeof o.callback === 'function') o.callback();
                     },
                     onerror() {
                         swal({
@@ -1709,6 +1712,8 @@ const steam = {
                                 lastSync: Date.now()
                             };
                             self.save([o]);
+
+                            if (typeof o.callback === 'function') o.callback();
                         } catch (e) {
                             throw e.stack;
                         }
@@ -4170,7 +4175,7 @@ const siteHandlers = {
             GM_addStyle(`
                 li[class*="hide"] { display: none; }
                 .SBSE_plati_menu { display: flex; margin-bottom: 10px; }
-                .SBSE_plati_menu > li { height: 30px; line-height: 30px; padding-right: 50px; }
+                .SBSE_plati_menu > li { height: 30px; line-height: 30px; padding-right: 30px; }
                 .SBSE_plati_menu > li > .SBSE_switch { vertical-align: text-bottom; }
                 .SBSE_plati_menu > li > * { cursor: pointer; }
                 .SBSE_dropdown_list { width: max-content; z-index: 999; box-shadow: 5px 5px 10px grey; }
@@ -4202,20 +4207,34 @@ const siteHandlers = {
             let platiCurrency = $('th.product-price select option:selected').text().trim();
             let $table = $('table.goods-table');
             const $body = $('body');
-            const $paging = $('#GoodsBlock .pages_nav > a');
             const infiniteScroll = {
                 enabled: plati.get('infiniteScroll'),
                 loading: false,
-                lastPage: parseInt($paging.filter(':last-child').text(), 10),
+                lastPage: 0,
                 reachedLastPage: false,
                 parameters: {
                     idr: 0,
                     id_s: location.pathname.split('/').pop(),
                     sort: 'name',
-                    page: parseInt($paging.filter('.active').text(), 10) + 1,
+                    page: 0,
                     rows: 10,
                     curr: 'USD',
                     lang: unsafeWindow.plang || 'en-US'
+                },
+                setParameters() {
+                    const $paging = $('#GoodsBlock .pages_nav > a');
+                    const onclickArguments = $paging.eq(0).attr('onclick').match(/\((.+)\)/);
+
+                    if (onclickArguments[1]) {
+                        const parameters = onclickArguments[1].split(',').map(x => isNaN(x) ? x.replace(/['"]+/g, '') : parseInt(x, 10));
+
+                        this.parameters.idr = parameters[0];
+                        this.parameters.sort = parameters[1];
+                        this.parameters.rows = parameters[3];
+                        this.parameters.curr = parameters[4];
+                        this.parameters.page = parseInt($paging.filter('.active').text(), 10) + 1;
+                        this.lastPage = parseInt($paging.filter(':last-child').text(), 10);
+                    }
                 }
             };
             const language = config.get('language');
@@ -4277,32 +4296,11 @@ const siteHandlers = {
                 $trs.addClass('SBSE_fetching').removeClass('SBSE_notFetched');
                 fetchItem(queue);
             };
-            const process = table => {
+            const process = ($rows = null) => {
                 if (plati.get('enablePlatiFeature')) {
-                    // grab paging parameters
-                    const onclickArguments = $paging.eq(0).attr('onclick').match(/\((.+)\)/);
+                    const $trs = $rows && $rows.length > 0 ? $rows : $table.find('tbody > tr:not(.SBSE_processing, .SBSE_processed)');
 
-                    if (onclickArguments[1]) {
-                        const parameters = onclickArguments[1].split(',').map(x => isNaN(x) ? x.replace(/['"]+/g, '') : parseInt(x, 10));
-
-                        infiniteScroll.parameters.idr = parameters[0];
-                        infiniteScroll.parameters.sort = parameters[1];
-                        infiniteScroll.parameters.rows = parameters[3];
-                        infiniteScroll.parameters.curr = parameters[4];
-                    }
-
-                    if (table) $table = $(table);
-                    const filters = $('.SBSE_plati_menu [data-config^="filter"] input:not(:checked)').map((i, ele) => ele.dataset.filter).get();
-                    platiCurrency = $table.find('th.product-price select option:selected').text().trim();
-
-                    $table.addClass(filters.join(' ')) // apply filters
-                    .addClass('showType showIcon SBSE_icon-vMiddle').find('thead tr:not(:has(.status)) > .product-sold').before('<th class="type"></th><th class="status"></th>');
-
-                    const $trs = $table.find('tbody > tr:not(.SBSE_processing, .SBSE_processed)');
-
-                    $trs.addClass('SBSE_processing');
-                    $trs.find('.product-sold').before('<td><span class="SBSE_type"></span></td><td><span class="SBSE_icon"></span></td>');
-                    $trs.each((i, tr) => {
+                    $trs.addClass('SBSE_processing').each((i, tr) => {
                         const $tr = $(tr);
                         const url = $tr.find('.product-title a').attr('href');
                         const id = parseInt(url.split('/').pop(), 10);
@@ -4326,7 +4324,9 @@ const siteHandlers = {
                                 $tr.attr('data-item', JSON.stringify(item));
                             }
 
-                            if (classes.length > 0) $tr.addClass(classes.join(' '));else $tr.addClass('SBSE_notFetched');
+                            if (classes.length > 0) {
+                                $tr.removeClass('SBSE_owned SBSE_wished SBSE_ignored SBSE_notOwned SBSE_notApplicable').addClass(classes.join(' '));
+                            } else $tr.addClass('SBSE_notFetched');
 
                             $tr.attr({
                                 'data-id': id,
@@ -4334,13 +4334,20 @@ const siteHandlers = {
                             });
                         }
 
-                        // setup price node
-                        const $price = $tr.find('.product-price div');
-                        const value = parseFloat($price.text().trim()) * 100;
+                        // setup type node
+                        if ($tr.find('.SBSE_type').length === 0) $tr.find('.product-sold').before('<td><span class="SBSE_type"></span></td>');
 
-                        $price.replaceWith(`<span class="SBSE_price" data-currency="${platiCurrency}" data-value="${value}"></span>`);
-                    });
-                    $trs.toggleClass('SBSE_processing SBSE_processed');
+                        // setup icon node
+                        if ($tr.find('.SBSE_icon').length === 0) $tr.find('.product-sold').before('<td><span class="SBSE_icon"></span></td>');
+
+                        // setup price node
+                        if ($tr.find('.SBSE_price').length === 0) {
+                            const $price = $tr.find('.product-price div');
+                            const value = parseFloat($price.text().trim()) * 100;
+
+                            $price.replaceWith(`<span class="SBSE_price" data-currency="${platiCurrency}" data-value="${value}"></span>`);
+                        }
+                    }).removeClass('SBSE_processing').addClass('SBSE_processed');
 
                     // auto fetch on page visit
                     if (plati.get('fetchOnStart')) fetchItems($table.find('tbody > tr'));
@@ -4367,7 +4374,7 @@ const siteHandlers = {
                             $table.siblings('.pages_nav, .sort_by').remove();
                             $table.after($resHTML.filter('.pages_nav, .sort_by'));
 
-                            process();
+                            process($trs);
 
                             params.page += 1;
                             infiniteScroll.reachedLastPage = params.page > infiniteScroll.lastPage;
@@ -4389,6 +4396,19 @@ const siteHandlers = {
 
                     if (spaceTillBotom < 200) fetchNextPage();
                 }
+            };
+            const initTable = () => {
+                const filters = $('.SBSE_plati_menu [data-config^="filter"] input:not(:checked)').map((i, ele) => ele.dataset.filter).get();
+                platiCurrency = $table.find('th.product-price select option:selected').text().trim();
+
+                $table.addClass(filters.join(' ')) // apply filters
+                .addClass('showType showIcon SBSE_icon-vMiddle').find('thead tr:not(:has(.status)) > .product-sold').before('<th class="type"></th><th class="status"></th>');
+
+                // grab infinite scroll parameters
+                infiniteScroll.setParameters();
+
+                // bind infinite scroll event
+                if (plati.get('infiniteScroll')) $table.addClass('infiniteScrollBinded').find('tbody').scroll(scrollHandler).scroll();
             };
 
             // set up menu
@@ -4440,6 +4460,7 @@ const siteHandlers = {
                         <span class="selectedCurrency">${xe.currencies[selectedCurrency][language]}</span>
                         <ul class="SBSE_dropdown_list"></ul>
                     </li>
+                    <li data-config="syncButton"><span>${i18n.get('settingsSyncLibrary')}</span></li>
                 </ul>
             `);
             const $enablePlatiFeature = $menu.find('[data-config="enablePlatiFeature"] input');
@@ -4448,6 +4469,7 @@ const siteHandlers = {
             const $fetchButton = $menu.find('[data-config="fetchButton"] span');
             const $filters = $menu.find('[data-config^="filter"] input');
             const $currencyToggler = $menu.find('[data-config="currency"] ul');
+            const $syncButton = $menu.find('[data-config="syncButton"] span');
 
             $enablePlatiFeature.change(() => {
                 const state = $enablePlatiFeature.prop('checked');
@@ -4495,6 +4517,17 @@ const siteHandlers = {
                 }));
             });
             $currencyToggler.find('span').wrap('<li></li>');
+            $syncButton.click(() => {
+                steam.sync([{
+                    key: 'library',
+                    sync: true,
+                    save: true,
+                    notify: true,
+                    callback() {
+                        process($table.find('tbody tr.SBSE_notOwned'));
+                    }
+                }]);
+            });
 
             // apply config
             $enablePlatiFeature.prop('checked', plati.get('enablePlatiFeature'));
@@ -4510,13 +4543,11 @@ const siteHandlers = {
                 $('.goods-table').toggleClass(filter, !state);
             });
 
-            $('body').toggleClass('enablePlatiFeature', plati.get('enablePlatiFeature')).toggleClass('infiniteScroll', plati.get('infiniteScroll'));
+            $body.toggleClass('enablePlatiFeature', plati.get('enablePlatiFeature')).toggleClass('infiniteScroll', plati.get('infiniteScroll'));
             $('.merchant_products').prepend($menu);
 
+            initTable();
             process();
-
-            // bind infinite scroll event
-            if (plati.get('infiniteScroll')) $table.addClass('infiniteScrollBinded').find('tbody').scroll(scrollHandler).scroll();
 
             // detect list changes
             new MutationObserver(mutations => {
@@ -4524,7 +4555,11 @@ const siteHandlers = {
                     Array.from(mutation.addedNodes).forEach(addedNode => {
                         const $addedNode = $(addedNode);
 
-                        if ($addedNode.is('table.goods-table')) process($addedNode);
+                        if ($addedNode.is('table.goods-table')) {
+                            $table = $addedNode;
+                            initTable();
+                            process();
+                        }
                     });
                 });
             }).observe($('#GoodsBlock')[0], {
