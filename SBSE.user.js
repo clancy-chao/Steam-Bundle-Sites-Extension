@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.7.1
+// @version      2.8.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -482,6 +482,7 @@ const i18n = {
             notFetched: '未檢查',
             enablePlatiFeature: '啟用腳本',
             platiFetchOnStart: '自動檢查',
+            platiInfiniteScroll: '自動換頁',
             platiFetchButton: '檢查',
             platiFilterType: '顯示類型',
             platiFilterStatus: '顯示狀態'
@@ -578,6 +579,7 @@ const i18n = {
             notFetched: '未检查',
             enablePlatiFeature: '启用脚本',
             platiFetchOnStart: '自动检查',
+            platiInfiniteScroll: '自动换页',
             platiFetchButton: '检查',
             platiFilterType: '显示类型',
             platiFilterStatus: '显示状态'
@@ -674,6 +676,7 @@ const i18n = {
             notFetched: 'Not Checked',
             enablePlatiFeature: 'Enable Script',
             platiFetchOnStart: 'Auto Check',
+            platiInfiniteScroll: 'Infinite Scroll',
             platiFetchButton: 'Check',
             platiFilterType: 'Show Type',
             platiFilterStatus: 'Show Status'
@@ -4143,6 +4146,7 @@ const siteHandlers = {
             init() {
                 if (!has.call(this.data, 'enablePlatiFeature')) this.data.enablePlatiFeature = true;
                 if (!has.call(this.data, 'fetchOnStart')) this.data.fetchOnStart = true;
+                if (!has.call(this.data, 'infiniteScroll')) this.data.infiniteScroll = true;
                 if (!has.call(this.data, 'itemData')) this.data.itemData = {};
                 if (!has.call(this.data, 'filterGame')) this.data.filterGame = true;
                 if (!has.call(this.data, 'filterDLC')) this.data.filterDLC = true;
@@ -4184,10 +4188,36 @@ const siteHandlers = {
                 .filterNotOwned tr.SBSE_notOwned,
                 .filterNotApplicable tr.SBSE_notApplicable,
                 .filterNotFetched tr.SBSE_notFetched { display: none; }
+                body.enablePlatiFeature .product-title > div { max-width: 600px !important; }
+                body.enablePlatiFeature.infiniteScroll .goods-table thead > tr { display: block; }
+                body.enablePlatiFeature.infiniteScroll .goods-table tbody {
+                    max-height: 600px;
+                    display: block;
+                    overflow: auto;
+                }
+                body.enablePlatiFeature.infiniteScroll .goods-table tbody > tr > td:last-child { padding-right: 5px; }
             `);
             // preparing
             let selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'USD');
             let platiCurrency = $('th.product-price select option:selected').text().trim();
+            let $table = $('table.goods-table');
+            const $body = $('body');
+            const $paging = $('#GoodsBlock .pages_nav > a');
+            const infiniteScroll = {
+                enabled: plati.get('infiniteScroll'),
+                loading: false,
+                lastPage: parseInt($paging.filter(':last-child').text(), 10),
+                reachedLastPage: false,
+                parameters: {
+                    idr: 0,
+                    id_s: location.pathname.split('/').pop(),
+                    sort: 'name',
+                    page: parseInt($paging.filter('.active').text(), 10) + 1,
+                    rows: 10,
+                    curr: 'USD',
+                    lang: unsafeWindow.plang || 'en-US'
+                }
+            };
             const language = config.get('language');
             const fetchItem = (() => {
                 var _ref11 = _asyncToGenerator(function* (queue) {
@@ -4197,7 +4227,7 @@ const siteHandlers = {
                         const $tr = $(tr);
                         const url = $tr.attr('data-url');
                         const id = parseInt($tr.attr('data-id'), 10);
-                        const classes = ['SBSE_fetching'];
+                        const classes = ['SBSE_fetching', 'SBSE_fetched'];
 
                         if (url.length > 0 && id > 0) {
                             const res = yield fetch(url);
@@ -4239,8 +4269,9 @@ const siteHandlers = {
                 };
             })();
             const fetchItems = items => {
-                const filter = plati.get('fetchOnStart') ? ':not(.SBSE_fetched)' : '';
-                const $trs = items && items.length > 0 ? $(items).filter(filter) : $(`.goods-table tbody > tr${filter}`);
+                const filters = ['.SBSE_fetching'];
+                if (plati.get('fetchOnStart')) filters.push('.SBSE_fetched');
+                const $trs = items && items.length > 0 ? $(items).filter(`:not(${filters.join()})`) : $table.find(`tbody > tr:not(${filters.join()})`);
                 const queue = $trs.get();
 
                 $trs.addClass('SBSE_fetching').removeClass('SBSE_notFetched');
@@ -4248,12 +4279,30 @@ const siteHandlers = {
             };
             const process = table => {
                 if (plati.get('enablePlatiFeature')) {
-                    const $table = table ? $(table) : $('.goods-table');
+                    // grab paging parameters
+                    const onclickArguments = $paging.eq(0).attr('onclick').match(/\((.+)\)/);
+
+                    if (onclickArguments[1]) {
+                        const parameters = onclickArguments[1].split(',').map(x => isNaN(x) ? x.replace(/['"]+/g, '') : parseInt(x, 10));
+
+                        infiniteScroll.parameters.idr = parameters[0];
+                        infiniteScroll.parameters.sort = parameters[1];
+                        infiniteScroll.parameters.rows = parameters[3];
+                        infiniteScroll.parameters.curr = parameters[4];
+                    }
+
+                    if (table) $table = $(table);
+                    const filters = $('.SBSE_plati_menu [data-config^="filter"] input:not(:checked)').map((i, ele) => ele.dataset.filter).get();
                     platiCurrency = $table.find('th.product-price select option:selected').text().trim();
 
-                    $table.addClass('showType showIcon SBSE_icon-vMiddle').find('thead tr:not(:has(.status)) > .product-sold').before('<th class="type"></th><th class="status"></th>');
+                    $table.addClass(filters.join(' ')) // apply filters
+                    .addClass('showType showIcon SBSE_icon-vMiddle').find('thead tr:not(:has(.status)) > .product-sold').before('<th class="type"></th><th class="status"></th>');
 
-                    $table.find('tbody > tr:not(.SBSE_processed)').each((i, tr) => {
+                    const $trs = $table.find('tbody > tr:not(.SBSE_processing, .SBSE_processed)');
+
+                    $trs.addClass('SBSE_processing');
+                    $trs.find('.product-sold').before('<td><span class="SBSE_type"></span></td><td><span class="SBSE_icon"></span></td>');
+                    $trs.each((i, tr) => {
                         const $tr = $(tr);
                         const url = $tr.find('.product-title a').attr('href');
                         const id = parseInt(url.split('/').pop(), 10);
@@ -4290,12 +4339,55 @@ const siteHandlers = {
                         const value = parseFloat($price.text().trim()) * 100;
 
                         $price.replaceWith(`<span class="SBSE_price" data-currency="${platiCurrency}" data-value="${value}"></span>`);
-                    }).addClass('SBSE_processed').find('.product-sold').before('<td><span class="SBSE_type"></span></td><td><span class="SBSE_icon"></span></td>');
+                    });
+                    $trs.toggleClass('SBSE_processing SBSE_processed');
 
                     // auto fetch on page visit
                     if (plati.get('fetchOnStart')) fetchItems($table.find('tbody > tr'));
 
                     xe.update(selectedCurrency);
+                }
+            };
+            const fetchNextPage = (() => {
+                var _ref12 = _asyncToGenerator(function* () {
+                    infiniteScroll.loading = true;
+
+                    const params = infiniteScroll.parameters;
+                    params.rnd = Math.random();
+
+                    if (params.id_s > 0) {
+                        const res = yield fetch(`/asp/block_goods_s.asp?${$.param(params)}`);
+                        const $resHTML = $((yield res.text()));
+                        const $trs = $resHTML.find('tbody > tr');
+
+                        if (res.ok && $trs.length > 0) {
+                            $table.find('tbody').append($trs);
+
+                            // refresh paging
+                            $table.siblings('.pages_nav, .sort_by').remove();
+                            $table.after($resHTML.filter('.pages_nav, .sort_by'));
+
+                            process();
+
+                            params.page += 1;
+                            infiniteScroll.reachedLastPage = params.page > infiniteScroll.lastPage;
+                        }
+                    }
+
+                    infiniteScroll.loading = false;
+                    $table.find('tbody').scroll();
+                });
+
+                return function fetchNextPage() {
+                    return _ref12.apply(this, arguments);
+                };
+            })();
+            const scrollHandler = () => {
+                if ($body.hasClass('enablePlatiFeature') && infiniteScroll.enabled === true && infiniteScroll.loading === false && infiniteScroll.reachedLastPage === false) {
+                    const $tbody = $table.find('tbody');
+                    const spaceTillBotom = $tbody.prop('scrollHeight') - $tbody.scrollTop() - $tbody.height();
+
+                    if (spaceTillBotom < 200) fetchNextPage();
                 }
             };
 
@@ -4315,6 +4407,13 @@ const siteHandlers = {
                             <span class="SBSE_slider"></span>
                         </label>
                         <label for="fetchOnStart"><span>${i18n.get('platiFetchOnStart')}</span></label>
+                    </li>
+                    <li data-config="infiniteScroll">
+                        <label class="SBSE_switch SBSE_switch-small">
+                            <input type="checkbox" id="infiniteScroll">
+                            <span class="SBSE_slider"></span>
+                        </label>
+                        <label for="infiniteScroll"><span>${i18n.get('platiInfiniteScroll')}</span></label>
                     </li>
                     <li data-config="fetchButton"><span>${i18n.get('platiFetchButton')}</span></li>
                     <li data-config="filterType" class="SBSE_dropdown">
@@ -4345,8 +4444,9 @@ const siteHandlers = {
             `);
             const $enablePlatiFeature = $menu.find('[data-config="enablePlatiFeature"] input');
             const $fetchOnStart = $menu.find('[data-config="fetchOnStart"] input');
+            const $infiniteScroll = $menu.find('[data-config="infiniteScroll"] input');
             const $fetchButton = $menu.find('[data-config="fetchButton"] span');
-            const $filters = $menu.find('[data-config="filterType"] input, [data-config="filterStatus"] input');
+            const $filters = $menu.find('[data-config^="filter"] input');
             const $currencyToggler = $menu.find('[data-config="currency"] ul');
 
             $enablePlatiFeature.change(() => {
@@ -4356,12 +4456,25 @@ const siteHandlers = {
                 $menu.find('li:not([data-config="enablePlatiFeature"])').toggleClass('hide1', !state);
 
                 if (state) process();
+                $body.toggleClass('enablePlatiFeature', state);
             });
             $fetchOnStart.change(() => {
                 const state = $fetchOnStart.prop('checked');
 
                 plati.set('fetchOnStart', state);
                 $fetchButton.parent().toggleClass('hide2', state);
+            });
+            $infiniteScroll.change(() => {
+                const state = $infiniteScroll.prop('checked');
+
+                plati.set('infiniteScroll', state);
+                infiniteScroll.enabled = state;
+                $body.toggleClass('infiniteScroll', state);
+
+                // bind infinite scroll event if not already
+                if (state && !$table.hasClass('infiniteScrollBinded')) {
+                    $table.addClass('infiniteScrollBinded').find('tbody').scroll(scrollHandler).scroll();
+                }
             });
             $fetchButton.click(fetchItems);
             $filters.change(e => {
@@ -4387,6 +4500,7 @@ const siteHandlers = {
             $enablePlatiFeature.prop('checked', plati.get('enablePlatiFeature'));
             $menu.find('li:not([data-config="enablePlatiFeature"])').toggleClass('hide1', !plati.get('enablePlatiFeature'));
             $fetchOnStart.prop('checked', plati.get('fetchOnStart'));
+            $infiniteScroll.prop('checked', plati.get('infiniteScroll'));
             $fetchButton.parent().toggleClass('hide2', plati.get('fetchOnStart'));
             $filters.each((i, input) => {
                 const filter = input.dataset.filter;
@@ -4396,9 +4510,13 @@ const siteHandlers = {
                 $('.goods-table').toggleClass(filter, !state);
             });
 
+            $('body').toggleClass('enablePlatiFeature', plati.get('enablePlatiFeature')).toggleClass('infiniteScroll', plati.get('infiniteScroll'));
             $('.merchant_products').prepend($menu);
 
             process();
+
+            // bind infinite scroll event
+            if (plati.get('infiniteScroll')) $table.addClass('infiniteScrollBinded').find('tbody').scroll(scrollHandler).scroll();
 
             // detect list changes
             new MutationObserver(mutations => {
