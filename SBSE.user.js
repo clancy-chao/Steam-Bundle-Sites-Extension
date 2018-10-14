@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.9.0
+// @version      2.10.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -27,8 +27,8 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @include      http*://gama-gama.ru/personal/settings/*
 // @include      http*://*plati.ru/seller/*
 // @include      http*://*plati.market/seller/*
-// @include      http*://po.plati.ru/seller/*
-// @include      http*://po.plati.market/seller/*
+// @include      http*://*plati.ru/cat/*
+// @include      http*://*plati.market/cat/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.js
 // @resource     sweetalert2CSS https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.18.0/sweetalert2.min.css
@@ -49,6 +49,9 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @connect      steamdb.steamcn.com
 // @connect      steamdb.info
 // @connect      steamspy.com
+// @connect      github.com
+// @connect      localhost
+// @connect      *
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -74,21 +77,21 @@ GM_addStyle(GM_getResourceText('flagIcon').replace(/\.\.\//g, 'https://cdnjs.clo
 
 // inject script css styles
 GM_addStyle(`
-    pre.SBSE_errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
-    a.SBSE_steamStore { text-decoration: none; font-size: smaller; }
-    a.SBSE_steamStore:hover { text-decoration: none; }
+    pre.SBSE-errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
+    a.SBSE-link-steam_store { text-decoration: none; font-size: smaller; }
+    a.SBSE-link-steam_store:hover { text-decoration: none; }
 
     /* switch */
-    .SBSE_switch { position: relative; display: inline-block; width: 60px; height: 30px; }
-    .SBSE_switch input { display: none; }
-    .SBSE_slider {
+    .SBSE-switch { position: relative; display: inline-block; width: 60px; height: 30px; }
+    .SBSE-switch input { display: none; }
+    .SBSE-switch__slider {
         position: absolute;
         top: 0; right: 0; bottom: 0; left: 0;
         background-color: #CCC;
         transition: 0.4s;
         cursor: pointer;
     }
-    .SBSE_slider:before {
+    .SBSE-switch__slider:before {
         width: 26px; height: 26px;
         position: absolute;
         bottom: 2px; left: 2px;
@@ -96,16 +99,16 @@ GM_addStyle(`
         transition: 0.4s;
         content: "";
     }
-    .SBSE_switch input:checked + .SBSE_slider { background-color: #2196F3; }
-    .SBSE_switch input:focus + .SBSE_slider { box-shadow: 0 0 1px #2196F3; }
-    .SBSE_switch input:checked + .SBSE_slider:before { transform: translateX(30px); }
-    .SBSE_switch-small { width: 40px; height: 20px; }
-    .SBSE_switch-small .SBSE_slider:before { width: 16px; height: 16px; }
-    .SBSE_switch-small input:checked + .SBSE_slider:before { transform: translateX(20px); }
+    .SBSE-switch input:checked + .SBSE-switch__slider { background-color: #2196F3; }
+    .SBSE-switch input:focus + .SBSE-switch__slider { box-shadow: 0 0 1px #2196F3; }
+    .SBSE-switch input:checked + .SBSE-switch__slider:before { transform: translateX(30px); }
+    .SBSE-switch--small { width: 40px; height: 20px; }
+    .SBSE-switch--small .SBSE-switch__slider:before { width: 16px; height: 16px; }
+    .SBSE-switch--small input:checked + .SBSE-switch__slider:before { transform: translateX(20px); }
 
     /* dropdown */
-    .SBSE_dropdown { display: inline-block; position: relative; }
-    .SBSE_dropdown_list {
+    .SBSE-dropdown { display: inline-block; position: relative; }
+    .SBSE-dropdown__list {
         width: calc(100% - 10px);
         max-height: 0;
         display: inline-block;
@@ -117,23 +120,39 @@ GM_addStyle(`
         list-style-type: none;
         background-color: #EEE;
     }
-    .SBSE_dropdown_list > li { width: 100%; display: block; padding: 3px 0; text-align: center; }
-    .SBSE_dropdown:hover > .SBSE_dropdown_list { max-height: 500px; }
+    .SBSE-dropdown__list > li { width: 100%; display: block; padding: 3px 0; text-align: center; }
+    .SBSE-dropdown:hover > .SBSE-dropdown__list { max-height: 500px; }
 
     /* settings */
-    .SBSE_settings .name { text-align: right; vertical-align: top; }
-    .SBSE_settings .value { text-align: left; }
-    .SBSE_settings .value > * { height: 30px; margin: 0 20px 10px; }
-    .SBSE_settings > span { display: inline-block; color: white; cursor: pointer; }
+    .SBSE-container__content__model[data-feature="setting"] .name { text-align: right; vertical-align: top; }
+    .SBSE-container__content__model[data-feature="setting"] .value { text-align: left; }
+    .SBSE-container__content__model[data-feature="setting"] .value > * { height: 30px; margin: 0 20px 10px; }
+    .SBSE-container__content__model[data-feature="setting"] > span { display: inline-block; color: white; cursor: pointer; }
 
     /* container */
-    .SBSE_container {
+    .SBSE-container { width: 100%; }
+    .SBSE-container__nav > ul { display: flex; margin: 0; padding: 0; list-style: none; }
+    .SBSE-container__nav__item {
+        flex: 1 1 auto;
+        text-align: center;
+        cursor: pointer;
+    }
+    .SBSE-container__nav__item--show {
+        border-bottom: 1px solid #29B6F6;
+        color: #29B6F6;
+    }
+    .SBSE-container__nav__item > span { display: block; padding: 10px; }
+    .SBSE-container__content__model {
         width: 100%; height: 200px;
         display: flex;
+        margin-top: 10px;
         flex-direction: column;
         box-sizing: border-box;
     }
-    .SBSE_container > textarea {
+    .SBSE-container__content__model { display: none; }
+    .SBSE-container__content__model[data-feature="setting"] { height: 100%; display: block; }
+    .SBSE-container__content__model--show { display: block; }
+    .SBSE-container__content__model > textarea {
         width: 100%; height: 150px;
         padding: 5px;
         border: none;
@@ -141,8 +160,8 @@ GM_addStyle(`
         resize: none;
         outline: none;
     }
-    .SBSE_container > div { width: 100%; padding-top: 5px; box-sizing: border-box; }
-    .SBSE_container > div button {
+    .SBSE-container__content__model > div { width: 100%; padding-top: 5px; box-sizing: border-box; }
+    .SBSE-button {
         width: 120px;
         position: relative;
         margin-right: 10px;
@@ -152,11 +171,11 @@ GM_addStyle(`
         outline: none;
         cursor: pointer;
     }
-    .SBSE_container select { max-width:120px; height: 30px; }
-    .SBSE_container label { margin-right: 10px; }
-    .SBSE_ExportList a { text-decoration: none; color: #333; transition: color 0.3s ease; }
-    .SBSE_ExportList a:hover { text-decoration: none; color: #787878; }
-    #SBSE_BtnSettings {
+    .SBSE-select { max-width:120px; height: 30px; }
+    .SBSE-container label { margin-right: 10px; }
+    .SBSE-dropdown__list-export a { text-decoration: none; color: #333; transition: color 0.3s ease; }
+    .SBSE-dropdown__list-export a:hover { text-decoration: none; color: #787878; }
+    .SBSE-button-setting {
         width: 20px; height: 20px;
         float: right;
         margin-top: 3px; margin-right: 0; margin-left: 10px;
@@ -167,10 +186,64 @@ GM_addStyle(`
         background-origin: border-box;
         border: none;
         vertical-align: top;
+        cursor: pointer;
+    }
+
+    /* terminal */
+    .SBSE-terminal {
+        height: 150px;
+        display: none;
+        margin: 0;
+        padding: 0;
+        background-color: #000;
+    }
+    .SBSE-terminal--show { display: block; }
+    .SBSE-terminal > div {
+        max-height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: auto;
+        background-color: transparent;
+    }
+    .SBSE-terminal > div > span {
+        display: inline-block;
+        padding-left: 20px;
+        color: #FFF;
+        text-indent: -20px;
+    }
+    .SBSE-terminal > div > span:before {
+        content: '>';
+        width: 20px;
+        display: inline-block;
+        text-align: center;
+        text-indent: 0;
+    }
+    .SBSE-terminal__message {}
+    .SBSE-terminal__input {
+        width: 100%;
+        position: relative;
+        order: 9999;
+        box-sizing: border-box;
+    }
+    .SBSE-terminal__input > input {
+        width: inherit;
+        max-width: calc(100% - 30px);
+        position: absolute;
+        top: 0; right: 0; bottom: 0; left: 20px;
+        padding: 0;
+        border: none;
+        outline: none;
+        background-color: transparent;
+        color: #FFF;
+    }
+    .SBSE-terminal__input > input:first-child { z-index: 9; }
+    .SBSE-terminal__input > input:last-child {
+        z-index: 3;
+        color: gray;
     }
 
     /* spinner button affect */
-    .SBSE_container > div > button:before {
+    .SBSE-button:before {
         width: 20px; height: 20px;
         content: '';
         position: absolute;
@@ -187,12 +260,12 @@ GM_addStyle(`
         animation-name: rotate;
         animation-timing-function: linear;
     }
-    .SBSE_container > div > button.narrow.working {
+    .SBSE-button.SBSE-button--narrow.SBSE-button--working {
         width: 100px;
         padding-right: 40px;
         transition: all 0.5s;
     }
-    .SBSE_container > div > button.working:before {
+    .SBSE-button.SBSE-button--working:before {
         transition-delay: 0.5s;
         transition-duration: 1s;
         opacity: 1;
@@ -203,22 +276,22 @@ GM_addStyle(`
     }
 
     /* types */
-    .SBSE_type {
+    .SBSE-type {
         height: 20px;
         display: none;
         margin-right: 5px;
         justify-content: center;
     }
-    .SBSE_type:before, .SBSE_type:after {
+    .SBSE-type:before, .SBSE-type:after {
         content: '';
         box-sizing: border-box;
         pointer-events: none;
     }
-    .SBSE_type:after { padding: 0 2px; }
-    .SBSE_game .SBSE_type { background-color: rgba(97,100,101,0.3); }
-    .SBSE_game .SBSE_type:after { content: 'Game'; }
-    .SBSE_DLC .SBSE_type { background-color: rgba(165,84,177,0.8); }
-    .SBSE_DLC .SBSE_type:before {
+    .SBSE-type:after { padding: 0 2px; }
+    .SBSE-item--game .SBSE-type { background-color: rgba(97,100,101,0.3); }
+    .SBSE-item--game .SBSE-type:after { content: 'Game'; }
+    .SBSE-item--DLC .SBSE-type { background-color: rgba(165,84,177,0.8); }
+    .SBSE-item--DLC .SBSE-type:before {
         content: 'ꜜ';
         width: 14px; height: 14px;
         margin: 3px 0 0 2px;
@@ -229,14 +302,13 @@ GM_addStyle(`
         font-size: 28px;
         line-height: 28px;
     }
-    .SBSE_DLC .SBSE_type:after { content: 'DLC'; }
-    .SBSE_package .SBSE_type { background-color: rgba(47,137,188,0.8); }
-    .SBSE_package .SBSE_type:after { content: 'Package'; }
-    .isSteam .SBSE_type, .showType .SBSE_type { display: flex; }
-    .SBSE_type-vMiddle .SBSE_type { vertical-align: middle; }
+    .SBSE-item--DLC .SBSE-type:after { content: 'DLC'; }
+    .SBSE-item--package .SBSE-type { background-color: rgba(47,137,188,0.8); }
+    .SBSE-item--package .SBSE-type:after { content: 'Package'; }
+    .SBSE-item--steam .SBSE-type { display: flex; }
 
     /* icons */
-    .SBSE_icon {
+    .SBSE-icon {
         width: 20px; height: 20px;
         display: none;
         margin-left: 5px;
@@ -244,7 +316,7 @@ GM_addStyle(`
         background-color: #E87A90;
         transform: rotate(45deg);
     }
-    .SBSE_icon:before, .SBSE_icon:after {
+    .SBSE-icon:before, .SBSE-icon:after {
         content: '';
         width: 3px; height: 14px;
         position: absolute;
@@ -254,44 +326,44 @@ GM_addStyle(`
         border-radius: 5px;
         pointer-events: none;
     }
-    .SBSE_icon:after { transform: translate(-50%, -50%) rotate(-90deg); }
-    .SBSE_owned .SBSE_icon { background-color: #9CCC65; }
-    .SBSE_owned .SBSE_icon:before, .SBSE_owned .SBSE_icon:after { transform: none; }
-    .SBSE_owned .SBSE_icon:before {
+    .SBSE-icon:after { transform: translate(-50%, -50%) rotate(-90deg); }
+    .SBSE-item--owned .SBSE-icon { background-color: #9CCC65; }
+    .SBSE-item--owned .SBSE-icon:before, .SBSE-item--owned .SBSE-icon:after { transform: none; }
+    .SBSE-item--owned .SBSE-icon:before {
         width: 3px; height: 11px;
         top: 4px; left: 10px;
         border-radius: 5px 5px 5px 0;
     }
-    .SBSE_owned .SBSE_icon:after {
+    .SBSE-item--owned .SBSE-icon:after {
         width: 5px; height: 3px;
         top: 12px; left: 6px;
         border-radius: 5px 0 0 5px;
     }
-    .SBSE_wished .SBSE_icon { transform: rotate(0); background-color: #29B6F6; }
-    .SBSE_wished .SBSE_icon:before, .SBSE_wished .SBSE_icon:after {
+    .SBSE-item--wished .SBSE-icon { transform: rotate(0); background-color: #29B6F6; }
+    .SBSE-item--wished .SBSE-icon:before, .SBSE-item--wished .SBSE-icon:after {
         width: 6px; height: 10px;
         top: 5px; left: 10px;
         border-radius: 6px 6px 0 0;
         transform: rotate(-45deg);
         transform-origin: 0 100%;
     }
-    .SBSE_wished .SBSE_icon:after {
+    .SBSE-item--wished .SBSE-icon:after {
         left: 4px;
         transform: rotate(45deg);
         transform-origin :100% 100%;
     }
-    .SBSE_ignored .SBSE_icon { background-color: rgb(135, 173, 189); }
-    .SBSE_notApplicable .SBSE_icon { transform: rotate(0); background-color: rgb(248, 187, 134); }
-    .SBSE_notApplicable .SBSE_icon:before {
+    .SBSE-item--ignored .SBSE-icon { background-color: rgb(135, 173, 189); }
+    .SBSE-item--notApplicable .SBSE-icon { transform: rotate(0); background-color: rgb(248, 187, 134); }
+    .SBSE-item--notApplicable .SBSE-icon:before {
         content: '?';
         width: 0; height: 10px;
         top: 5px; left: 7px;
         color: white;
         font-size: 16px; font-weight: 900;
     }
-    .SBSE_notApplicable .SBSE_icon:after { display: none; }
-    .SBSE_fetching .SBSE_icon { transform: rotate(0); background-color: transparent; }
-    .SBSE_fetching .SBSE_icon:before {
+    .SBSE-item--notApplicable .SBSE-icon:after { display: none; }
+    .SBSE-item--fetching .SBSE-icon { transform: rotate(0); background-color: transparent; }
+    .SBSE-item--fetching .SBSE-icon:before {
         width: 20px; height: 20px;
         top: 0; left: 0;
         border: 3px solid grey;
@@ -304,24 +376,24 @@ GM_addStyle(`
         animation-name: rotate;
         animation-timing-function: linear;
     }
-    .SBSE_fetching .SBSE_icon:after { display: none; }
-    .SBSE_notFetched .SBSE_icon { background-color: transparent; }
-    .SBSE_notFetched .SBSE_icon:before, .SBSE_notFetched .SBSE_icon:after { display: none; }
-    .SBSE_failed .SBSE_icon { transform: rotate(0); }
-    .SBSE_failed .SBSE_icon:before {
+    .SBSE-item--fetching .SBSE-icon:after { display: none; }
+    .SBSE-item--notFetched .SBSE-icon { background-color: transparent; }
+    .SBSE-item--notFetched .SBSE-icon:before, .SBSE-item--notFetched .SBSE-icon:after { display: none; }
+    .SBSE-item--failed .SBSE-icon { transform: rotate(0); }
+    .SBSE-item--failed .SBSE-icon:before {
         content: '!';
         width: 0; height: 10px;
         top: 5px; left: 8.5px;
         color: white;
         font-size: 16px; font-weight: 900;
     }
-    .SBSE_failed .SBSE_icon:after { display: none; }
-    .isSteam .SBSE_icon, .showIcon .SBSE_icon { display: inline-block; }
-    .SBSE_icon-vMiddle .SBSE_icon { vertical-align: middle; }
+    .SBSE-item--failed .SBSE-icon:after { display: none; }
+    .SBSE-item--steam .SBSE-icon { display: inline-block; }
 
     /* Steam Tooltip */
-    .SBSE_tooltip {
+    .SBSE-tooltip {
         width: 308px;
+        display: none;
         position: fixed;
         overflow: hidden;
         background: url(https://steamstore-a.akamaihd.net/public/images/v6/blue_body_darker_repeat.jpg) -700px center repeat-y scroll rgb(0, 0, 0);
@@ -330,7 +402,7 @@ GM_addStyle(`
         transition: all 0.5s;
         z-index: 999;
     }
-    .SBSE_tooltip.SBSE_hide { display: none; }
+    .SBSE-tooltip--show{ display: block; }
 
     /* Tooltip */
     [tooltip]::before, [tooltip]::after {
@@ -368,6 +440,13 @@ const has = Object.prototype.hasOwnProperty;
 const unique = a => [...new Set(a)];
 const isArray = value => Array.isArray(value);
 const isObject = value => Object(value) === value;
+const request = options => new Promise((resolve, reject) => {
+    options.onerror = reject;
+    options.ontimeout = reject;
+    options.onload = resolve;
+
+    GM_xmlhttpRequest(options);
+});
 
 const config = {
     data: JSON.parse(GM_getValue('SBSE_config', '{}')),
@@ -386,6 +465,11 @@ const config = {
         if (!has.call(this.data, 'titleComesLast')) this.data.titleComesLast = false;
         if (!has.call(this.data, 'activateAllKeys')) this.data.activateAllKeys = false;
         if (!has.call(this.data, 'enableTooltips')) this.data.enableTooltips = this.get('language') !== 'english';
+        if (!has.call(this.data, 'enableASFIPC')) this.data.enableASFIPC = false;
+        if (!has.call(this.data, 'ASFIPCProtocol')) this.data.ASFIPCProtocol = 'http';
+        if (!has.call(this.data, 'ASFIPCServer')) this.data.ASFIPCServer = '127.0.0.1';
+        if (!has.call(this.data, 'ASFIPCPort')) this.data.ASFIPCPort = 1242;
+        if (!has.call(this.data, 'ASFIPCPassword')) this.data.ASFIPCPassword = '';
     }
 };
 const i18n = {
@@ -428,6 +512,11 @@ const i18n = {
             settingsTitleComesLast: '遊戲名置後',
             settingsActivateAllKeys: '不跳過、啟動所有序號',
             settingsEnableTooltips: 'SteamCN 論壇提示框',
+            settingsEnableASFIPC: '啟用ASF IPC',
+            settingsASFIPCProtocol: 'ASF IPC 傳輸協定',
+            settingsASFIPCServer: 'ASF IPC IP位址',
+            settingsASFIPCPort: 'ASF IPC 連接埠',
+            settingsASFIPCPassword: 'ASF IPC 密碼',
             HBAlreadyOwned: '遊戲已擁有',
             HBRedeemAlreadyOwned: '確定刮開 %title% Steam 序號？',
             steamStore: 'Steam 商店',
@@ -455,6 +544,8 @@ const i18n = {
             buttonCopy: '複製',
             buttonReset: '清空',
             buttonExport: '匯出',
+            buttonCommands: '指令',
+            buttonLog: '日誌',
             checkboxIncludeGameTitle: '遊戲名',
             checkboxJoinKeys: '合併',
             checkboxSkipUsed: '跳過已使用',
@@ -525,6 +616,11 @@ const i18n = {
             settingsTitleComesLast: '游戏名置后',
             settingsActivateAllKeys: '不跳过、激活所有激活码',
             settingsEnableTooltips: 'SteamCN 论坛提示窗',
+            settingsEnableASFIPC: '启用ASF IPC',
+            settingsASFIPCProtocol: 'ASF IPC 传输协议',
+            settingsASFIPCServer: 'ASF IPC IP地址',
+            settingsASFIPCPort: 'ASF IPC 端口',
+            settingsASFIPCPassword: 'ASF IPC 密码',
             HBAlreadyOwned: '游戏已拥有',
             HBRedeemAlreadyOwned: '确定刮开 %title% Steam 激活码？',
             steamStore: 'Steam 商店',
@@ -552,6 +648,8 @@ const i18n = {
             buttonCopy: '复制',
             buttonReset: '清空',
             buttonExport: '导出',
+            buttonCommands: '指令',
+            buttonLog: '日志',
             checkboxIncludeGameTitle: '游戏名',
             checkboxJoinKeys: '合并',
             checkboxSkipUsed: '跳过已使用',
@@ -622,6 +720,11 @@ const i18n = {
             settingsTitleComesLast: 'Title Comes Last',
             settingsActivateAllKeys: 'No skip & activate all keys',
             settingsEnableTooltips: 'Tooltips from SteamCN',
+            settingsEnableASFIPC: 'Enable ASF IPC',
+            settingsASFIPCProtocol: 'ASF IPC Protocol',
+            settingsASFIPCServer: 'ASF IPC IP Address',
+            settingsASFIPCPort: 'ASF IPC Port',
+            settingsASFIPCPassword: 'ASF IPC Password',
             HBAlreadyOwned: 'Game Already Owned',
             HBRedeemAlreadyOwned: 'Are you sure to redeem %title% Steam Key?',
             steamStore: 'Steam Store',
@@ -649,6 +752,8 @@ const i18n = {
             buttonCopy: 'Copy',
             buttonReset: 'Reset',
             buttonExport: 'Export',
+            buttonCommands: 'Commands',
+            buttonLog: 'Log',
             checkboxIncludeGameTitle: 'Game Title',
             checkboxJoinKeys: 'Join',
             checkboxSkipUsed: 'Skip Used',
@@ -1619,7 +1724,7 @@ const xe = {
         });
     },
     update(targetCurrency = 'USD') {
-        $('.SBSE_price').each((i, ele) => {
+        $('.SBSE-price').each((i, ele) => {
             const originalCurrency = ele.dataset.currency;
             const originalValue = parseInt(ele.dataset.value, 10);
             const originalRate = this.exchangeRate.rates[originalCurrency];
@@ -1642,6 +1747,34 @@ const xe = {
 const steam = {
     library: JSON.parse(GM_getValue('SBSE_steam_library', '{}')),
     games: JSON.parse(GM_getValue('SBSE_steam_games', '{}')),
+    getSessionID: (() => {
+        var _ref = _asyncToGenerator(function* () {
+            const res = yield request({
+                method: 'GET',
+                url: 'https://store.steampowered.com/'
+            });
+
+            if (res.status === 200) {
+                const accountID = res.response.match(/g_AccountID = (\d+)/).pop();
+                const sessionID = res.response.match(/g_sessionID = "(\w+)"/).pop();
+
+                if (accountID > 0) config.set('sessionID', sessionID);else {
+                    swal({
+                        title: i18n.get('notLoggedInTitle'),
+                        text: i18n.get('notLoggedInMsg'),
+                        type: 'error',
+                        showCancelButton: true
+                    }).then(function (result) {
+                        if (result.value === true) window.open('https://store.steampowered.com/');
+                    });
+                }
+            }
+        });
+
+        return function getSessionID() {
+            return _ref.apply(this, arguments);
+        };
+    })(),
     sync(a = []) {
         if (!isArray(a) || a.length === 0) {
             a.push({ key: 'library', sync: true, save: true }, { key: 'games', sync: true, save: true });
@@ -1800,244 +1933,6 @@ const steam = {
         GM_deleteValue('SBSE_steam');
     }
 };
-
-// functions
-const getSessionID = () => {
-    GM_xmlhttpRequest({
-        method: 'GET',
-        url: 'https://store.steampowered.com/',
-        onload(res) {
-            if (res.status === 200) {
-                const accountID = res.response.match(/g_AccountID = (\d+)/).pop();
-                const sessionID = res.response.match(/g_sessionID = "(\w+)"/).pop();
-
-                if (accountID > 0) config.set('sessionID', sessionID);else {
-                    swal({
-                        title: i18n.get('notLoggedInTitle'),
-                        text: i18n.get('notLoggedInMsg'),
-                        type: 'error',
-                        showCancelButton: true
-                    }).then(result => {
-                        if (result.value === true) window.open('https://store.steampowered.com/');
-                    });
-                }
-            }
-        }
-    });
-};
-const steamCNTooltip = {
-    timeoutID: 0,
-    load(data) {
-        if (config.get('enableTooltips')) {
-            const $container = $('<div/>');
-
-            (Array.isArray(data) ? data : [data]).forEach(d => {
-                ['app', 'sub'].forEach(type => {
-                    if (has.call(d, type)) {
-                        const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${d[type]}#steam_info_${type}_${d[type]}_1`;
-
-                        $container.append($(`<iframe id="tooltip_${type + d[type]}" class="SBSE_tooltip SBSE_hide" data-url="${url}"></iframe>`).mouseenter(() => {
-                            clearTimeout(this.timeoutID);
-                        }).mouseout(this.hide));
-                    }
-                });
-            });
-
-            $('body').append($container);
-        }
-    },
-    show(e) {
-        const $target = $(e.currentTarget);
-        const json = $target.closest('.SBSE_processed').attr('data-gameinfo');
-
-        if (json.length > 0 && config.get('enableTooltips')) {
-            const data = JSON.parse(json);
-            const opened = !!$('.SBSE_tooltip:not(.SBSE_hide)').length;
-
-            ['app', 'sub'].forEach(type => {
-                const $tooltip = $(`#tooltip_${type + data[type]}`);
-
-                if ($tooltip.length > 0 && !opened) {
-                    // load tooltip
-                    if (!$tooltip.attr('src')) $tooltip.attr('src', $tooltip.attr('data-url'));
-
-                    $tooltip.css({
-                        top: e.clientY,
-                        left: e.clientX + 10
-                    }).removeClass('SBSE_hide');
-                    this.reposition($tooltip, $tooltip.height());
-                    $tooltip[0].contentWindow.postMessage('show', '*'); // get height
-
-                    $target.one('mouseout', () => {
-                        this.timeoutID = setTimeout(this.hide.bind(steamCNTooltip), 500);
-                    });
-                }
-            });
-        }
-    },
-    hide() {
-        const $tooltip = $('.SBSE_tooltip:not(.SBSE_hide)');
-
-        $tooltip.addClass('SBSE_hide');
-        $tooltip[0].contentWindow.postMessage('hide', '*');
-    },
-    reposition($tooltip, height) {
-        const $window = $(window);
-        const $document = $(document);
-        const offsetTop = $tooltip.offset().top - $document.scrollTop();
-        const offsetLeft = $tooltip.offset().left - $document.scrollLeft();
-        const overflowX = offsetLeft + $tooltip.width() - ($window.width() - 20);
-        const overflowY = offsetTop + height - ($window.height() - 20);
-
-        if (overflowY > 0) $tooltip.css('top', offsetTop - overflowY);
-        if (overflowX > 0) $tooltip.css('left', offsetLeft - overflowX);
-    },
-    listen() {
-        window.addEventListener('message', e => {
-            if (e.origin === 'https://steamdb.steamcn.com' && e.data.height && e.data.src) {
-                const $tooltip = $(`.SBSE_tooltip[src="${e.data.src}"]`);
-
-                $tooltip.height(e.data.height);
-                this.reposition($tooltip, e.data.height);
-            }
-        });
-    }
-};
-const settings = {
-    construct() {
-        const panelHTML = `
-            <div class="SBSE_settings">
-                <table>
-                    <tr>
-                        <td class="name">${i18n.get('settingsAutoUpdateSessionID')}</td>
-                        <td class="value">
-                            <label class="SBSE_switch">
-                                <input type="checkbox" class="autoUpdateSessionID">
-                                <span class="SBSE_slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="name">${i18n.get('settingsSessionID')}</td>
-                        <td class="value">
-                            <input type="text" class="sessionID" value="${config.get('sessionID')}">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="name">${i18n.get('settingsSyncLibrary')}</td>
-                        <td class="value">
-                            <button class="syncLibrary">${i18n.get('settingsSyncLibraryButton')}</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="name">${i18n.get('settingsLanguage')}</td>
-                        <td class="value">
-                            <select class="language"></select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="name">${i18n.get('settingsASFFormat')}</td>
-                        <td class="value">
-                            <label class="SBSE_switch">
-                                <input type="checkbox" class="ASFFormat">
-                                <span class="SBSE_slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="name">${i18n.get('settingsTitleComesLast')}</td>
-                        <td class="value">
-                            <label class="SBSE_switch">
-                                <input type="checkbox" class="titleComesLast">
-                                <span class="SBSE_slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="name">${i18n.get('settingsActivateAllKeys')}</td>
-                        <td class="value">
-                            <label class="SBSE_switch">
-                                <input type="checkbox" class="activateAllKeys">
-                                <span class="SBSE_slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="name">${i18n.get('settingsEnableTooltips')}</td>
-                        <td class="value">
-                            <label class="SBSE_switch">
-                                <input type="checkbox" class="enableTooltips">
-                                <span class="SBSE_slider"></span>
-                            </label>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-        `;
-
-        return panelHTML;
-    },
-    display() {
-        swal({
-            title: i18n.get('settingsTitle'),
-            html: this.construct()
-        });
-
-        // apply settings
-        const $panel = $(swal.getContent());
-        const $sessionID = $panel.find('.sessionID');
-        const $language = $panel.find('.language');
-
-        // toggles
-        $panel.find('input[type=checkbox]').each((index, input) => {
-            const $input = $(input);
-
-            $input.prop('checked', config.get(input.className));
-            $input.change(e => {
-                swal.showLoading();
-
-                const setting = e.delegateTarget.className;
-                const state = e.delegateTarget.checked;
-
-                config.set(setting, state);
-
-                if (setting === 'autoUpdateSessionID') $sessionID.attr('disabled', state);
-
-                setTimeout(swal.hideLoading, 500);
-            });
-        });
-
-        // sessionID input
-        $sessionID.prop('disabled', config.get('autoUpdateSessionID'));
-        $sessionID.change(() => {
-            swal.showLoading();
-
-            config.set('sessionID', $sessionID.val().trim());
-
-            setTimeout(swal.hideLoading, 500);
-        });
-
-        // sync library
-        $panel.find('.syncLibrary').click(() => {
-            steam.sync([{ key: 'library', notify: true }]);
-        });
-
-        // language
-        Object.keys(i18n.data).forEach(language => {
-            $language.append(new Option(i18n.data[language].name, language));
-        });
-        $panel.find(`option[value=${config.get('language')}]`).prop('selected', true);
-        $language.change(() => {
-            swal.showLoading();
-
-            const newLanguage = $language.val();
-            config.set('language', newLanguage);
-            i18n.set();
-
-            setTimeout(swal.hideLoading, 500);
-        });
-    }
-};
 const activator = {
     activated: JSON.parse(GM_getValue('SBSE_activated', '[]')),
     isActivated(key) {
@@ -2060,7 +1955,7 @@ const activator = {
     results: [],
     resultDetails(result) {
         // result from Steam
-        if (result.sbse !== true) {
+        if (result.SBSE !== true) {
             // get status
             let status = i18n.get('failStatus');
             let statusMsg = i18n.get('failDetailUnexpected');
@@ -2115,7 +2010,7 @@ const activator = {
         this.results.length = 0;
 
         const updateResults = () => {
-            $('.SBSE_container > textarea').val(this.results.concat(keys).join(eol));
+            $('.SBSE-container__content__model[data-feature="SBSE"] > textarea').val(this.results.concat(keys).join(eol));
         };
         const activateHandler = () => {
             const key = keys.shift();
@@ -2123,7 +2018,7 @@ const activator = {
             if (key) {
                 if (this.isActivated(key)) {
                     this.results.push(this.resultDetails({
-                        sbse: true,
+                        SBSE: true,
                         key,
                         status: `${i18n.get('skippedStatus')}/${i18n.get('activatedDetail')}`,
                         descripton: i18n.get('noItemDetails')
@@ -2141,7 +2036,7 @@ const activator = {
                     });
 
                     this.results.push(this.resultDetails({
-                        sbse: true,
+                        SBSE: true,
                         key,
                         status: `${i18n.get('skippedStatus')}/${i18n.get('failDetailAlreadyOwned')}`,
                         descripton: description.join()
@@ -2184,7 +2079,7 @@ const activator = {
                             } else {
                                 const errorMsg = [];
 
-                                errorMsg.push('<pre class="SBSE_errorMsg">');
+                                errorMsg.push('<pre class="SBSE-errorMsg">');
                                 errorMsg.push(`sessionID: ${config.get('sessionID') + eol}`);
                                 errorMsg.push(`autoUpdate: ${config.get('autoUpdateSessionID') + eol}`);
                                 errorMsg.push(`status: ${res.status + eol}`);
@@ -2196,7 +2091,7 @@ const activator = {
                                     html: i18n.get('failDetailRequestFailedNeedUpdate') + eol + errorMsg.join(''),
                                     type: 'error'
                                 });
-                                getSessionID();
+                                steam.getSessionID();
                                 if (typeof callback === 'function') callback();
                             }
                         }
@@ -2208,107 +2103,250 @@ const activator = {
         activateHandler();
     }
 };
-const getContainer = handlers => {
-    const $container = $(`
-        <div class="SBSE_container">
-            <textarea></textarea>
-            <div>
-                <button class="SBSE_BtnReveal">${i18n.get('buttonReveal')}</button>
-                <button class="SBSE_BtnRetrieve">${i18n.get('buttonRetrieve')}</button>
-                <button class="SBSE_BtnActivate">${i18n.get('buttonActivate')}</button>
-                <button class="SBSE_BtnCopy">${i18n.get('buttonCopy')}</button>
-                <button class="SBSE_BtnReset">${i18n.get('buttonReset')}</button>
-                <div class="SBSE_ExportMenu SBSE_dropdown">
-                    <button class="SBSE_BtnExport">${i18n.get('buttonExport')}</button>
-                    <ul class="SBSE_ExportList SBSE_dropdown_list">
-                        <li><a data-fileType="txt">.txt</a></li>
-                        <li><a data-fileType="csv">.csv</a></li>
-                        <li><a data-fileType="keys">.keys</a></li>
-                    </ul>
-                </div>
-                <label><input type="checkbox" class="SBSE_ChkTitle">${i18n.get('checkboxIncludeGameTitle')}</label>
-                <label><input type="checkbox" class="SBSE_ChkJoin">${i18n.get('checkboxJoinKeys')}</label>
-                <select class="SBSE_SelFilter">
-                    <option value="All" selected>${i18n.get('selectFilterAll')}</option>
-                    <option value="Owned">${i18n.get('selectFilterOwned')}</option>
-                    <option value="NotOwned">${i18n.get('selectFilterNotOwned')}</option>
-                </select>
-                <button id="SBSE_BtnSettings"> </button>
-            </div>
-        </div>
-    `);
 
-    if (typeof handlers.reveal !== 'function') handlers.reveal = () => {};
-    if (typeof handlers.retrieve !== 'function') {
-        handlers.retrieve = () => {
-            const data = handlers.extract();
+// models
+const settings = {
+    model: null,
+    getModel() {
+        return this.model instanceof $ ? this.model : $();
+    },
+    display() {
+        swal({
+            title: i18n.get('settingsTitle'),
+            onBeforeOpen: dom => {
+                $(dom).find('.swal2-content').append(settings.getModel());
+            }
+        });
+    },
+    init() {
+        const settingDetails = [{
+            name: i18n.get('settingsAutoUpdateSessionID'),
+            configItem: 'autoUpdateSessionID',
+            type: 'switch'
+        }, {
+            name: i18n.get('settingsSessionID'),
+            configItem: 'sessionID',
+            type: 'text'
+        }, {
+            name: i18n.get('settingsSyncLibrary'),
+            configItem: 'syncLibrary',
+            type: 'button',
+            textContent: i18n.get('settingsSyncLibraryButton')
+        }, {
+            name: i18n.get('settingsLanguage'),
+            configItem: 'language',
+            type: 'select'
+        }, {
+            name: i18n.get('settingsASFFormat'),
+            configItem: 'ASFFormat',
+            type: 'switch'
+        }, {
+            name: i18n.get('settingsTitleComesLast'),
+            configItem: 'titleComesLast',
+            type: 'switch'
+        }, {
+            name: i18n.get('settingsActivateAllKeys'),
+            configItem: 'activateAllKeys',
+            type: 'switch'
+        }, {
+            name: i18n.get('settingsEnableTooltips'),
+            configItem: 'enableTooltips',
+            type: 'switch'
+        }, {
+            name: i18n.get('settingsEnableASFIPC'),
+            configItem: 'enableASFIPC',
+            type: 'switch'
+        }, {
+            name: i18n.get('settingsASFIPCProtocol'),
+            configItem: 'ASFIPCProtocol',
+            type: 'select',
+            options: ['http', 'https']
+        }, {
+            name: i18n.get('settingsASFIPCServer'),
+            configItem: 'ASFIPCServer',
+            type: 'text'
+        }, {
+            name: i18n.get('settingsASFIPCPort'),
+            configItem: 'ASFIPCPort',
+            type: 'text'
+        }, {
+            name: i18n.get('settingsASFIPCPassword'),
+            configItem: 'ASFIPCPassword',
+            type: 'text'
+        }];
+        const $model = $('<div class="SBSE-container__content__model" data-feature="setting"><table></table></div>');
+
+        // append settings
+        settingDetails.forEach(detail => {
+            const $tr = $(`<tr><td class="name">${detail.name}</td><td class="value"></td></tr>`).appendTo($model.find('table'));
+
+            switch (detail.type) {
+                case 'switch':
+                    $tr.find('.value').append(`
+                        <label class="SBSE-switch">
+                            <input type="checkbox" data-config="${detail.configItem}">
+                            <span class="SBSE-switch__slider"></span>
+                        </label>
+                    `);
+                    break;
+                case 'text':
+                    $tr.find('.value').append(`<input type="text" data-config="${detail.configItem}" value="${config.get(detail.configItem)}">`);
+                    break;
+                case 'button':
+                    $tr.find('.value').append(`<button data-config="${detail.configItem}">${detail.textContent}</button>`);
+                    break;
+                case 'select':
+                    $tr.find('.value').append(`<select data-config="${detail.configItem}"></select>`);
+                    if (detail.options) $tr.find('select').append(`${detail.options.map(x => `<option value="${x}">${x}</option>`)}`);
+                    break;
+                default:
+            }
+        });
+
+        // apply settings
+        const $sessionID = $model.find('[data-config="sessionID"]');
+        const $language = $model.find('[data-config="language"]');
+        const $ASFIPC = $model.find('[data-config^="ASFIPC"]');
+
+        // toggles
+        $model.find('.SBSE-switch input[type="checkbox"]').each((i, input) => {
+            const $input = $(input);
+
+            $input.prop('checked', config.get(input.dataset.config));
+            $input.on('change', e => {
+                swal.showLoading();
+
+                const configItem = e.delegateTarget.dataset.config;
+                const state = e.delegateTarget.checked;
+
+                config.set(configItem, state);
+
+                if (configItem === 'autoUpdateSessionID') $sessionID.prop('disabled', state);
+                if (configItem === 'enableASFIPC') $ASFIPC.prop('disabled', !state);
+
+                setTimeout(swal.hideLoading, 500);
+            });
+        });
+
+        // toggle - disable related fields
+        // sessionID
+        $sessionID.prop('disabled', config.get('autoUpdateSessionID'));
+        $ASFIPC.prop('disabled', !config.get('enableASFIPC'));
+
+        // input text
+        $model.find('input[type="text"]').on('input', e => {
+            swal.showLoading();
+
+            const configItem = e.delegateTarget.dataset.config;
+            const value = e.delegateTarget.value.trim();
+
+            config.set(configItem, value);
+
+            setTimeout(swal.hideLoading, 500);
+        });
+
+        // select
+        $model.find('select').on('change', e => {
+            swal.showLoading();
+
+            const configItem = e.delegateTarget.dataset.config;
+            const value = e.delegateTarget.value;
+
+            config.set(configItem, value);
+            if (configItem === 'language') i18n.set();
+
+            setTimeout(swal.hideLoading, 500);
+        });
+
+        // select - language options
+        Object.keys(i18n.data).forEach(lang => {
+            $language.append(new Option(i18n.data[lang].name, lang));
+        });
+
+        // select - language
+        $language.val(config.get('language'));
+        // select - ASF IPC protocol
+        $ASFIPC.filter('select').val(config.get('ASFIPCProtocol'));
+
+        // button - sync library
+        $model.find('[data-config="syncLibrary"]').on('click', () => {
+            steam.sync([{ key: 'library', notify: true }]);
+        });
+
+        this.model = $model;
+    }
+};
+const SBSE = {
+    model: null,
+    handlers: {
+        extract() {
+            return { items: [] };
+        },
+        retrieve() {
+            const $model = SBSE.getModel();
+            const data = this.extract();
             const keys = [];
-            const includeTitle = !!$('.SBSE_ChkTitle:checked').length;
-            const joinKeys = !!$('.SBSE_ChkJoin:checked').length;
-            const selected = $('.SBSE_SelFilter').val() || 'All';
-            const skipUsed = !!$('.SBSE_ChkSkipUsed:checked').length;
-            const skipMarketListing = !$('.SBSE_ChkMarketListings:checked').length;
+            const includeTitle = $model.find('.SBSE-checkbox-title').prop('checked');
+            const joinKeys = $model.find('.SBSE-checkbox-join').prop('checked');
+            const selected = $model.find('.SBSE-select-filter').val() || 'All';
+            const skipUsed = $model.find('.SBSE-checkbox-skipUsed').prop('checked');
+            const skipMarketListing = !$model.find('.SBSE-checkbox-marketListings').prop('checked');
             const separator = joinKeys ? ',' : eol;
             const prefix = joinKeys && config.get('ASFFormat') ? '!redeem ' : '';
 
             for (let i = 0; i < data.items.length; i += 1) {
                 const item = data.items[i];
+                let skip = false;
 
-                if (selected === 'Owned' && !item.owned) continue;
-                if (selected === 'NotOwned' && item.owned) continue;
-                if (skipUsed && item.used) continue;
-                if (skipMarketListing && item.marketListing) continue;
+                if (selected === 'Owned' && !item.owned) skip = true;
+                if (selected === 'NotOwned' && item.owned) skip = true;
+                if (skipUsed && item.used) skip = true;
+                if (skipMarketListing && item.marketListing) skip = true;
 
-                const temp = [item.key];
+                if (!skip) {
+                    const temp = [item.key];
 
-                if (config.get('ASFFormat')) {
-                    if (!joinKeys) temp.unshift(item.title);
+                    if (config.get('ASFFormat')) {
+                        if (!joinKeys) temp.unshift(item.title);
 
-                    keys.push(temp.join(tab));
-                } else {
-                    if (includeTitle) temp.unshift(item.title);
-                    if (config.get('titleComesLast')) temp.reverse();
+                        keys.push(temp.join(tab));
+                    } else {
+                        if (includeTitle) temp.unshift(item.title);
+                        if (config.get('titleComesLast')) temp.reverse();
 
-                    keys.push(temp.join(', '));
+                        keys.push(temp.join(', '));
+                    }
                 }
             }
 
-            $('.SBSE_container > textarea').val(prefix + keys.join(separator));
-        };
-    }
-    if (typeof handlers.activate !== 'function') {
-        handlers.activate = e => {
-            const $textarea = $container.find('textarea');
+            $model.find('textarea').val(prefix + keys.join(separator));
+        },
+        activate(e) {
+            const $textarea = SBSE.getModel().find('textarea');
             const keys = unique($textarea.val().match(regKey));
 
             if (keys.length > 0) {
                 const $activateBtn = $(e.currentTarget);
 
-                $activateBtn.prop('disabled', true).addClass('working');
-                $textarea.attr('disabled', '');
+                $activateBtn.prop('disabled', true).addClass('SBSE-button--working');
+                $textarea.prop('disabled', true);
 
                 $textarea.val(keys.join(eol));
                 activator.activate(keys, () => {
-                    $activateBtn.prop('disabled', false).removeClass('working');
-                    $textarea.removeAttr('disabled');
+                    $activateBtn.prop('disabled', false).removeClass('SBSE-button--working');
+                    $textarea.prop('disabled', false);
                 });
             } else $textarea.val(i18n.get('emptyInput'));
-        };
-    }
-    if (typeof handlers.copy !== 'function') {
-        handlers.copy = () => {
-            $('.SBSE_container > textarea').select();
+        },
+        copy() {
+            SBSE.getModel().find('textarea').select();
             document.execCommand('copy');
-        };
-    }
-    if (typeof handlers.reset !== 'function') {
-        handlers.reset = () => {
-            $('.SBSE_container > textarea').val('');
-        };
-    }
-    if (typeof handlers.export !== 'function') {
-        handlers.export = e => {
-            const data = handlers.extract();
+        },
+        reset() {
+            SBSE.getModel().find('textarea').val('');
+        },
+        export(e) {
+            const data = this.extract();
 
             if (data.items.length > 0) {
                 const exportBtn = e.target;
@@ -2335,46 +2373,492 @@ const getContainer = handlers => {
                 exportBtn.href = `data:text/${fileType};charset=utf-8,\ufeff${encodeURIComponent(formattedData)}`;
                 exportBtn.download = `${filename}.${fileType}`;
             }
-        };
+        }
+    },
+    setHandlers(handlers) {
+        this.handlers = Object.assign(this.handlers, handlers);
+    },
+    getModel() {
+        return this.model instanceof $ ? this.model : $();
+    },
+    init() {
+        // construct SBSE model
+        const $model = $('<div class="SBSE-container__content__model" data-feature="SBSE"></div>');
+
+        $model.append(`
+            <textarea></textarea>
+            <div>
+                <button class="SBSE-button SBSE-button-reveal">${i18n.get('buttonReveal')}</button>
+                <button class="SBSE-button SBSE-button-retrieve">${i18n.get('buttonRetrieve')}</button>
+                <button class="SBSE-button SBSE-button-activate">${i18n.get('buttonActivate')}</button>
+                <button class="SBSE-button SBSE-button-copy">${i18n.get('buttonCopy')}</button>
+                <button class="SBSE-button SBSE-button-reset">${i18n.get('buttonReset')}</button>
+                <div class="SBSE-dropdown SBSE-dropdown-export">
+                    <button class="SBSE-button SBSE-button-export">${i18n.get('buttonExport')}</button>
+                    <ul class="SBSE-dropdown__list SBSE-dropdown__list-export">
+                        <li><a data-fileType="txt">.txt</a></li>
+                        <li><a data-fileType="csv">.csv</a></li>
+                        <li><a data-fileType="keys">.keys</a></li>
+                    </ul>
+                </div>
+                <label><input type="checkbox" class="SBSE-checkbox SBSE-checkbox-title" data-config="SBSE_ChkTitle">${i18n.get('checkboxIncludeGameTitle')}</label>
+                <label><input type="checkbox" class="SBSE-checkbox SBSE-checkbox-join" data-config="SBSE_ChkJoin">${i18n.get('checkboxJoinKeys')}</label>
+                <select class="SBSE-select SBSE-select-filter">
+                    <option value="All" selected>${i18n.get('selectFilterAll')}</option>
+                    <option value="Owned">${i18n.get('selectFilterOwned')}</option>
+                    <option value="NotOwned">${i18n.get('selectFilterNotOwned')}</option>
+                </select>
+                <button class="SBSE-button-setting"> </button>
+            </div>
+        `);
+
+        // bind handlers
+        const handlers = this.handlers;
+
+        $model.find('button').click(e => {
+            e.preventDefault();
+        });
+        $model.find('.SBSE-button-retrieve').on('click.retrieve', e => {
+            handlers.retrieve(e);
+        });
+        $model.find('.SBSE-button-activate').on('click.activate', e => {
+            handlers.activate(e);
+        });
+        $model.find('.SBSE-button-copy').on('click.copy', e => {
+            handlers.copy(e);
+        });
+        $model.find('.SBSE-button-reset').on('click.reset', e => {
+            handlers.reset(e);
+        });
+        $model.find('.SBSE-dropdown__list-export').on('click.export', e => {
+            handlers.export(e);
+        });
+        $model.find('.SBSE-button-setting').on('click.setting', settings.display);
+        $model.find('.SBSE-checkbox').on('change', e => {
+            const key = e.currentTarget.dataset.config;
+
+            if (key.length > 0) config.set(key, e.currentTarget.checked);
+        });
+
+        // apply settings
+        if (config.get('SBSE_ChkTitle')) $model.find('.SBSE-checkbox-title').prop('checked', true);
+        if (config.get('SBSE_ChkJoin')) $model.find('.SBSE-checkbox-join').prop('checked', true);
+
+        this.model = $model;
     }
-    if (typeof handlers.settings !== 'function') {
-        handlers.settings = () => {
-            settings.display();
+};
+const ASF = {
+    model: null,
+    terminal: {},
+    getModel() {
+        return this.model instanceof $ ? this.model : $();
+    },
+    scrollToBottom(key) {
+        const terminal = this.terminal[key];
+
+        if (terminal instanceof $) terminal.scrollTop(terminal[0].scrollHeight);
+    },
+    push(key, line) {
+        this.terminal[key].append(`<span class="SBSE-terminal__message">${line}</span>`);
+        this.scrollToBottom(key);
+    },
+    listenLogs() {
+        const self = this;
+
+        self.push('log', 'Establishing connection to ASF IPC server');
+
+        const domain = `${config.get('ASFIPCServer')}:${config.get('ASFIPCPort')}`;
+        const password = config.get('ASFIPCPassword');
+        const url = `ws://${domain}/Api/NLog${password.length > 0 ? `?password=${password}` : ''}`;
+        const ws = new WebSocket(url);
+
+        ws.addEventListener('open', () => {
+            self.push('log', 'Connection established');
+        });
+        ws.addEventListener('error', () => {
+            self.push('log', 'An error occured while connecting to ASF IPC server');
+        });
+        ws.addEventListener('message', e => {
+            try {
+                const data = JSON.parse(e.data);
+
+                self.push('log', data.Result);
+            } catch (error) {
+                self.push('log', error.stack);
+            }
+        });
+    },
+    initCommands: (() => {
+        var _ref2 = _asyncToGenerator(function* () {
+            const ipc = {
+                protocol: config.get('ASFIPCProtocol'),
+                server: config.get('ASFIPCServer'),
+                port: config.get('ASFIPCPort'),
+                password: config.get('ASFIPCPassword'),
+                commands: {},
+                bots: []
+            };
+            const self = ASF;
+            const requestOptions = function (method, pathname) {
+                const options = { method };
+
+                options.url = `${ipc.protocol}://${ipc.server}:${ipc.port + pathname}`;
+                if (ipc.password.length > 0) options.headers = { Authentication: ipc.password };
+
+                return options;
+            };
+            const sendCommand = (() => {
+                var _ref3 = _asyncToGenerator(function* (command) {
+                    self.push('commands', command);
+
+                    const res = yield request(requestOptions('POST', `/Api/Command/${encodeURIComponent(command)}`));
+
+                    try {
+                        const data = JSON.parse(res.response);
+                        const msg = data.Success === true ? data.Result : data.Message;
+
+                        self.push('commands', msg);
+                    } catch (error) {
+                        self.push('commands', error.stack);
+                    }
+                });
+
+                return function sendCommand(_x) {
+                    return _ref3.apply(this, arguments);
+                };
+            })();
+
+            // append terminal input
+            const $input = $(`
+            <span class="SBSE-terminal__input">
+                <input type="text">
+                <input type="text">
+            </span>
+        `).appendTo(self.terminal.commands).find('input:first-child');
+            const $hint = $input.next('input');
+
+            // bind event
+            // display hint on input
+            $input.on('input', function () {
+                let newHint = '';
+                let saved = $hint.attr('data-saved');
+                const typed = $input.val().replace(/\s+/g, ' ');
+
+                if (typed.length > 0) {
+                    const typedPieces = typed.split(' ');
+
+                    // perform a new search for command
+                    if (!saved || saved.length === 0 || saved.indexOf(typedPieces[0]) === -1) {
+                        saved = Object.keys(ipc.commands).find(function (x) {
+                            return x.indexOf(typedPieces[0]) === 0;
+                        }) || '';
+                    }
+
+                    const command = ipc.commands[saved];
+
+                    // found matching command
+                    if (isArray(command) && command.length > 0) {
+                        const hintPieces = command.slice(0);
+
+                        // skip 1st piece as no need to process the command
+                        for (let i = 1; i < typedPieces.length; i += 1) {
+                            if (typedPieces[i].length > 0) {
+                                let newHintPiece = command[i];
+
+                                // replace command argument if typed something
+                                if (typedPieces[i].length > 0) newHintPiece = typedPieces[i];
+
+                                // match bot name
+                                if (command[i] === '<Bots>' || command[i] === '<TargetBot>') {
+                                    const found = ipc.bots.find(function (x) {
+                                        return x.indexOf(typedPieces[i]) === 0;
+                                    });
+
+                                    if (found) newHintPiece = found;
+                                }
+
+                                // multiple arguments for last typed piece
+                                if (i === typedPieces.length - 1 && newHintPiece.includes(',') && (command[i] === '<Bots>' || command[i] === '<GameIDs>' || command[i] === '<SteamIDs64>' || command[i] === '<AppIDs>' || command[i] === '<RealAppIDs>' || command[i] === '<AppIDsOrGameNames>' || command[i] === '<AppIDs,GameName>' || command[i] === '<Keys>' || command[i] === '<Modes>')) {
+                                    if (newHintPiece.slice(-1) === ',') {
+                                        newHintPiece += command[i];
+                                    } else if (command[i] === '<Bots>') {
+                                        const pieces = newHintPiece.split(',');
+                                        const last = pieces.length - 1;
+                                        const found = ipc.bots.find(function (x) {
+                                            return x.indexOf(pieces[last]) === 0;
+                                        });
+
+                                        if (found) {
+                                            pieces[last] = found;
+                                            newHintPiece = pieces.join(',');
+                                        }
+                                    }
+                                }
+
+                                hintPieces[i] = newHintPiece;
+                            }
+                        }
+
+                        newHint = hintPieces.filter(function (x) {
+                            return x.length > 0;
+                        }).join(' ');
+                    }
+                } else saved = '';
+
+                $hint.attr('data-saved', saved);
+                $hint.val(newHint);
+                $input.val(typed);
+            });
+
+            // detect key board event
+            $input.on('keydown', function (e) {
+                // right arrow key, auto complete hint
+                if (e.keyCode === 39 && $hint.val().length > $input.val().length) {
+                    const bracket = $hint.val().indexOf('<');
+                    const text = bracket > -1 ? $hint.val().slice(0, bracket) : $hint.val();
+
+                    $input.val(text);
+                }
+
+                // enter key, send command
+                if (e.keyCode === 13) {
+                    sendCommand($input.val());
+                    $input.val('');
+                    $hint.val('');
+                }
+            });
+
+            // prevent the hint input getting focus
+            $hint.on('focus', function () {
+                $input.focus();
+            });
+
+            // focus input field when click empty space
+            self.terminal.commands.parent().on('click', function (e) {
+                if ($(e.target).is('.SBSE-terminal-commands')) $input.focus();
+            });
+
+            self.push('commands', 'Fetching commands from ASF wiki');
+
+            // fetch commands
+            const resCommands = yield request({
+                method: 'GET',
+                url: 'https://github.com/JustArchiNET/ArchiSteamFarm/wiki/Commands'
+            });
+
+            if (resCommands.status === 200) {
+                const html = resCommands.response.slice(resCommands.response.indexOf('<div id="wiki-body"'), resCommands.response.indexOf('<div id="wiki-rightbar"'));
+                const $html = $(html);
+                const commands = $html.find('h2:has(#user-content-commands-1) + table tbody tr td:first-child code').get().map(function (ele) {
+                    return ele.innerText.trim();
+                });
+
+                commands.forEach(function (command) {
+                    const pieces = command.split(' ');
+
+                    ipc.commands[pieces[0]] = pieces;
+                });
+
+                self.push('commands', 'Commands successfully fetched');
+            } else self.push('commands', 'Failed to fetch commands from ASF wiki, please refrsh to try again');
+
+            // fetch bots
+            const resBots = yield request(requestOptions('GET', '/api/bot/ASF'));
+
+            if (resBots.status === 200) {
+                try {
+                    const data = JSON.parse(resBots.response);
+
+                    ipc.bots = Object.keys(data.Result);
+                } catch (e) {
+                    throw e;
+                }
+            }
+        });
+
+        return function initCommands() {
+            return _ref2.apply(this, arguments);
         };
+    })(),
+    init() {
+        // construct SBSE model
+        const $model = $('<div class="SBSE-container__content__model" data-feature="ASF"></div>');
+
+        $model.append(`
+            <div class="SBSE-terminal SBSE-terminal-commands"><div></div></div>
+            <div class="SBSE-terminal SBSE-terminal-log SBSE-terminal--show"><div></div></div>
+            <div>
+                <button class="SBSE-button SBSE-button-commands">${i18n.get('buttonCommands')}</button>
+                <button class="SBSE-button SBSE-button-log">${i18n.get('buttonLog')}</button>
+                <button class="SBSE-button-setting"> </button>
+            </div>
+        `);
+
+        $model.find('.SBSE-button-commands').on('click.commands', () => {
+            $model.find('.SBSE-terminal--show').removeClass('SBSE-terminal--show');
+            $model.find('.SBSE-terminal-commands').addClass('SBSE-terminal--show');
+            $model.find('.SBSE-terminal__input input:first-child').focus();
+        });
+        $model.find('.SBSE-button-log').on('click.log', () => {
+            $model.find('.SBSE-terminal--show').removeClass('SBSE-terminal--show');
+            $model.find('.SBSE-terminal-log').addClass('SBSE-terminal--show');
+        });
+        $model.find('.SBSE-button-setting').on('click.setting', settings.display);
+
+        this.model = $model;
+        this.terminal.log = $model.find('.SBSE-terminal-log > div');
+        this.terminal.commands = $model.find('.SBSE-terminal-commands > div');
+
+        if (config.get('enableASFIPC')) {
+            this.listenLogs();
+            this.initCommands();
+        } else {
+            this.push('commands', 'ASF IPC feature not enabled, please go to settings and enable this feature');
+            this.push('log', 'ASF IPC feature not enabled, please go to settings and enable this feature');
+        }
     }
+};
+const container = {
+    self: null,
+    models: {},
+    get(feature, handlers) {
+        this.show(feature);
+        if (isObject(handlers)) {
+            if (feature === 'SBSE') SBSE.setHandlers(handlers);
+            if (feature === 'ASF') ASF.setHandlers(handlers);
+        }
 
-    // bind event
-    $container.find('button').click(e => {
-        e.preventDefault();
-    });
-    $container.find('.SBSE_BtnReveal').click(handlers.reveal);
-    $container.find('.SBSE_BtnRetrieve').click(handlers.retrieve);
-    $container.find('.SBSE_BtnActivate').click(handlers.activate);
-    $container.find('.SBSE_BtnCopy').click(handlers.copy);
-    $container.find('.SBSE_BtnReset').click(handlers.reset);
-    $container.find('.SBSE_ExportList').click(handlers.export);
-    $container.find('#SBSE_BtnSettings').click(handlers.settings);
-    $container.find('input[type="checkbox"]').change(e => {
-        const key = e.currentTarget.className.trim();
+        return this.self;
+    },
+    show(feature) {
+        // nav
+        this.self.find('.SBSE-container__nav__item--show').removeClass('SBSE-container__nav__item--show');
+        this.self.find(`.SBSE-container__nav__item[data-feature="${feature}"]`).addClass('SBSE-container__nav__item--show');
 
-        if (key.length > 0) config.set(key, e.currentTarget.checked);
-    });
+        // content
+        this.self.find('.SBSE-container__content__model--show').removeClass('SBSE-container__content__model--show');
+        this.self.find(`.SBSE-container__content__model[data-feature="${feature}"]`).addClass('SBSE-container__content__model--show');
+    },
+    init() {
+        this.self = $('<div class="SBSE-container"></div>');
 
-    // apply settings
-    if (config.get('SBSE_ChkTitle')) $container.find('.SBSE_ChkTitle').prop('checked', 'checked');
-    if (config.get('SBSE_ChkJoin')) $container.find('.SBSE_ChkJoin').prop('checked', 'checked');
+        const $nav = $('<div class="SBSE-container__nav"></div>').appendTo(this.self);
+        const $content = $('<div class="SBSE-container__content"></div>').appendTo(this.self);
 
-    return $container;
+        // construct nav
+        $nav.append(`
+            <ul>
+                <li class="SBSE-container__nav__item" data-feature="SBSE"><span>Steam Ext</span></li>
+                <li class="SBSE-container__nav__item" data-feature="ASF"><span>ASF IPC</span></li>
+            </ul>
+        `);
+
+        // bind event
+        $nav.find('.SBSE-container__nav__item').on('click', e => {
+            const $target = $(e.delegateTarget);
+
+            if (!$target.hasClass('SBSE-container__nav__item--show')) {
+                container.show($target.attr('data-feature'));
+            }
+        });
+
+        // append models to content block
+        this.models.SBSE = SBSE.getModel();
+        this.models.ASF = ASF.getModel();
+
+        $content.append(Object.values(this.models));
+    }
+};
+
+const steamCNTooltip = {
+    timeoutID: 0,
+    load(data) {
+        if (config.get('enableTooltips')) {
+            const $container = $('<div/>');
+
+            (Array.isArray(data) ? data : [data]).forEach(d => {
+                ['app', 'sub'].forEach(type => {
+                    if (has.call(d, type)) {
+                        const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${d[type]}#steam_info_${type}_${d[type]}_1`;
+
+                        $container.append($(`<iframe id="SBSE-tooltip_${type + d[type]}" class="SBSE-tooltip" data-url="${url}"></iframe>`).mouseenter(() => {
+                            clearTimeout(this.timeoutID);
+                        }).mouseout(this.hide));
+                    }
+                });
+            });
+
+            $('body').append($container);
+        }
+    },
+    show(e) {
+        const $target = $(e.currentTarget);
+        const json = $target.closest('.SBSE-item--processed').attr('data-gameinfo');
+
+        if (json.length > 0 && config.get('enableTooltips')) {
+            const data = JSON.parse(json);
+            const opened = !!$('.SBSE-tooltip--show').length;
+
+            ['app', 'sub'].forEach(type => {
+                const $tooltip = $(`#SBSE-tooltip_${type + data[type]}`);
+
+                if ($tooltip.length > 0 && !opened) {
+                    // load tooltip
+                    if (!$tooltip.attr('src')) $tooltip.attr('src', $tooltip.attr('data-url'));
+
+                    $tooltip.css({
+                        top: e.clientY,
+                        left: e.clientX + 10
+                    }).addClass('SBSE-tooltip--show');
+                    this.reposition($tooltip, $tooltip.height());
+                    $tooltip[0].contentWindow.postMessage('show', '*'); // get height
+
+                    $target.one('mouseout', () => {
+                        this.timeoutID = setTimeout(this.hide.bind(steamCNTooltip), 500);
+                    });
+                }
+            });
+        }
+    },
+    hide() {
+        const $tooltip = $('.SBSE-tooltip--show');
+
+        if ($tooltip.length > 0) {
+            $tooltip.removeClass('SBSE-tooltip--show');
+            $tooltip[0].contentWindow.postMessage('hide', '*');
+        }
+    },
+    reposition($tooltip, height) {
+        const $window = $(window);
+        const $document = $(document);
+        const offsetTop = $tooltip.offset().top - $document.scrollTop();
+        const offsetLeft = $tooltip.offset().left - $document.scrollLeft();
+        const overflowX = offsetLeft + $tooltip.width() - ($window.width() - 20);
+        const overflowY = offsetTop + height - ($window.height() - 20);
+
+        if (overflowY > 0) $tooltip.css('top', offsetTop - overflowY);
+        if (overflowX > 0) $tooltip.css('left', offsetLeft - overflowX);
+    },
+    listen() {
+        window.addEventListener('message', e => {
+            if (e.origin === 'https://steamdb.steamcn.com' && e.data.height && e.data.src) {
+                const $tooltip = $(`.SBSE-tooltip[src="${e.data.src}"]`);
+
+                $tooltip.height(e.data.height);
+                this.reposition($tooltip, e.data.height);
+            }
+        });
+    }
 };
 const siteHandlers = {
     indiegala() {
         // inject css
         GM_addStyle(`
-            .SBSE_container { margin-top: 10px; }
-            .SBSE_container > textarea { border: 1px solid #CC001D; border-radius: 3px; }
-            .SBSE_container > div button { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
-            .swal2-popup .SBSE_slider { margin: 0; }
-            .SBSE_icon { vertical-align: middle; }
+            .SBSE-container { margin-top: 10px; }
+            .SBSE-container__content__model > textarea { border: 1px solid #CC001D; border-radius: 3px; }
+            .SBSE-button { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
+            .swal2-popup .SBSE-switch__slider { margin: 0; }
+            .SBSE-icon { vertical-align: middle; }
         `);
 
         const handlers = {
@@ -2392,7 +2876,7 @@ const siteHandlers = {
                     const key = $ele.find('.keys').val();
 
                     if (key) {
-                        const d = JSON.parse($(ele).closest('.SBSE_processed').attr('data-gameinfo') || '{}');
+                        const d = JSON.parse($(ele).closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
 
                         if (Object.keys(d).length === 0) {
                             const $a = $ele.find('.title_game > a');
@@ -2414,7 +2898,7 @@ const siteHandlers = {
             reveal(e) {
                 const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
                 const $revealBtn = $(e.currentTarget);
-                const selected = $('.SBSE_SelFilter').val() || 'All';
+                const selected = $('.SBSE-select-filter').val() || 'All';
                 const handler = ($games, callback) => {
                     const game = $games.shift();
 
@@ -2422,7 +2906,7 @@ const siteHandlers = {
                         const $game = $(game);
                         const code = $game.attr('id').split('_').pop();
                         const id = $game.attr('onclick').match(/steampowered\.com\/(app|sub)\/(\d+)/)[2];
-                        const d = JSON.parse($game.closest('.SBSE_processed').attr('data-gameinfo') || '{}');
+                        const d = JSON.parse($game.closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
 
                         if (selected === 'All' || selected === 'Owned' && d.owned || selected === 'NotOwned' && !d.owned) {
                             $.ajax({
@@ -2456,11 +2940,11 @@ const siteHandlers = {
                     } else callback();
                 };
 
-                $revealBtn.addClass('working');
+                $revealBtn.addClass('SBSE-button--working');
 
                 handler($(source).find('a[id^=fetchlink_]'), () => {
-                    $revealBtn.removeClass('working');
-                    $('.SBSE_BtnRetrieve').click();
+                    $revealBtn.removeClass('SBSE-button--working');
+                    $('.SBSE-button-retrieve').click();
                 });
             }
         };
@@ -2481,21 +2965,21 @@ const siteHandlers = {
                 d.owned = steam.isOwned(d);
                 d.wished = steam.isWished(d);
 
-                if (d.owned) $ele.addClass('SBSE_owned');
-                if (d.wished) $ele.addClass('SBSE_wished');
+                if (d.owned) $ele.addClass('SBSE-item--owned');
+                if (d.wished) $ele.addClass('SBSE-item--wished');
 
                 // append icon
-                $a.after($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
+                $a.after($('<span class="SBSE-icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
 
                 tooltipsData.push(d);
 
-                $ele.attr('data-gameinfo', JSON.stringify(d)).addClass('SBSE_processed isSteam');
+                $ele.attr('data-gameinfo', JSON.stringify(d)).addClass('SBSE-item--processed SBSE-item--steam');
             });
 
             // load SteamCN tooltip
             steamCNTooltip.load(tooltipsData);
         };
-        const $container = getContainer(handlers);
+        const $container = container.get('SBSE', handlers);
 
         process();
 
@@ -2524,44 +3008,48 @@ const siteHandlers = {
     fanatical() {
         // inject css
         GM_addStyle(`
-            .SBSE_container { margin-top: 10px; }
-            .SBSE_container > textarea { background-color: #434343; color: #eee; }
-            .SBSE_container > div button { width: 80px; }
-            .SBSE_container > div button, .SBSE_container select { border: 1px solid transparent; background-color: #1c1c1c; color: #eee; }
-            .SBSE_container > div button:hover, .SBSE_container select:hover { color: #A8A8A8; }
-            .SBSE_container label { color: #DEDEDE; }
-            .SBSE_container span { margin-right: 0; margin-left: 10px; float: right; }
-            .SBSE_container span { margin-top: 5px; }
+            .SBSE-container { margin-top: 10px; }
+            .SBSE-container__nav { background-color: rgb(28, 28, 28); }
+            .SBSE-container__nav__item--show {
+                border-bottom: 1px solid #ff9800;
+                color: #ff9800;
+            }
+            .SBSE-container__content { margin: 0; }
+            .SBSE-container__content__model > textarea { background-color: #434343; color: #eee; }
+            .SBSE-container__content__model label { color: #DEDEDE; }
+            .SBSE-button, .SBSE-select { border: 1px solid transparent; background-color: #1c1c1c; color: #eee; }
+            .SBSE-button:hover, .SBSE-select:hover { color: #A8A8A8; }
+            .SBSE-button--narrow { width: 80px; }
 
             /* currency converter */
-            .priceExt { positon: relative; }
-            .priceExt ~ .priceExt { display: none; }
-            .portrait { width: 100%; padding: 0 .875rem 0 .875rem; }
-            .portrait > div { padding: 1rem; }
-            .portrait .currencyToggler {
+            .SBSE-priceExt { positon: relative; }
+            .SBSE-priceExt ~ .SBSE-priceExt { display: none; }
+            .SBSE-priceExt--portrait { width: 100%; padding: 0 .875rem 0 .875rem; }
+            .SBSE-priceExt--portrait > div { padding: 1rem; }
+            .SBSE-priceExt--portrait .SBSE-priceExt__currencyToggler {
                 width: 100%; height: 40px;
                 margin-bottom: 10px;
                 font-size: 20px;
                 border-radius: 3px;
             }
-            .landscape { padding: 1rem; }
-            .landscape > div { display: flex; align-items: center; justify-content: space-evenly; }
-            .landscape .currencyToggler {
+            .SBSE-priceExt--landscape { padding: 1rem; }
+            .SBSE-priceExt--landscape > div { display: flex; align-items: center; justify-content: space-evenly; }
+            .SBSE-priceExt--landscape .SBSE-priceExt__currencyToggler {
                 width: 300px; height: 40px;
                 font-size: 20px;
                 border-radius: 3px;
             }
-            .pricingDetail { background-color: transparent; }
-            .pricingDetail th { padding-top: 10px; }
-            .pricingDetail .cheapest { border-bottom: 1px solid #ff9800; font-weight: bold; }
-            .pricingDetail .currency-flag { vertical-align: text-bottom; }
+            .SBSE-priceExt__pricingDetail { background-color: transparent; }
+            .SBSE-priceExt__pricingDetail th { padding-top: 10px; }
+            .SBSE-priceExt__pricingDetail .cheapest { border-bottom: 1px solid #ff9800; font-weight: bold; }
+            .SBSE-priceExt__pricingDetail .currency-flag { vertical-align: text-bottom; }
             .swal2-popup table { background-color: white; }
-            .SBSE_icon { vertical-align: bottom; }
+            .SBSE-icon { vertical-align: bottom; }
         `);
 
         let APIData = null;
         const fetchAPIData = (() => {
-            var _ref = _asyncToGenerator(function* (s, c) {
+            var _ref4 = _asyncToGenerator(function* (s, c) {
                 let slug = s;
                 let callback = c;
                 if (typeof s === 'function') {
@@ -2586,23 +3074,23 @@ const siteHandlers = {
                 if (typeof callback === 'function') callback();
             });
 
-            return function fetchAPIData(_x, _x2) {
-                return _ref.apply(this, arguments);
+            return function fetchAPIData(_x2, _x3) {
+                return _ref4.apply(this, arguments);
             };
         })();
         const productHandler = (() => {
-            var _ref2 = _asyncToGenerator(function* () {
+            var _ref5 = _asyncToGenerator(function* () {
                 if (Object.keys(APIData).length > 0) {
                     const language = config.get('language');
                     const $priceExt = $(`
-                    <div class="priceExt portrait">
+                    <div class="SBSE-priceExt SBSE-priceExt--portrait">
                         <div>
-                            <select class="currencyToggler"></select>
+                            <select class="SBSE-priceExt__currencyToggler"></select>
                         </div>
                     </div>
                 `);
-                    const $currencyToggler = $priceExt.find('.currencyToggler');
-                    const $pricingDetail = $('<table class="pricingDetail"></table>');
+                    const $currencyToggler = $priceExt.find('.SBSE-priceExt__currencyToggler');
+                    const $pricingDetail = $('<table class="SBSE-priceExt__pricingDetail"></table>');
                     const selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'USD');
                     const isStarDeal = !!$('.stardeal-purchase-info').length;
                     let starDeal = {};
@@ -2616,7 +3104,7 @@ const siteHandlers = {
 
                     // change orientation
                     if (isStarDeal || $('.background-bundle, .bundle-header.container-fluid').length > 0) {
-                        $priceExt.toggleClass('portrait landscape container');
+                        $priceExt.toggleClass('SBSE-priceExt--portrait SBSE-priceExt--landscape container');
                     }
 
                     Object.keys(xe.currencies).forEach(function (currency) {
@@ -2643,7 +3131,7 @@ const siteHandlers = {
                             <tr class="tier${index + 1}">
                                 <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
                                 <td>${symbol + (value / 100).toFixed(decimalPlace)}</td>
-                                <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
+                                <td> ≈ <span class="SBSE-price" data-currency="${currency}" data-value="${value}"></span></td>
                             </tr>
                         `);
                         });
@@ -2671,7 +3159,7 @@ const siteHandlers = {
                             <tr class="tier1">
                                 <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
                                 <td>${symbol + (value / 100).toFixed(decimalPlace)}</td>
-                                <td> ≈ <span class="SBSE_price" data-currency="${currency}" data-value="${value}"></span></td>
+                                <td> ≈ <span class="SBSE-price" data-currency="${currency}" data-value="${value}"></span></td>
                             </tr>
                         `).appendTo($currencyToggler.parent());
                         });
@@ -2683,7 +3171,7 @@ const siteHandlers = {
 
                     // highlight the cheapest
                     for (let i = 1; i < 10; i += 1) {
-                        const $prices = $(`.tier${i} .SBSE_price`);
+                        const $prices = $(`.tier${i} .SBSE-price`);
 
                         if ($prices.length === 0) break;
 
@@ -2695,7 +3183,7 @@ const siteHandlers = {
             });
 
             return function productHandler() {
-                return _ref2.apply(this, arguments);
+                return _ref5.apply(this, arguments);
             };
         })();
         const handlers = {
@@ -2712,7 +3200,7 @@ const siteHandlers = {
                     const key = $dl.find('input').val();
 
                     if (key) {
-                        const d = JSON.parse($dl.closest('.SBSE_processed').attr('data-gameinfo') || '{}');
+                        const d = JSON.parse($dl.closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
 
                         if (Object.keys(d).length === 0) {
                             d.title = $dl.find('dd').eq(1).text().trim();
@@ -2729,12 +3217,12 @@ const siteHandlers = {
             },
             reveal(e) {
                 const $revealBtn = $(e.currentTarget);
-                const selected = $('.SBSE_SelFilter').val() || 'All';
+                const selected = $('.SBSE-select-filter').val() || 'All';
                 const handler = ($games, callback) => {
                     const game = $games.shift();
 
                     if (game) {
-                        const d = JSON.parse($(game).closest('.SBSE_processed').attr('data-gameinfo') || '{}');
+                        const d = JSON.parse($(game).closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
 
                         if (selected === 'All' || selected === 'Owned' && d.owned || selected === 'NotOwned' && !d.owned) {
                             game.click();
@@ -2743,11 +3231,11 @@ const siteHandlers = {
                     } else setTimeout(callback, 500);
                 };
 
-                $revealBtn.addClass('working');
+                $revealBtn.addClass('SBSE-button--working');
 
                 handler($('.account-content dl button'), () => {
-                    $revealBtn.removeClass('working');
-                    $('.SBSE_BtnRetrieve').click();
+                    $revealBtn.removeClass('SBSE-button--working');
+                    $('.SBSE-button-retrieve').click();
                 });
             }
         };
@@ -2756,7 +3244,7 @@ const siteHandlers = {
             const slug = title.trim().toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
 
             // empty textarea
-            $('.SBSE_container textarea').val('');
+            SBSE.getModel().find('textarea').val('');
 
             if (slug.length > 0) {
                 fetchAPIData(slug, () => {
@@ -2775,15 +3263,15 @@ const siteHandlers = {
                                 d.wished = steam.isWished(d);
 
                                 // check if owned & wished
-                                if (d.owned) $dl.addClass('SBSE_owned');
-                                if (d.wished) $dl.addClass('SBSE_wished');
+                                if (d.owned) $dl.addClass('SBSE-item--owned');
+                                if (d.wished) $dl.addClass('SBSE-item--wished');
 
                                 // append Steam store link
-                                $gameTitle.find('.game-name').append(`<span> | </span><a class="SBSE_steamStore" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`, $('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
+                                $gameTitle.find('.game-name').append(`<span> | </span><a class="SBSE-link-steam_store" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`, $('<span class="SBSE-icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
 
                                 tooltipsData.push(d);
 
-                                $dl.addClass('SBSE_processed isSteam').attr('data-gameinfo', JSON.stringify(d));
+                                $dl.addClass('SBSE-item--processed SBSE-item--steam').attr('data-gameinfo', JSON.stringify(d));
                             }
                         };
 
@@ -2798,9 +3286,9 @@ const siteHandlers = {
                 });
             }
         };
-        const $container = getContainer(handlers);
+        const $container = container.get('SBSE', handlers);
 
-        $container.find('button').addClass('narrow'); // narrow buttons
+        $container.find('.SBSE-button').addClass('SBSE-button--narrow'); // narrow buttons
         $container.find('a').attr('href', ''); // dodge from master css selector
 
         new MutationObserver(mutations => {
@@ -2833,14 +3321,14 @@ const siteHandlers = {
     humblebundle() {
         // inject css
         GM_addStyle(`
-            .SBSE_container > div { position: relative; }
-            .SBSE_container > textarea {
+            .SBSE-container__content__model > div { position: relative; }
+            .SBSE-container__content__model > textarea {
                 border: 1px solid #CFCFCF;
                 border-radius: 5px;
                 color: #4a4c45;
                 text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
             }
-            .SBSE_container > div button {
+            .SBSE-button {
                 width: 70px;
                 border: 1px solid #C9CCD3;
                 border-radius: 3px;
@@ -2848,34 +3336,34 @@ const siteHandlers = {
                 background: linear-gradient(to top, #cacaca, #e7e7e7);
                 color: #4a4c45 !important;
             }
-            .SBSE_container > div button:hover {
+            .SBSE-button:hover {
                 border: 1px solid #b7bac0;
                 background-color: #fafcff;
                 color: #555961 !important;
             }
-            .SBSE_container > div button.narrow.working { width: 76px; padding-right: 36px; }
-            #SBSE_BtnSettings { position: absolute; right: 0; }
-            .SBSE_owned .sr-unredeemed-steam-button {
+            .SBSE-button--narrow.SBSE-button--working { width: 76px; padding-right: 36px; }
+            .SBSE-button-setting { position: absolute; right: 0; }
+            .SBSE-item--owned .sr-unredeemed-steam-button {
                 background-color: #F3F3F3;
                 background: linear-gradient(to top, #E8E8E8, #F6F6F6);
             }/*
-            .SBSE_owned .heading-text h4 > span:not(.steam-owned):last-child::after {
+            .SBSE-item--owned .heading-text h4 > span:not(.steam-owned):last-child::after {
                 content: '\\f085';
                 font-family: hb-icons;
                 color: #17A1E5;
             }*/
-            .SBSE_activationRestrictions { float: right; margin-right: 5px; cursor: pointer; }
+            .SBSE-span-activationRestrictions { float: right; margin-right: 5px; cursor: pointer; }
             .swal2-icon-text { font-size: inherit; }
             .flag-icon { width: 4em; height: 3em; border-radius: 3px; }
             .flag-icon-unknown { border: 1px solid; text-align: center; line-height: 3em; }
             .key-redeemer h4 { position: relative; }
-            .key-redeemer .SBSE_icon { position: absolute; top: 50%; margin-top: -10px; }
+            .key-redeemer .SBSE-icon { position: absolute; top: 50%; margin-top: -10px; }
         `);
 
         let gamekey;
         const atDownload = location.pathname === '/downloads';
         const fetchKey = (() => {
-            var _ref3 = _asyncToGenerator(function* ($node, machineName, callback) {
+            var _ref6 = _asyncToGenerator(function* ($node, machineName, callback) {
                 if (gamekey) {
                     const res = yield fetch('https://www.humblebundle.com/humbler/redeemkey', {
                         method: 'POST',
@@ -2909,8 +3397,8 @@ const siteHandlers = {
                 } else $node.click();
             });
 
-            return function fetchKey(_x3, _x4, _x5) {
-                return _ref3.apply(this, arguments);
+            return function fetchKey(_x4, _x5, _x6) {
+                return _ref6.apply(this, arguments);
             };
         })();
         const handlers = {
@@ -2927,7 +3415,7 @@ const siteHandlers = {
                     const key = $ele.text().trim();
 
                     if (key) {
-                        const d = JSON.parse($ele.closest('.SBSE_processed').attr('data-gameinfo') || '{}');
+                        const d = JSON.parse($ele.closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
 
                         if (Object.keys(d).length === 0) {
                             const $titleEle = $ele.closest(atDownload ? '.container' : '.redeemer-cell').prev().find('h4');
@@ -2946,14 +3434,14 @@ const siteHandlers = {
             },
             reveal(e) {
                 const $revealBtn = $(e.currentTarget);
-                const selected = $('.SBSE_SelFilter').val() || 'All';
+                const selected = $('.SBSE-select-filter').val() || 'All';
                 const handler = ($games, callback) => {
                     const game = $games.shift();
 
                     if (game) {
                         const $game = $(game);
                         const machineName = $game.closest('.key-redeemer').attr('data-machineName');
-                        const d = JSON.parse($(game).closest('.SBSE_processed').attr('data-gameinfo') || '{}');
+                        const d = JSON.parse($(game).closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
 
                         if (atDownload && machineName) {
                             if (selected === 'All' || selected === 'Owned' && d.owned || selected === 'NotOwned' && !d.owned) {
@@ -2970,16 +3458,16 @@ const siteHandlers = {
                     } else callback();
                 };
 
-                $revealBtn.addClass('working');
+                $revealBtn.addClass('SBSE-button--working');
 
-                handler($('.key-redeemer.isSteam .keyfield:not(.redeemed)'), () => {
-                    $revealBtn.removeClass('working');
-                    $('.SBSE_BtnRetrieve').click();
+                handler($('.key-redeemer.SBSE-item--steam .keyfield:not(.redeemed)'), () => {
+                    $revealBtn.removeClass('SBSE-button--working');
+                    $('.SBSE-button-retrieve').click();
                 });
             }
         };
         const process = (() => {
-            var _ref4 = _asyncToGenerator(function* ($node) {
+            var _ref7 = _asyncToGenerator(function* ($node) {
                 gamekey = new URLSearchParams(location.search).get('key');
                 let json = GM_getValue(gamekey, '');
 
@@ -3001,7 +3489,7 @@ const siteHandlers = {
 
                         if ($keyRedeemer.length > 0) {
                             if (game.key_type === 'steam') {
-                                $keyRedeemer.addClass('isSteam');
+                                $keyRedeemer.addClass('SBSE-item--steam');
 
                                 const d = {
                                     title: game.human_name,
@@ -3012,8 +3500,8 @@ const siteHandlers = {
                                 d.wished = steam.isWished(d);
 
                                 // apply owned effect on game title
-                                if (d.owned) $keyRedeemer.addClass('SBSE_owned');
-                                if (d.wished) $keyRedeemer.addClass('SBSE_wished');
+                                if (d.owned) $keyRedeemer.addClass('SBSE-item--owned');
+                                if (d.wished) $keyRedeemer.addClass('SBSE-item--wished');
 
                                 // store data
                                 $keyRedeemer.attr({
@@ -3023,7 +3511,7 @@ const siteHandlers = {
                                 });
 
                                 // append Steam store link
-                                $keyRedeemer.find('h4 > span').eq(0).after(`<span> | </span><a class="SBSE_steamStore" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`);
+                                $keyRedeemer.find('h4 > span').eq(0).after(`<span> | </span><a class="SBSE-link-steam_store" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`);
 
                                 tooltipsData.push(d);
                             }
@@ -3041,7 +3529,7 @@ const siteHandlers = {
                             if (disallowed.length > 0) html += `<p>${i18n.get('HBDisallowedCountries')}<br>${disallowed.join(separator)}</p>`;
                             if (exclusive.length > 0) html += `<p>${i18n.get('HBExclusiveCountries')}<br>${exclusive.join(separator)}</p>`;
                             if (disallowed.length > 0 || exclusive.length > 0) {
-                                $(`<span class="SBSE_activationRestrictions">${i18n.get('HBActivationRestrictions')}</span>`).click(function () {
+                                $(`<span class="SBSE-span-activationRestrictions">${i18n.get('HBActivationRestrictions')}</span>`).click(function () {
                                     swal({
                                         title: `${game.human_name}<br>${i18n.get('HBActivationRestrictions')}`,
                                         html,
@@ -3050,20 +3538,20 @@ const siteHandlers = {
                                 }).insertBefore($keyRedeemer.find('.heading-text > h4'));
                             }
 
-                            $keyRedeemer.addClass('SBSE_processed');
+                            $keyRedeemer.addClass('SBSE-item--processed');
                         }
                     });
 
                     // override default popups
                     document.addEventListener('click', function (e) {
                         const $target = $(e.target).closest('.keyfield:not(.redeemed)');
-                        const $keyRedeemer = $target.closest('.key-redeemer.isSteam');
+                        const $keyRedeemer = $target.closest('.key-redeemer.SBSE-item--steam');
                         const machineName = $keyRedeemer.attr('data-machineName');
 
                         if ($target.length > 0 && $keyRedeemer.length > 0 && machineName) {
                             e.stopPropagation();
 
-                            if ($keyRedeemer.hasClass('SBSE_owned')) {
+                            if ($keyRedeemer.hasClass('SBSE-item--owned')) {
                                 swal({
                                     title: i18n.get('HBAlreadyOwned'),
                                     text: i18n.get('HBRedeemAlreadyOwned').replace('%title%', $keyRedeemer.attr('data-humanName')),
@@ -3083,15 +3571,15 @@ const siteHandlers = {
                 }
             });
 
-            return function process(_x6) {
-                return _ref4.apply(this, arguments);
+            return function process(_x7) {
+                return _ref7.apply(this, arguments);
             };
         })();
-        const $container = getContainer(handlers);
+        const $container = container.get('SBSE', handlers);
         const $keyManager = $('.js-key-manager-holder');
 
         // narrow buttons
-        $container.find('div > button').addClass('narrow');
+        $container.find('.SBSE-button').addClass('SBSE-button--narrow');
 
         // at home page
         if ($keyManager.length > 0) {
@@ -3112,7 +3600,7 @@ const siteHandlers = {
             const observer = new MutationObserver(mutations => {
                 mutations.forEach(mutation => {
                     Array.from(mutation.addedNodes).forEach((() => {
-                        var _ref5 = _asyncToGenerator(function* (addedNode) {
+                        var _ref8 = _asyncToGenerator(function* (addedNode) {
                             const $node = $(addedNode);
 
                             if ($node.hasClass('key-list') || $node.find('.key-list').length > 0) {
@@ -3123,7 +3611,7 @@ const siteHandlers = {
                                 $node.find('.heading-text > h4').each(function (i, heading) {
                                     heading.parentElement.dataset.title = heading.innerText.trim();
                                     $(heading.firstChild).wrap('<span/>');
-                                    $(heading).append($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
+                                    $(heading).append($('<span class="SBSE-icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
                                 });
 
                                 // fetch & process key data
@@ -3131,8 +3619,8 @@ const siteHandlers = {
                             }
                         });
 
-                        return function (_x7) {
-                            return _ref5.apply(this, arguments);
+                        return function (_x8) {
+                            return _ref8.apply(this, arguments);
                         };
                     })());
                 });
@@ -3169,9 +3657,13 @@ const siteHandlers = {
 
             // inject css
             GM_addStyle(`
-                .SBSE_container { padding: 5px; border: 1px solid #424242; }
-                .SBSE_container > textarea { border: 1px solid #000; }
-                .SBSE_container > div button {
+                .SBSE-container { padding: 5px; border: 1px solid #424242; }
+                .SBSE-container__nav__item--show {
+                    border-bottom: 1px solid #FD5E0F;
+                    color: #FD5E0F;
+                }
+                .SBSE-container__content__model > textarea { border: 1px solid #000; }
+                .SBSE-button {
                     border: none;
                     background-color: #FD5E0F;
                     color: rgb(49, 49, 49);
@@ -3221,12 +3713,11 @@ const siteHandlers = {
                     });
                 }
             };
-            const $container = getContainer(handlers);
+            const $container = container.get('SBSE', handlers);
 
-            $container.find('.SBSE_SelFilter').hide(); // hide filter selector
-            $container.find('.SBSE_BtnExport').remove(); // remove export button
-            $container.find('#SBSE_BtnSettings').before(`
-                <label><input type="checkbox" class="SBSE_ChkMarketListings">${i18n.get('checkboxMarketListings')}</label>
+            $container.find('.SBSE-button-export, .SBSE-select-filter').remove();
+            $container.find('label:has(.SBSE-checkbox-join)').after(`
+                <label><input type="checkbox" class="SBSE-checkbox-marketListings">${i18n.get('checkboxMarketListings')}</label>
             `); // append checkbox for market keys
 
             $('#TableKeys').eq(0).before($container);
@@ -3237,7 +3728,7 @@ const siteHandlers = {
             if ($awaitRatings.length > 0) {
                 $('#TableKeys td:contains(Rate TRADE)').text(i18n.get('DIGRateAllPositive')).css('cursor', 'pointer').click(() => {
                     $awaitRatings.each((() => {
-                        var _ref6 = _asyncToGenerator(function* (i, a) {
+                        var _ref9 = _asyncToGenerator(function* (i, a) {
                             const res = yield fetch(a.href, {
                                 method: 'GET',
                                 credentials: 'same-origin'
@@ -3246,8 +3737,8 @@ const siteHandlers = {
                             if (res.ok) $(a).parent('td').html('<span class="DIG3_14_Orange">Positive</span>');
                         });
 
-                        return function (_x8, _x9) {
-                            return _ref6.apply(this, arguments);
+                        return function (_x9, _x10) {
+                            return _ref9.apply(this, arguments);
                         };
                     })());
                 });
@@ -3256,21 +3747,21 @@ const siteHandlers = {
         } else if (pathname.includes('/account_digstore') || pathname.includes('/account_trades') || pathname.includes('/account_tradesXT') || pathname.includes('/store_update') || pathname.includes('/storeXT_update')) {
             // inject css styles
             GM_addStyle(`
-                .DIGEasyBuy_row { height: 30px; }
+                .DIGEasyBuy-row { height: 30px; }
                 .DIGEasyBuy button { padding: 4px 8px; outline: none; cursor: pointer; }
-                .DIGEasyBuy_checked { background-color: #222; }
-                .DIGEasyBuy_hideOwned tr.SBSE_hide { display: none; }
-                .DIGEasyBuy_hideOwned tr.SBSE_hide + .SBSE_searchResults { display: none; }
-                .SBSE_searchResults td { padding: 0 }
-                .SBSE_searchResults iframe {
+                .DIGEasyBuy-row--checked { background-color: #222; }
+                .DIGEasyBuy--hideOwned tr.DIGEasyBuy-row--hide { display: none; }
+                .DIGEasyBuy--hideOwned tr.DIGEasyBuy-row--hide + .DIGEasyBuy-searchResults { display: none; }
+                .DIGEasyBuy-searchResults td { padding: 0 }
+                .DIGEasyBuy-searchResults iframe {
                     width: 100%; height: 300px;
                     display: none;
                     background-color: white;
                     border: none;
                 }
-                .SBSE_owned a[href*="steam"] .DIG3_14_Gray { color: #9ccc65; }
-                .SBSE_wished a[href*="steam"] .DIG3_14_Gray { color: #29b6f6; }
-                .SBSE_ignored a[href*="steam"] .DIG3_14_Gray { text-decoration: line-through; }
+                .SBSE-item--owned a[href*="steam"] .DIG3_14_Gray { color: #9ccc65; }
+                .SBSE-item--wished a[href*="steam"] .DIG3_14_Gray { color: #29b6f6; }
+                .SBSE-item--ignored a[href*="steam"] .DIG3_14_Gray { text-decoration: line-through; }
                 .DIG2content select { max-width: 200px; }
             `);
 
@@ -3301,9 +3792,9 @@ const siteHandlers = {
                     return parseInt(price, 10);
                 });
                 $row.click(() => {
-                    $row.toggleClass('DIGEasyBuy_checked');
+                    $row.toggleClass('DIGEasyBuy-row--checked');
                 });
-                $row.addClass('DIGEasyBuy_row');
+                $row.addClass('DIGEasyBuy-row');
             };
 
             $('a[href^="account_buy"]').each(easyBuySetup);
@@ -3317,10 +3808,10 @@ const siteHandlers = {
                 const id = parseInt($tr.attr('data-id'), 10);
                 const d = { [data[0]]: steamID };
 
-                if (steam.isOwned(d)) $tr.addClass('SBSE_owned SBSE_hide');
-                if (steam.isWished(d)) $tr.addClass('SBSE_wished');
-                if (steam.isIgnored(d)) $tr.addClass('SBSE_ignored');
-                if (MPHideList.includes(id)) $tr.addClass('SBSE_hide');
+                if (steam.isOwned(d)) $tr.addClass('SBSE-item--owned DIGEasyBuy-row--hide');
+                if (steam.isWished(d)) $tr.addClass('SBSE-item--wished');
+                if (steam.isIgnored(d)) $tr.addClass('SBSE-item--ignored');
+                if (MPHideList.includes(id)) $tr.addClass('DIGEasyBuy-row--hide');
 
                 // append manual hide feature
                 $tr.children().eq(0).attr('title', i18n.get('DIGClickToHideThisRow')).click(e => {
@@ -3330,7 +3821,7 @@ const siteHandlers = {
                         MPHideList.push(id);
                         GM_setValue('SBSE_DIGMPHideList', JSON.stringify(MPHideList));
 
-                        $tr.addClass('SBSE_hide');
+                        $tr.addClass('DIGEasyBuy-row--hide');
                     }
                 });
 
@@ -3370,7 +3861,7 @@ const siteHandlers = {
                             html = html.replace(/\/images\//g, 'https://www.google.com/images/').replace(/\/url\?/g, 'https://www.google.com/url?');
 
                             $tr.after(`
-                                <tr class="SBSE_searchResults">
+                                <tr class="DIGEasyBuy-searchResults">
                                     <td colspan="11"><iframe sandbox="allow-scripts" srcdoc='${html.replace(/[&<>"']/g, m => map[m])}'></frame></td>
                                 </tr>
                             `);
@@ -3383,7 +3874,7 @@ const siteHandlers = {
                     }).click(e => {
                         e.stopPropagation();
 
-                        $tr.next('.SBSE_searchResults').find('iframe').slideToggle('fast');
+                        $tr.next('.DIGEasyBuy-searchResults').find('iframe').slideToggle('fast');
                     });
                 }
             };
@@ -3425,7 +3916,7 @@ const siteHandlers = {
             // bind button event
             $('.DIGButtonPurchase').click(() => {
                 let balance = parseInt($('div:contains(Usable DIG Points) > span').text().split(' ').shift().replace(/\D/g, ''), 10);
-                const $games = $('.DIGEasyBuy_checked:visible');
+                const $games = $('.DIGEasyBuy-row--checked:visible');
 
                 swal({
                     title: i18n.get('DIGButtonPurchasing'),
@@ -3436,7 +3927,7 @@ const siteHandlers = {
                 });
 
                 (() => {
-                    var _ref7 = _asyncToGenerator(function* () {
+                    var _ref10 = _asyncToGenerator(function* () {
                         const game = $games.shift();
 
                         if (game) {
@@ -3492,7 +3983,7 @@ const siteHandlers = {
                     });
 
                     function purchaseHandler() {
-                        return _ref7.apply(this, arguments);
+                        return _ref10.apply(this, arguments);
                     }
 
                     return purchaseHandler;
@@ -3501,9 +3992,9 @@ const siteHandlers = {
             $('.DIGButtonSelectAll').click(e => {
                 const $self = $(e.currentTarget);
                 const state = !$self.data('state');
-                const selector = $('.DIGEasyBuy_hideOwned').length > 0 ? '.DIGEasyBuy_row:not(.SBSE_hide)' : '.DIGEasyBuy_row';
+                const selector = $('.DIGEasyBuy--hideOwned').length > 0 ? '.DIGEasyBuy-row:not(.DIGEasyBuy-row--hide)' : '.DIGEasyBuy-row';
 
-                $(selector).toggleClass('DIGEasyBuy_checked', state);
+                $(selector).toggleClass('DIGEasyBuy-row--checked', state);
                 $self.data('state', state);
                 $self.text(state ? i18n.get('DIGEasyBuySelectCancel') : i18n.get('DIGEasyBuySelectAll'));
             });
@@ -3511,7 +4002,7 @@ const siteHandlers = {
                 const $self = $(e.currentTarget);
                 const state = !$self.data('state');
 
-                $('#TableKeys').toggleClass('DIGEasyBuy_hideOwned', state);
+                $('#TableKeys').toggleClass('DIGEasyBuy--hideOwned', state);
                 $self.data('state', state);
                 $self.text(state ? i18n.get('DIGEasyBuyShowOwned') : i18n.get('DIGEasyBuyHideOwned'));
             });
@@ -3520,7 +4011,7 @@ const siteHandlers = {
                 const $self = $(e.currentTarget);
                 const $tbody = $('#TableKeys > tbody');
                 const load = (() => {
-                    var _ref8 = _asyncToGenerator(function* (page, retry = 0) {
+                    var _ref11 = _asyncToGenerator(function* (page, retry = 0) {
                         $self.text(i18n.get('DIGEasyBuyLoading').replace('%page%', page));
 
                         const res = yield fetch(`${location.origin}/account_tradesXT_${page}.html`, {
@@ -3540,8 +4031,8 @@ const siteHandlers = {
                         } else if (retry < 3) load(page, retry + 1);else load(page + 1);
                     });
 
-                    return function load(_x10) {
-                        return _ref8.apply(this, arguments);
+                    return function load(_x11) {
+                        return _ref11.apply(this, arguments);
                     };
                 })();
 
@@ -3634,26 +4125,26 @@ const siteHandlers = {
     ccyycn() {
         // inject css
         GM_addStyle(`
-            .SBSE_container {
+            .SBSE-container {
                 width: 80%;
                 margin: 0 auto;
                 font-size: 16px;
                 color: #000;
             }
-            .SBSE_container > textarea {
+            .SBSE-container__content__model > textarea {
                 background-color: #EEE;
                 box-shadow: 0 0 1px 1px rgba(204,204,204,0.5);
                 border-radius: 5px;
             }
-            .SBSE_container > div { text-align: left; }
-            .SBSE_container > div button {
+            .SBSE-container__content__model > div { text-align: left; }
+            .SBSE-button {
                 width: 80px;
                 border: 1px solid #2e6da4;
                 border-radius: 5px;
                 background-color: #337ab7;
                 color: #FFF;
             }
-            .SBSE_container label { color: #EEE; }
+            .SBSE-container label { color: #EEE; }
             .expanded .showOrderMeta {
                 display: block !important;
                 position: absolute;
@@ -3695,18 +4186,18 @@ const siteHandlers = {
                     } else callback();
                 };
 
-                $revealBtn.addClass('working');
+                $revealBtn.addClass('SBSE-button--working');
 
                 handler($('.deliver-btn'), () => {
-                    $revealBtn.removeClass('working');
-                    $('.SBSE_BtnRetrieve').click();
+                    $revealBtn.removeClass('SBSE-button--working');
+                    $('.SBSE-button-retrieve').click();
                 });
             }
         };
-        const $container = getContainer(handlers);
+        const $container = container.get('SBSE', handlers);
 
-        $container.find('.SBSE_SelFilter').hide(); // hide filter selector
-        $container.find('button').addClass('narrow'); // narrow buttons
+        $container.find('.SBSE-select-filter').remove(); // hide filter selector
+        $container.find('.SBSE-button').addClass('SBSE-button--narrow'); // narrow buttons
 
         // insert textarea
         $('.featurette-divider').eq(0).after($container);
@@ -3715,14 +4206,14 @@ const siteHandlers = {
         if (location.pathname.startsWith('/profile/')) {
             // inject css
             GM_addStyle(`
-                .SBSE_container > textarea, .SBSE_container > div button {
+                .SBSE-container__content__model > textarea, .SBSE-button {
                     background: transparent;
                     border: 1px solid #8cc53f;
                     border-radius: 3px;
                     color: #8cc53f;
                     transition: all 0.8s ease;
                 }
-                .SBSE_container > div button:hover {
+                .SBSE-button:hover {
                     background-color: #8cc53f;
                     color: white;
                     text-decoration: none;
@@ -3768,7 +4259,7 @@ const siteHandlers = {
                         } else callback();
                     };
 
-                    $revealBtn.addClass('working');
+                    $revealBtn.addClass('SBSE-button--working');
 
                     const $reveals = $('.product:has(img[title*=Steam]) .reveal-product');
                     const timer = $reveals.length > 0 ? 1500 : 0;
@@ -3776,19 +4267,19 @@ const siteHandlers = {
                     $reveals.click();
                     setTimeout(() => {
                         handler($('.btn-reveal-key'), () => {
-                            $revealBtn.removeClass('working');
-                            $('.SBSE_BtnRetrieve').click();
+                            $revealBtn.removeClass('SBSE-button--working');
+                            $('.SBSE-button-retrieve').click();
                         });
                     }, timer);
                 }
             };
-            const $container = getContainer(handlers);
+            const $container = container.get('SBSE', handlers);
 
-            $container.find('.SBSE_SelFilter').hide(); // hide filter selector
+            $container.find('.SBSE-select-filter').hide(); // hide filter selector
 
             // append checkbox for used-key
-            $('#SBSE_BtnSettings').before(`
-                <label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${i18n.get('checkboxSkipUsed')}</label>
+            $('.SBSE-button-setting').before(`
+                <label><input type="checkbox" class="SBSE-checkbox-skipUsed" checked>${i18n.get('checkboxSkipUsed')}</label>
             `);
 
             // insert container
@@ -3796,7 +4287,7 @@ const siteHandlers = {
 
             // load details
             $('img[src*="steam.svg"]').each((() => {
-                var _ref10 = _asyncToGenerator(function* (index, ele) {
+                var _ref13 = _asyncToGenerator(function* (index, ele) {
                     $.ajax({
                         url: $(ele).closest('tr').find('.item-link').attr('href'),
                         data: { v: 1 },
@@ -3804,8 +4295,8 @@ const siteHandlers = {
                     });
                 });
 
-                return function (_x11, _x12) {
-                    return _ref10.apply(this, arguments);
+                return function (_x12, _x13) {
+                    return _ref13.apply(this, arguments);
                 };
             })());
 
@@ -3816,10 +4307,10 @@ const siteHandlers = {
         } else {
             // inject css
             GM_addStyle(`
-                .SBSE_container { margin-bottom: 20px; }
-                .SBSE_container > textarea { background-color: #EEE; border-radius: 3px; }
-                .SBSE_container > div button { outline: none !important; }
-                #SBSE_BtnSettings { margin-top: 8px; }
+                .SBSE-container { margin-bottom: 20px; }
+                .SBSE-container__content__model > textarea { background-color: #EEE; border-radius: 3px; }
+                .SBSE-button { outline: none !important; }
+                .SBSE-button-setting { margin-top: 8px; }
             `);
 
             const handlers = {
@@ -3856,7 +4347,7 @@ const siteHandlers = {
                         } else callback();
                     };
 
-                    $revealBtn.addClass('working');
+                    $revealBtn.addClass('SBSE-button--working');
 
                     const $reveals = $('.product:has(img[title*=Steam]) .reveal-product');
                     const timer = $reveals.length > 0 ? 1500 : 0;
@@ -3864,20 +4355,20 @@ const siteHandlers = {
                     $reveals.click();
                     setTimeout(() => {
                         handler($('.expanded .reveal'), () => {
-                            $revealBtn.removeClass('working');
-                            $('.SBSE_BtnRetrieve').click();
+                            $revealBtn.removeClass('SBSE-button--working');
+                            $('.SBSE-button-retrieve').click();
                         });
                     }, timer);
                 }
             };
-            const $container = getContainer(handlers);
+            const $container = container.get('SBSE', handlers);
 
             // append checkbox for used-key
-            $container.find('#SBSE_BtnSettings').before($(`
-                <label><input type="checkbox" class="SBSE_ChkSkipUsed" checked>${i18n.get('checkboxSkipUsed')}</label>
+            $container.find('.SBSE-button-setting').before($(`
+                <label><input type="checkbox" class="SBSE-checkbox-skipUsed" checked>${i18n.get('checkboxSkipUsed')}</label>
             `));
             // add buttons style via groupees's class
-            $container.find('.SBSE_container > div > button, .SBSE_container > div > a').addClass('btn btn-default');
+            $container.find('.SBSE-button').addClass('btn btn-default');
 
             // insert container
             $('.container > div').eq(1).before($container);
@@ -3912,13 +4403,13 @@ const siteHandlers = {
         if (keys.length > 0) {
             // inject css
             GM_addStyle(`
-                .SBSE_container > textarea { border: 1px solid #AAAAAA; }
-                .SBSE_container > div button {
+                .SBSE-container__content__model > textarea { border: 1px solid #AAAAAA; }
+                .SBSE-button {
                     border: 1px solid #d3d3d3;
                     background: #e6e6e6 url(images/ui-bg_glass_75_e6e6e6_1x400.png) 50% 50% repeat-x;
                     color: #555555;
                 }
-                .SBSE_container > div button:hover {
+                .SBSE-button:hover {
                     border-color: #999999;
                     background: #dadada url(images/ui-bg_glass_75_dadada_1x400.png) 50% 50% repeat-x;
                     color: #212121;
@@ -3941,10 +4432,9 @@ const siteHandlers = {
                     return data;
                 }
             };
-            const $container = getContainer(handlers);
+            const $container = container.get('SBSE', handlers);
 
-            $container.find('.SBSE_SelFilter').hide(); // hide filter selector
-            $container.find('.SBSE_BtnReveal').remove(); // remove reveal
+            $container.find('.SBSE-button-reveal, .SBSE-select-filter').remove();
 
             // insert container
             $('#tabs').eq(0).prepend($container);
@@ -3958,24 +4448,24 @@ const siteHandlers = {
     yuplay() {
         // inject css
         GM_addStyle(`
-            .SBSE_container { margin-top: 20px; }
-            .SBSE_container > textarea { background-color: rgb(230, 230, 229); color: rgb(27, 26, 26); }
-            .SBSE_container > div { text-align: left; }
-            .SBSE_container > div button {
+            .SBSE-container { margin-top: 20px; }
+            .SBSE-container__content__model > textarea { background-color: rgb(230, 230, 229); color: rgb(27, 26, 26); }
+            .SBSE-container__content__model > div { text-align: left; }
+            .SBSE-button {
                 width: 80px;
                 border: 1px solid #b4de0a;
                 background-color: #b4de0a;
                 color: #1a1a1a;
             }
-            .SBSE_container > div button:hover {
+            .SBSE-button:hover {
                 border: 1px solid #a4ca09;
                 background-color: #a4ca09;
             }
-            .SBSE_container label { color: #1a1a1a; font-weight: 400; }
-            .SBSE_appList { margin-bottom: 10px; }
-            .SBSE_appList td { vertical-align: top; }
-            .SBSE_appList a { display: block; margin-bottom: 5px; }
-            .SBSE_icon { position: relative; top: 5px; }
+            .SBSE-container label { color: #1a1a1a; font-weight: 400; }
+            .SBSE-table-appList { margin-bottom: 10px; }
+            .SBSE-table-appList td { vertical-align: top; }
+            .SBSE-table-appList a { display: block; margin-bottom: 5px; }
+            .SBSE-icon { position: relative; top: 5px; }
         `);
 
         const handlers = {
@@ -4002,22 +4492,22 @@ const siteHandlers = {
         };
         const appListHandler = data => {
             if (data.length > 0) {
-                const $appList = $('<table class="SBSE_appList"></table>');
+                const $appList = $('<table class="SBSE-table-appList"></table>');
 
                 $appList.append('<tr><td colspan="2">App List</td></tr>');
 
                 data.forEach(d => {
                     const $row = $('<tr/>');
 
-                    $row.append($('<td/>').append($('<span class="SBSE_icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip))), $(`<td><a href="https://store.steampowered.com/app/${d.app}" target="_blank">${d.title}</a></td>`));
+                    $row.append($('<td/>').append($('<span class="SBSE-icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip))), $(`<td><a href="https://store.steampowered.com/app/${d.app}" target="_blank">${d.title}</a></td>`));
 
                     d.owned = steam.isOwned(d);
                     d.wished = steam.isWished(d);
 
-                    if (d.owned) $row.addClass('SBSE_owned');
-                    if (d.wished) $row.addClass('SBSE_wished');
+                    if (d.owned) $row.addClass('SBSE-item--owned');
+                    if (d.wished) $row.addClass('SBSE-item--wished');
 
-                    $row.addClass('SBSE_processed isSteam').attr('data-gameinfo', JSON.stringify(d));
+                    $row.addClass('SBSE-item--processed SBSE-item--steam').attr('data-gameinfo', JSON.stringify(d));
 
                     $appList.append($row);
                 });
@@ -4028,11 +4518,10 @@ const siteHandlers = {
                 steamCNTooltip.load(data);
             }
         };
-        const $container = getContainer(handlers);
+        const $container = container.get('SBSE', handlers);
 
-        $container.find('.SBSE_SelFilter').hide(); // hide filter selector
-        $container.find('button').addClass('narrow'); // narrow buttons
-        $container.find('.SBSE_BtnReveal').remove(); // remove reveal
+        $container.find('.SBSE-button').addClass('SBSE-button--narrow'); // narrow buttons
+        $container.find('.SBSE-button-reveal, .SBSE-select-filter').remove(); // remove reveal
 
         // insert textarea
         $('.table-light').eq(0).before($container);
@@ -4080,16 +4569,16 @@ const siteHandlers = {
     'gama-gama': () => {
         // inject css
         GM_addStyle(`
-            .SBSE_container > textarea { background-color: #ededed; color: #33; border-radius: 4px; }
-            .SBSE_container > div button {
+            .SBSE-container__content__model > textarea { background-color: #ededed; color: #33; border-radius: 4px; }
+            .SBSE-button {
                 width: 80px; height: 35px;
                 border: none; border-radius: 4px;
                 background: linear-gradient(to bottom, #47bceb 0, #18a4dd 30%, #127ba6 100%);
                 color: #fff;
                 box-shadow: 0 1px 3px 1px rgba(0,0,0,.8);
             }
-            .SBSE_container > div button { font-family: inherit; font-size: inherit; }
-            .SBSE_container > div button:hover { background: linear-gradient(to bottom, #47bceb, #18a4dd); }
+            .SBSE-button { font-family: inherit; font-size: inherit; }
+            .SBSE-button:hover { background: linear-gradient(to bottom, #47bceb, #18a4dd); }
         `);
 
         const handlers = {
@@ -4117,16 +4606,17 @@ const siteHandlers = {
                 return data;
             }
         };
-        const $container = getContainer(handlers);
+        const $container = container.get('SBSE', handlers);
 
-        $container.find('.SBSE_SelFilter').hide(); // hide filter selector
-        $container.find('button').addClass('narrow'); // narrow buttons
-        $container.find('.SBSE_BtnReveal').remove(); // remove reveal
+        $container.find('.SBSE-button').addClass('SBSE-button--narrow'); // narrow buttons
+        $container.find('.SBSE-button-reveal, .SBSE-select-filter').remove(); // remove reveal
 
         // insert textarea
         $('.user-info').eq(0).after($container);
     },
     plati() {
+        let selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'USD');
+        let platiCurrency = $('th.product-price select option:selected').text().trim();
         const plati = {
             data: JSON.parse(GM_getValue('SBSE_plati', '{}')),
             save(callback) {
@@ -4167,86 +4657,102 @@ const siteHandlers = {
                 this.save();
             }
         };
+        const infiniteScroll = {
+            enabled: plati.get('infiniteScroll'),
+            loading: false,
+            $loader: $('#platiru-loader_i'),
+            lastPage: 0,
+            reachedLastPage: false,
+            pathname: $('head #popup-container + script').text().match(/\/asp\/block_goods.+?\.asp/)[0],
+            parameters: {
+                idr: 0,
+                sort: 'name',
+                page: 0,
+                rows: 10,
+                curr: 'USD',
+                lang: unsafeWindow.plang || 'en-US'
+            },
+            setParameters() {
+                const $paging = $('.pages_nav').eq(0).children('a');
+                const onclickArguments = $paging.eq(0).attr('onclick').match(/\((.+)\)/);
 
-        plati.init();
+                if (onclickArguments[1]) {
+                    const parameters = onclickArguments[1].split(',').map(x => isNaN(x) ? x.replace(/['"]+/g, '') : parseInt(x, 10));
 
-        if (location.pathname.startsWith('/seller/')) {
-            // inject css styles
-            GM_addStyle(`
-                li[class*="hide"] { display: none; }
-                .SBSE_plati_menu { display: flex; margin-bottom: 10px; }
-                .SBSE_plati_menu > li { height: 30px; line-height: 30px; padding-right: 30px; }
-                .SBSE_plati_menu > li > .SBSE_switch { vertical-align: text-bottom; }
-                .SBSE_plati_menu > li > * { cursor: pointer; }
-                .SBSE_dropdown_list { width: max-content; z-index: 999; box-shadow: 5px 5px 10px grey; }
-                .SBSE_dropdown_list li { cursor: default; }
-                .SBSE_dropdown_list li > label, .SBSE_dropdown_list li > span { width: 100%; display: inline-block; margin: 0 10px; cursor: pointer; text-align: left; }
-                tr.SBSE_processed:hover { background-color: #f3f3f3; }
-                tr.SBSE_processed:hover .product-title > div::after { display: none; }
-                .filterGame tr.SBSE_game,
-                .filterDLC tr.SBSE_DLC,
-                .filterPackage tr.SBSE_package,
-                .filterBundle tr.SBSE_bundle,
-                .filterOwned tr.SBSE_owned,
-                .filterWished tr.SBSE_wished,
-                .filterIgnored tr.SBSE_ignored,
-                .filterNotOwned tr.SBSE_notOwned,
-                .filterNotApplicable tr.SBSE_notApplicable,
-                .filterNotFetched tr.SBSE_notFetched { display: none; }
-                body.enablePlatiFeature .product-title > div { max-width: 600px !important; }
-                body.enablePlatiFeature.infiniteScroll .goods-table thead > tr { display: block; }
-                body.enablePlatiFeature.infiniteScroll .goods-table tbody {
-                    max-height: 600px;
-                    display: block;
-                    overflow: auto;
+                    this.parameters.idr = parameters[0];
+                    this.parameters.sort = parameters[1];
+                    this.parameters.rows = parameters[3];
+                    this.parameters.curr = parameters[4];
+                    this.parameters.page = parseInt($paging.filter('.active').text(), 10) + 1;
+                    this.lastPage = parseInt($paging.filter(':last-child').text(), 10);
                 }
-                body.enablePlatiFeature.infiniteScroll .goods-table tbody > tr > td:last-child { padding-right: 5px; }
-            `);
-            // preparing
-            let selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'USD');
-            let platiCurrency = $('th.product-price select option:selected').text().trim();
-            let $table = $('table.goods-table');
-            const $body = $('body');
-            const infiniteScroll = {
-                enabled: plati.get('infiniteScroll'),
-                loading: false,
-                lastPage: 0,
-                reachedLastPage: false,
-                parameters: {
-                    idr: 0,
-                    id_s: location.pathname.split('/').pop(),
-                    sort: 'name',
-                    page: 0,
-                    rows: 10,
-                    curr: 'USD',
-                    lang: unsafeWindow.plang || 'en-US'
-                },
-                setParameters() {
-                    const $paging = $('#GoodsBlock .pages_nav > a');
-                    const onclickArguments = $paging.eq(0).attr('onclick').match(/\((.+)\)/);
 
-                    if (onclickArguments[1]) {
-                        const parameters = onclickArguments[1].split(',').map(x => isNaN(x) ? x.replace(/['"]+/g, '') : parseInt(x, 10));
+                if (this.pathname) {
+                    const type = this.pathname.slice(-5, -4);
 
-                        this.parameters.idr = parameters[0];
-                        this.parameters.sort = parameters[1];
-                        this.parameters.rows = parameters[3];
-                        this.parameters.curr = parameters[4];
-                        this.parameters.page = parseInt($paging.filter('.active').text(), 10) + 1;
-                        this.lastPage = parseInt($paging.filter(':last-child').text(), 10);
+                    this.parameters[`id_${type}`] = location.pathname.split('/').pop();
+                }
+            },
+            fetchNextPage: (() => {
+                var _ref14 = _asyncToGenerator(function* () {
+                    this.$loader.css('visibility', 'visible');
+                    this.loading = true;
+
+                    const $table = $('table:has(tbody.infiniteScrollBinded)');
+                    const params = this.parameters;
+                    params.rnd = Math.random();
+
+                    if (this.pathname) {
+                        const res = yield fetch(`${this.pathname}?${$.param(params)}`);
+                        const $resHTML = $((yield res.text()));
+                        const $trs = $resHTML.find('tbody > tr');
+
+                        if (res.ok && $trs.length > 0) {
+                            $table.find('tbody').append($trs);
+
+                            // refresh paging
+                            $table.siblings('.pages_nav, .sort_by').remove();
+                            $table.after($resHTML.filter('.pages_nav, .sort_by'));
+
+                            params.page += 1;
+                            this.reachedLastPage = params.page > this.lastPage;
+                        }
                     }
+
+                    this.loading = false;
+                    this.$loader.css('visibility', 'hidden');
+                    this.scrollHandler();
+                });
+
+                function fetchNextPage() {
+                    return _ref14.apply(this, arguments);
                 }
-            };
-            const language = config.get('language');
-            const fetchItem = (() => {
-                var _ref11 = _asyncToGenerator(function* (queue) {
+
+                return fetchNextPage;
+            })(),
+            scrollHandler() {
+                const $tbody = $('tbody.infiniteScrollBinded');
+
+                if ($('body').hasClass('enablePlatiFeature') && $tbody.length > 0 && this.enabled === true && this.loading === false && this.reachedLastPage === false) {
+                    const spaceTillBotom = $tbody.prop('scrollHeight') - $tbody.scrollTop() - $tbody.height();
+
+                    if (spaceTillBotom < 200) this.fetchNextPage();
+                }
+            },
+            init($target) {
+                $target.addClass('infiniteScrollBinded').on('scroll', this.scrollHandler.bind(this)).scroll();
+            }
+        };
+        const processor = {
+            fetchItem: (() => {
+                var _ref15 = _asyncToGenerator(function* (queue) {
                     const tr = queue.shift();
 
                     if (tr) {
                         const $tr = $(tr);
                         const url = $tr.attr('data-url');
                         const id = parseInt($tr.attr('data-id'), 10);
-                        const classes = ['SBSE_fetching', 'SBSE_fetched'];
+                        const classes = ['SBSE-item--fetching', 'SBSE-item--fetched'];
 
                         if (url.length > 0 && id > 0) {
                             const res = yield fetch(url);
@@ -4263,44 +4769,63 @@ const siteHandlers = {
                                     item[type] = steamID;
 
                                     plati.setItem(id, item);
-                                    if (steam.isOwned(item)) classes.push('SBSE_owned');
-                                    if (steam.isWished(item)) classes.push('SBSE_wished');
-                                    if (steam.isIgnored(item)) classes.push('SBSE_ignored');
-                                    if (classes.length === 1) classes.push('SBSE_notOwned');
-                                    if (steam.isGame(item)) classes.push('SBSE_game');
-                                    if (steam.isDLC(item)) classes.push('SBSE_DLC');
-                                    if (steam.isPackage(item)) classes.push('SBSE_package');
+                                    if (steam.isOwned(item)) classes.push('SBSE-item--owned');
+                                    if (steam.isWished(item)) classes.push('SBSE-item--wished');
+                                    if (steam.isIgnored(item)) classes.push('SBSE-item--ignored');
+                                    if (classes.length === 1) classes.push('SBSE-item--notOwned');
+                                    if (steam.isGame(item)) classes.push('SBSE-item--game');
+                                    if (steam.isDLC(item)) classes.push('SBSE-item--DLC');
+                                    if (steam.isPackage(item)) classes.push('SBSE-item--package');
                                 } else {
                                     plati.setItem(id, {});
-                                    classes.push('SBSE_notApplicable');
+                                    classes.push('SBSE-item--notApplicable');
                                 }
-                            } else classes.push('SBSE_failed');
+                            } else classes.push('SBSE-item--failed');
                         }
 
-                        $tr.removeClass('SBSE_owned SBSE_wished SBSE_ignored SBSE_notOwned SBSE_notApplicable');
+                        $tr.removeClass('SBSE-item--owned SBSE-item--wished SBSE-item--ignored SBSE-item--notOwned SBSE-item--notApplicable');
                         $tr.toggleClass(classes.join(' '));
-                        fetchItem(queue);
+                        this.fetchItem(queue);
                     } else plati.save();
                 });
 
-                return function fetchItem(_x13) {
-                    return _ref11.apply(this, arguments);
-                };
-            })();
-            const fetchItems = items => {
-                const filters = ['.SBSE_fetching'];
-                if (plati.get('fetchOnStart')) filters.push('.SBSE_fetched');
-                const $trs = items && items.length > 0 ? $(items).filter(`:not(${filters.join()})`) : $table.find(`tbody > tr:not(${filters.join()})`);
-                const queue = $trs.get();
+                function fetchItem(_x14) {
+                    return _ref15.apply(this, arguments);
+                }
 
-                $trs.addClass('SBSE_fetching').removeClass('SBSE_notFetched');
-                fetchItem(queue);
-            };
-            const process = ($rows = null) => {
+                return fetchItem;
+            })(),
+            fetchItems(items) {
+                const filters = ['.SBSE-item--fetching'];
+                if (plati.get('fetchOnStart')) filters.push('.SBSE-item--fetched');
+
+                const $trs = items && items.length > 0 ? $(items) : $('.goods-table tbody > tr');
+                const $filtered = $trs.filter(`.SBSE-item--steam:not(${filters.join()})`);
+
+                $filtered.addClass('SBSE-item--fetching').removeClass('SBSE-item--notFetched');
+                this.fetchItem($filtered.get());
+            },
+            process($rows = null) {
                 if (plati.get('enablePlatiFeature')) {
-                    const $trs = $rows && $rows.length > 0 ? $rows : $table.find('tbody > tr:not(.SBSE_processing, .SBSE_processed)');
+                    const $table = $('.goods-table');
+                    const $trs = $rows && $rows.length > 0 ? $rows : $table.find('tbody > tr');
 
-                    $trs.addClass('SBSE_processing').each((i, tr) => {
+                    // setup type & icon node
+                    $trs.find('td:not(.SBSE-icon) + .product-sold').before(`
+                        <td><span class="SBSE-type"></span></td>
+                        <td><span class="SBSE-icon"></span></td>
+                    `);
+
+                    // setup price node
+                    $trs.filter(':not(:has(.SBSE-price))').find('.product-price div').each((i, price) => {
+                        const $price = $(price);
+                        const value = parseFloat($price.text().trim()) * 100;
+
+                        $price.replaceWith(`<span class="SBSE-price" data-currency="${platiCurrency}" data-value="${value}"></span>`);
+                    });
+
+                    // process
+                    $trs.filter(':not(.SBSE-item--processing, .SBSE-item--processed)').addClass('SBSE-item--processing SBSE-item--steam').each((i, tr) => {
                         const $tr = $(tr);
                         const url = $tr.find('.product-title a').attr('href');
                         const id = parseInt(url.split('/').pop(), 10);
@@ -4310,144 +4835,117 @@ const siteHandlers = {
                             const item = plati.getItem(id);
 
                             if (item !== null) {
-                                classes.push('SBSE_fetched');
+                                classes.push('SBSE-item--fetched');
                                 if (item.app || item.sub) {
-                                    if (steam.isOwned(item)) classes.push('SBSE_owned');
-                                    if (steam.isWished(item)) classes.push('SBSE_wished');
-                                    if (steam.isIgnored(item)) classes.push('SBSE_ignored');
-                                    if (classes.length === 1) classes.push('SBSE_notOwned');
-                                    if (steam.isGame(item)) classes.push('SBSE_game');
-                                    if (steam.isDLC(item)) classes.push('SBSE_DLC');
-                                    if (steam.isPackage(item)) classes.push('SBSE_package');
-                                } else classes.push('SBSE_notApplicable');
+                                    if (steam.isOwned(item)) classes.push('SBSE-item--owned');
+                                    if (steam.isWished(item)) classes.push('SBSE-item--wished');
+                                    if (steam.isIgnored(item)) classes.push('SBSE-item--ignored');
+                                    if (classes.length === 1) classes.push('SBSE-item--notOwned');
+                                    if (steam.isGame(item)) classes.push('SBSE-item--game');
+                                    if (steam.isDLC(item)) classes.push('SBSE-item--DLC');
+                                    if (steam.isPackage(item)) classes.push('SBSE-item--package');
+                                } else classes.push('SBSE-item--notApplicable');
 
                                 $tr.attr('data-item', JSON.stringify(item));
                             }
 
                             if (classes.length > 0) {
-                                $tr.removeClass('SBSE_owned SBSE_wished SBSE_ignored SBSE_notOwned SBSE_notApplicable').addClass(classes.join(' '));
-                            } else $tr.addClass('SBSE_notFetched');
+                                $tr.removeClass('SBSE-item--owned SBSE-item--wished SBSE-item--ignored SBSE-item--notOwned SBSE-item--notApplicable').addClass(classes.join(' '));
+                            } else $tr.addClass('SBSE-item--notFetched');
 
                             $tr.attr({
                                 'data-id': id,
                                 'data-url': location.origin + url
                             });
                         }
-
-                        // setup type node
-                        if ($tr.find('.SBSE_type').length === 0) $tr.find('.product-sold').before('<td><span class="SBSE_type"></span></td>');
-
-                        // setup icon node
-                        if ($tr.find('.SBSE_icon').length === 0) $tr.find('.product-sold').before('<td><span class="SBSE_icon"></span></td>');
-
-                        // setup price node
-                        if ($tr.find('.SBSE_price').length === 0) {
-                            const $price = $tr.find('.product-price div');
-                            const value = parseFloat($price.text().trim()) * 100;
-
-                            $price.replaceWith(`<span class="SBSE_price" data-currency="${platiCurrency}" data-value="${value}"></span>`);
-                        }
-                    }).removeClass('SBSE_processing').addClass('SBSE_processed');
+                    }).removeClass('SBSE-item--processing').addClass('SBSE-item--processed');
 
                     // auto fetch on page visit
-                    if (plati.get('fetchOnStart')) fetchItems($table.find('tbody > tr'));
+                    if (plati.get('fetchOnStart')) this.fetchItems();
 
                     xe.update(selectedCurrency);
                 }
-            };
-            const fetchNextPage = (() => {
-                var _ref12 = _asyncToGenerator(function* () {
-                    infiniteScroll.loading = true;
-
-                    const params = infiniteScroll.parameters;
-                    params.rnd = Math.random();
-
-                    if (params.id_s > 0) {
-                        const res = yield fetch(`/asp/block_goods_s.asp?${$.param(params)}`);
-                        const $resHTML = $((yield res.text()));
-                        const $trs = $resHTML.find('tbody > tr');
-
-                        if (res.ok && $trs.length > 0) {
-                            $table.find('tbody').append($trs);
-
-                            // refresh paging
-                            $table.siblings('.pages_nav, .sort_by').remove();
-                            $table.after($resHTML.filter('.pages_nav, .sort_by'));
-
-                            process($trs);
-
-                            params.page += 1;
-                            infiniteScroll.reachedLastPage = params.page > infiniteScroll.lastPage;
-                        }
-                    }
-
-                    infiniteScroll.loading = false;
-                    $table.find('tbody').scroll();
-                });
-
-                return function fetchNextPage() {
-                    return _ref12.apply(this, arguments);
-                };
-            })();
-            const scrollHandler = () => {
-                if ($body.hasClass('enablePlatiFeature') && infiniteScroll.enabled === true && infiniteScroll.loading === false && infiniteScroll.reachedLastPage === false) {
-                    const $tbody = $table.find('tbody');
-                    const spaceTillBotom = $tbody.prop('scrollHeight') - $tbody.scrollTop() - $tbody.height();
-
-                    if (spaceTillBotom < 200) fetchNextPage();
-                }
-            };
-            const initTable = () => {
-                const filters = $('.SBSE_plati_menu [data-config^="filter"] input:not(:checked)').map((i, ele) => ele.dataset.filter).get();
+            },
+            initTable(table) {
+                const $table = table ? $(table) : $('.goods-table');
+                const filters = $('.SBSE-plati-menu [data-config^="filter"] input:not(:checked)').map((i, ele) => ele.dataset.filter).get();
                 platiCurrency = $table.find('th.product-price select option:selected').text().trim();
 
-                $table.addClass(filters.join(' ')) // apply filters
-                .addClass('showType showIcon SBSE_icon-vMiddle').find('thead tr:not(:has(.status)) > .product-sold').before('<th class="type"></th><th class="status"></th>');
+                // apply filters
+                $table.addClass(filters.join(' '));
+                // add type & icon
+                $table.find('thead tr:not(:has(.status)) > .product-sold').before('<th class="type"></th><th class="status"></th>');
 
                 // grab infinite scroll parameters
                 infiniteScroll.setParameters();
 
                 // bind infinite scroll event
-                if (plati.get('infiniteScroll')) $table.addClass('infiniteScrollBinded').find('tbody').scroll(scrollHandler).scroll();
-            };
+                if (plati.get('infiniteScroll')) infiniteScroll.init($table.find('tbody'));
+            },
+            init() {
+                this.initTable();
+                this.process();
 
-            // set up menu
+                const self = this;
+
+                // detect list changes
+                new MutationObserver(mutations => {
+                    mutations.forEach(mutation => {
+                        Array.from(mutation.addedNodes).forEach(addedNode => {
+                            const $addedNode = $(addedNode);
+
+                            if ($addedNode.is('.goods-table')) {
+                                self.initTable.call(self, $addedNode);
+                                self.process.call(self, $addedNode.find('tbody tr'));
+                            }
+                            if ($addedNode.is('tr')) {
+                                self.process.call(self, $addedNode);
+                            }
+                        });
+                    });
+                }).observe($('body')[0], {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        };
+        const insertMenu = () => {
             const $menu = $(`
-                <ul class="SBSE_plati_menu">
+                <ul class="SBSE-plati-menu">
                     <li data-config="enablePlatiFeature">
-                        <label class="SBSE_switch SBSE_switch-small">
+                        <label class="SBSE-switch SBSE-switch--small">
                             <input type="checkbox" id="enablePlatiFeature">
-                            <span class="SBSE_slider"></span>
+                            <span class="SBSE-switch__slider"></span>
                         </label>
                         <label for="enablePlatiFeature"><span>${i18n.get('enablePlatiFeature')}</span></label>
                     </li>
                     <li data-config="fetchOnStart">
-                        <label class="SBSE_switch SBSE_switch-small">
+                        <label class="SBSE-switch SBSE-switch--small">
                             <input type="checkbox" id="fetchOnStart">
-                            <span class="SBSE_slider"></span>
+                            <span class="SBSE-switch__slider"></span>
                         </label>
                         <label for="fetchOnStart"><span>${i18n.get('platiFetchOnStart')}</span></label>
                     </li>
                     <li data-config="infiniteScroll">
-                        <label class="SBSE_switch SBSE_switch-small">
+                        <label class="SBSE-switch SBSE-switch--small">
                             <input type="checkbox" id="infiniteScroll">
-                            <span class="SBSE_slider"></span>
+                            <span class="SBSE-switch__slider"></span>
                         </label>
                         <label for="infiniteScroll"><span>${i18n.get('platiInfiniteScroll')}</span></label>
                     </li>
                     <li data-config="fetchButton"><span>${i18n.get('platiFetchButton')}</span></li>
-                    <li data-config="filterType" class="SBSE_dropdown">
+                    <li data-config="filterType" class="SBSE-dropdown">
                         <span>${i18n.get('platiFilterType')}</span>
-                        <ul class="SBSE_dropdown_list">
+                        <ul class="SBSE-dropdown__list">
                             <li><label><input type="checkbox" data-filter="filterGame"><span>${i18n.get('game')}</span></label></li>
                             <li><label><input type="checkbox" data-filter="filterDLC"><span>${i18n.get('dlc')}</span></label></li>
                             <li><label><input type="checkbox" data-filter="filterPackage"><span>${i18n.get('package')}</span></label></li>
                             <li><label><input type="checkbox" data-filter="filterBundle"><span>${i18n.get('bundle')}</span></label></li>
                         </ul>
                     </li>
-                    <li data-config="filterStatus" class="SBSE_dropdown">
+                    <li data-config="filterStatus" class="SBSE-dropdown">
                         <span>${i18n.get('platiFilterStatus')}</span>
-                        <ul class="SBSE_dropdown_list">
+                        <ul class="SBSE-dropdown__list">
                             <li><label><input type="checkbox" data-filter="filterOwned"><span>${i18n.get('owned')}</span></label></li>
                             <li><label><input type="checkbox" data-filter="filterWished"><span>${i18n.get('wished')}</span></label></li>
                             <li><label><input type="checkbox" data-filter="filterIgnored"><span>${i18n.get('ignored')}</span></label></li>
@@ -4456,9 +4954,9 @@ const siteHandlers = {
                             <li><label><input type="checkbox" data-filter="filterNotFetched"><span>${i18n.get('notFetched')}</span></label></li>
                         </ul>
                     </li>
-                    <li data-config="currency" class="SBSE_dropdown">
-                        <span class="selectedCurrency">${xe.currencies[selectedCurrency][language]}</span>
-                        <ul class="SBSE_dropdown_list"></ul>
+                    <li data-config="currency" class="SBSE-dropdown">
+                        <span class="selectedCurrency">${xe.currencies[selectedCurrency][config.get('language')]}</span>
+                        <ul class="SBSE-dropdown__list"></ul>
                     </li>
                     <li data-config="syncButton"><span>${i18n.get('settingsSyncLibrary')}</span></li>
                 </ul>
@@ -4471,60 +4969,62 @@ const siteHandlers = {
             const $currencyToggler = $menu.find('[data-config="currency"] ul');
             const $syncButton = $menu.find('[data-config="syncButton"] span');
 
-            $enablePlatiFeature.change(() => {
+            // bind event
+            $enablePlatiFeature.on('change', () => {
                 const state = $enablePlatiFeature.prop('checked');
 
                 plati.set('enablePlatiFeature', state);
                 $menu.find('li:not([data-config="enablePlatiFeature"])').toggleClass('hide1', !state);
 
                 if (state) process();
-                $body.toggleClass('enablePlatiFeature', state);
+                $('body').toggleClass('enablePlatiFeature', state);
             });
-            $fetchOnStart.change(() => {
+            $fetchOnStart.on('change', () => {
                 const state = $fetchOnStart.prop('checked');
 
                 plati.set('fetchOnStart', state);
                 $fetchButton.parent().toggleClass('hide2', state);
             });
-            $infiniteScroll.change(() => {
+            $infiniteScroll.on('change', () => {
                 const state = $infiniteScroll.prop('checked');
 
                 plati.set('infiniteScroll', state);
                 infiniteScroll.enabled = state;
-                $body.toggleClass('infiniteScroll', state);
+                $('body').toggleClass('infiniteScroll', state);
 
                 // bind infinite scroll event if not already
-                if (state && !$table.hasClass('infiniteScrollBinded')) {
-                    $table.addClass('infiniteScrollBinded').find('tbody').scroll(scrollHandler).scroll();
+                if (state && $('.infiniteScrollBinded').length === 0) {
+                    $('.goods-table tbody').addClass('infiniteScrollBinded').on('scroll', infiniteScroll.scrollHandler.bind(infiniteScroll)).scroll();
                 }
             });
-            $fetchButton.click(fetchItems);
-            $filters.change(e => {
+            $fetchButton.on('click', processor.fetchItems.bind(processor));
+            $filters.on('change', e => {
                 const input = e.delegateTarget;
                 const filter = input.dataset.filter;
                 const state = input.checked;
 
                 plati.set(filter, state);
                 $('.goods-table').toggleClass(filter, !state);
+                infiniteScroll.scrollHandler();
             });
             Object.keys(xe.currencies).forEach(currency => {
-                const currencyName = xe.currencies[currency][language];
+                const currencyName = xe.currencies[currency][config.get('language')];
 
-                $currencyToggler.append($(`<span>${currencyName}</span>`).click(() => {
+                $currencyToggler.append($(`<span>${currencyName}</span>`).on('click', () => {
                     xe.update(currency);
                     selectedCurrency = currency;
                     $currencyToggler.prev('.selectedCurrency').text(currencyName);
                 }));
             });
             $currencyToggler.find('span').wrap('<li></li>');
-            $syncButton.click(() => {
+            $syncButton.on('click', () => {
                 steam.sync([{
                     key: 'library',
                     sync: true,
                     save: true,
                     notify: true,
                     callback() {
-                        process($table.find('tbody tr.SBSE_notOwned'));
+                        processor.process($('.goods-table tbody tr.SBSE-item--notOwned')).call(processor);
                     }
                 }]);
             });
@@ -4543,29 +5043,54 @@ const siteHandlers = {
                 $('.goods-table').toggleClass(filter, !state);
             });
 
-            $body.toggleClass('enablePlatiFeature', plati.get('enablePlatiFeature')).toggleClass('infiniteScroll', plati.get('infiniteScroll'));
-            $('.merchant_products').prepend($menu);
+            $('body').toggleClass('enablePlatiFeature', plati.get('enablePlatiFeature')).toggleClass('infiniteScroll', plati.get('infiniteScroll'));
 
-            initTable();
-            process();
+            const $target = $('.merchant_products');
 
-            // detect list changes
-            new MutationObserver(mutations => {
-                mutations.forEach(mutation => {
-                    Array.from(mutation.addedNodes).forEach(addedNode => {
-                        const $addedNode = $(addedNode);
+            if ($target.length === 0) $('.content_center').before($menu);else $target.eq(0).prepend($menu);
+        };
 
-                        if ($addedNode.is('table.goods-table')) {
-                            $table = $addedNode;
-                            initTable();
-                            process();
-                        }
-                    });
-                });
-            }).observe($('#GoodsBlock')[0], {
-                childList: true,
-                subtree: true
-            });
+        plati.init();
+
+        // inject css styles
+        GM_addStyle(`
+            li[class*="hide"] { display: none; }
+            .SBSE-plati-menu { display: flex; margin-bottom: 10px !important; list-style: none; }
+            .SBSE-plati-menu > li { height: 30px; line-height: 30px; padding-right: 30px; }
+            .SBSE-plati-menu > li > .SBSE-switch { vertical-align: text-bottom; }
+            .SBSE-plati-menu > li > * { cursor: pointer; }
+            .SBSE-dropdown__list { width: max-content; z-index: 999; box-shadow: 5px 5px 10px grey; }
+            .SBSE-dropdown__list li { cursor: default; }
+            .SBSE-dropdown__list li > label, .SBSE-dropdown__list li > span { width: 100%; display: inline-block; margin: 0 10px; cursor: pointer; text-align: left; }
+            tr.SBSE-item--processed:hover { background-color: #f3f3f3; }
+            tr.SBSE-item--processed:hover .product-title > div::after { display: none; }
+            .filterGame tr.SBSE-item--game,
+            .filterDLC tr.SBSE-item--DLC,
+            .filterPackage tr.SBSE-item--package,
+            .filterBundle tr.SBSE_bundle,
+            .filterOwned tr.SBSE-item--owned,
+            .filterWished tr.SBSE-item--wished,
+            .filterIgnored tr.SBSE-item--ignored,
+            .filterNotOwned tr.SBSE-item--notOwned,
+            .filterNotApplicable tr.SBSE-item--notApplicable,
+            .filterNotFetched tr.SBSE-item--notFetched { display: none; }
+            body.enablePlatiFeature .product-title > div { max-width: 600px !important; }
+            body.enablePlatiFeature.infiniteScroll .goods-table { table-layout:fixed; }
+            body.enablePlatiFeature.infiniteScroll .goods-table thead > tr { display: block; }
+            body.enablePlatiFeature.infiniteScroll .goods-table tbody {
+                max-height: 600px;
+                display: block;
+                table-layout:fixed;
+                overflow: auto;
+            }
+            body.enablePlatiFeature.infiniteScroll .goods-table tbody > tr { display: table; }
+            body.enablePlatiFeature.infiniteScroll .goods-table tbody > tr > td:last-child { padding-right: 5px; }
+            .SBSE-icon { vertical-align: middle; }
+        `);
+
+        if (location.pathname.startsWith('/seller/')) {
+            insertMenu();
+            processor.init();
         }
     }
 };
@@ -4574,6 +5099,10 @@ const init = () => {
     i18n.init();
     xe.init();
     steam.init();
+    settings.init();
+    SBSE.init();
+    ASF.init();
+    container.init();
 
     if (location.hostname === 'store.steampowered.com') {
         // save sessionID
@@ -4602,7 +5131,7 @@ const init = () => {
         const site = location.hostname.replace(/(www|alds|bundle|steamdb)\./, '').split('.').shift();
 
         // check sessionID
-        if (!config.get('sessionID')) getSessionID();
+        if (!config.get('sessionID')) steam.getSessionID();
 
         if (has.call(siteHandlers, site)) siteHandlers[site](true);
     }
