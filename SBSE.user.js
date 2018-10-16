@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.10.2
+// @version      2.10.3
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2474,23 +2474,28 @@ const ASF = {
         const domain = `${config.get('ASFIPCServer')}:${config.get('ASFIPCPort')}`;
         const password = config.get('ASFIPCPassword');
         const url = `ws://${domain}/Api/NLog${password.length > 0 ? `?password=${password}` : ''}`;
-        const ws = new WebSocket(url);
 
-        ws.addEventListener('open', () => {
-            self.push('log', 'Connection established');
-        });
-        ws.addEventListener('error', () => {
-            self.push('log', 'An error occured while connecting to ASF IPC server');
-        });
-        ws.addEventListener('message', e => {
-            try {
-                const data = JSON.parse(e.data);
+        try {
+            const ws = new WebSocket(url);
 
-                self.push('log', data.Result);
-            } catch (error) {
-                self.push('log', error.stack);
-            }
-        });
+            ws.addEventListener('open', () => {
+                self.push('log', 'Connection established');
+            });
+            ws.addEventListener('error', () => {
+                self.push('log', 'An error occured while connecting to ASF IPC server');
+            });
+            ws.addEventListener('message', e => {
+                try {
+                    const data = JSON.parse(e.data);
+
+                    self.push('log', data.Result);
+                } catch (error) {
+                    self.push('log', error.stack);
+                }
+            });
+        } catch (error) {
+            self.push('log', `Failed to establish connection, error message: ${error.message}`);
+        }
     },
     initCommands: (() => {
         var _ref2 = _asyncToGenerator(function* () {
