@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.10.0
+// @version      2.10.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -2418,6 +2418,9 @@ const SBSE = {
         $model.find('button').click(e => {
             e.preventDefault();
         });
+        $model.find('.SBSE-button-reveal').on('click.reveal', e => {
+            handlers.reveal(e);
+        });
         $model.find('.SBSE-button-retrieve').on('click.retrieve', e => {
             handlers.retrieve(e);
         });
@@ -2855,6 +2858,10 @@ const siteHandlers = {
         // inject css
         GM_addStyle(`
             .SBSE-container { margin-top: 10px; }
+            .SBSE-container__nav__item--show {
+                border-bottom: 1px solid #CC001D;
+                color: #CC001D;
+            }
             .SBSE-container__content__model > textarea { border: 1px solid #CC001D; border-radius: 3px; }
             .SBSE-button { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
             .swal2-popup .SBSE-switch__slider { margin: 0; }
