@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.10.1
+// @version      2.10.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -51,6 +51,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @connect      steamspy.com
 // @connect      github.com
 // @connect      localhost
+// @connect      127.0.0.1
 // @connect      *
 // @grant        GM_xmlhttpRequest
 // @grant        GM_setValue
