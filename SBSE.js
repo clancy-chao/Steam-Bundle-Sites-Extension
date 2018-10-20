@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.10.3
+// @version      2.10.4
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -4649,7 +4649,6 @@ const siteHandlers = {
         const infiniteScroll = {
             enabled: plati.get('infiniteScroll'),
             loading: false,
-            $loader: $('#platiru-loader_i'),
             lastPage: 0,
             reachedLastPage: false,
             pathname: $('head #popup-container + script').text().match(/\/asp\/block_goods.+?\.asp/)[0],
@@ -4679,14 +4678,17 @@ const siteHandlers = {
                 if (this.pathname) {
                     const type = this.pathname.slice(-5, -4);
 
-                    this.parameters[`id_${type}`] = location.pathname.split('/').pop();
+                    this.parameters[`id_${type}`] = location.pathname.includes('/seller/') ? location.pathname.split('/').pop() : this.parameters.idr;
                 }
             },
             fetchNextPage: async function fetchNextPage() {
-                this.$loader.css('visibility', 'visible');
+                const $loader = $('.content_center .platiru-loader').eq(0);
+
+                $loader.css('visibility', 'visible');
                 this.loading = true;
 
-                const $table = $('table:has(tbody.infiniteScrollBinded)');
+                const $wrap = $('.SBSE-infiniteScroll-wrap');
+                const $table = $wrap.find('table.goods-table');
                 const params = this.parameters;
                 params.rnd = Math.random();
 
@@ -4699,8 +4701,8 @@ const siteHandlers = {
                         $table.find('tbody').append($trs);
 
                         // refresh paging
-                        $table.siblings('.pages_nav, .sort_by').remove();
-                        $table.after($resHTML.filter('.pages_nav, .sort_by'));
+                        $wrap.siblings('.pages_nav, .sort_by').remove();
+                        $wrap.after($resHTML.filter('.pages_nav, .sort_by'), $resHTML.find('.goods-table ~ *'));
 
                         params.page += 1;
                         this.reachedLastPage = params.page > this.lastPage;
@@ -4708,27 +4710,28 @@ const siteHandlers = {
                 }
 
                 this.loading = false;
-                this.$loader.css('visibility', 'hidden');
                 this.scrollHandler();
+                $loader.css('visibility', 'hidden');
             },
             scrollHandler() {
-                const $tbody = $('tbody.infiniteScrollBinded');
+                const $wrap = $('.SBSE-infiniteScroll-wrap');
 
-                if ($('body').hasClass('enablePlatiFeature') &&
-                    $tbody.length > 0 &&
+                if ($('body').is('.enablePlatiFeature.infiniteScroll') &&
+                    $wrap.length > 0 &&
                     this.enabled === true &&
                     this.loading === false &&
                     this.reachedLastPage === false) {
-                    const spaceTillBotom = $tbody.prop('scrollHeight') - $tbody.scrollTop() - $tbody.height();
+                    const spaceTillBotom = $wrap.prop('scrollHeight') - $wrap.scrollTop() - $wrap.height();
 
                     if (spaceTillBotom < 200) this.fetchNextPage();
                 }
             },
-            init($target) {
-                $target
-                    .addClass('infiniteScrollBinded')
-                    .on('scroll', this.scrollHandler.bind(this))
-                    .scroll();
+            init() {
+                if ($('.SBSE-infiniteScroll-wrap').length === 0) {
+                    $('.goods-table').wrap($('<div class="SBSE-infiniteScroll-wrap"></div>').on('scroll', this.scrollHandler.bind(this)));
+                }
+
+                this.scrollHandler();
             },
         };
         const processor = {
@@ -4791,9 +4794,9 @@ const siteHandlers = {
                     const $trs = $rows && $rows.length > 0 ? $rows : $table.find('tbody > tr');
 
                     // setup type & icon node
-                    $trs.find('td:not(.SBSE-icon) + .product-sold').before(`
-                        <td><span class="SBSE-type"></span></td>
-                        <td><span class="SBSE-icon"></span></td>
+                    $trs.find('td:not(.icon) + .product-sold').before(`
+                        <td class="type"><span class="SBSE-type"></span></td>
+                        <td class="icon"><span class="SBSE-icon"></span></td>
                     `);
 
                     // setup price node
@@ -4861,13 +4864,13 @@ const siteHandlers = {
                 // apply filters
                 $table.addClass(filters.join(' '));
                 // add type & icon
-                $table.find('thead tr:not(:has(.status)) > .product-sold').before('<th class="type"></th><th class="status"></th>');
+                $table.find('thead th:not(.icon) + .product-sold').before('<th class="type"></th><th class="icon"></th>');
 
                 // grab infinite scroll parameters
                 infiniteScroll.setParameters();
 
                 // bind infinite scroll event
-                if (plati.get('infiniteScroll')) infiniteScroll.init($table.find('tbody'));
+                if (plati.get('infiniteScroll')) infiniteScroll.init();
             },
             init() {
                 this.initTable();
@@ -4963,7 +4966,7 @@ const siteHandlers = {
                 plati.set('enablePlatiFeature', state);
                 $menu.find('li:not([data-config="enablePlatiFeature"])').toggleClass('hide1', !state);
 
-                if (state) process();
+                if (state) processor.init();
                 $('body').toggleClass('enablePlatiFeature', state);
             });
             $fetchOnStart.on('change', () => {
@@ -4980,12 +4983,7 @@ const siteHandlers = {
                 $('body').toggleClass('infiniteScroll', state);
 
                 // bind infinite scroll event if not already
-                if (state && $('.infiniteScrollBinded').length === 0) {
-                    $('.goods-table tbody')
-                        .addClass('infiniteScrollBinded')
-                        .on('scroll', infiniteScroll.scrollHandler.bind(infiniteScroll))
-                        .scroll();
-                }
+                if (state) infiniteScroll.init();
             });
             $fetchButton.on('click', processor.fetchItems.bind(processor));
             $filters.on('change', (e) => {
@@ -5050,7 +5048,7 @@ const siteHandlers = {
         // inject css styles
         GM_addStyle(`
             li[class*="hide"] { display: none; }
-            .SBSE-plati-menu { display: flex; margin-bottom: 10px !important; list-style: none; }
+            .SBSE-plati-menu { display: flex; margin: 10px 0 0 0 !important; list-style: none; }
             .SBSE-plati-menu > li { height: 30px; line-height: 30px; padding-right: 30px; }
             .SBSE-plati-menu > li > .SBSE-switch { vertical-align: text-bottom; }
             .SBSE-plati-menu > li > * { cursor: pointer; }
@@ -5069,21 +5067,24 @@ const siteHandlers = {
             .filterNotOwned tr.SBSE-item--notOwned,
             .filterNotApplicable tr.SBSE-item--notApplicable,
             .filterNotFetched tr.SBSE-item--notFetched { display: none; }
+            body.enablePlatiFeature .content_center { width: initial; }
+            body.enablePlatiFeature .right_side { display: none; }
+            body.enablePlatiFeature .goods-table { width: initial; }
             body.enablePlatiFeature .product-title > div { max-width: 600px !important; }
-            body.enablePlatiFeature.infiniteScroll .goods-table { table-layout:fixed; }
-            body.enablePlatiFeature.infiniteScroll .goods-table thead > tr { display: block; }
-            body.enablePlatiFeature.infiniteScroll .goods-table tbody {
+            body.enablePlatiFeature.infiniteScroll .SBSE-infiniteScroll-wrap {
                 max-height: 600px;
-                display: block;
-                table-layout:fixed;
+                margin: 10px 0;
                 overflow: auto;
             }
-            body.enablePlatiFeature.infiniteScroll .goods-table tbody > tr { display: table; }
+            body.enablePlatiFeature.infiniteScroll .goods-table { margin: 0; }
             body.enablePlatiFeature.infiniteScroll .goods-table tbody > tr > td:last-child { padding-right: 5px; }
             .SBSE-icon { vertical-align: middle; }
+            body:not(.enablePlatiFeature) .type,
+            body:not(.enablePlatiFeature) .icon { display: none; }
+            .merchant_products > .SBSE-plati-menu { margin: 0 0 10px 0 !important; }
         `);
 
-        if (location.pathname.startsWith('/seller/')) {
+        if (location.pathname.startsWith('/seller/') || location.pathname.startsWith('/cat/')) {
             insertMenu();
             processor.init();
         }
