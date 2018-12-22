@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.10.4
+// @version      2.10.5
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -62,12 +62,6 @@
 // ==/UserScript==
 
 /* global swal */
-
-// setup jQuery
-const $ = jQuery.noConflict(true);
-
-$.fn.pop = [].pop;
-$.fn.shift = [].shift;
 
 // inject external css styles
 GM_addStyle(GM_getResourceText('sweetalert2CSS'));
@@ -436,6 +430,29 @@ const regKey = /(?:(?:([A-Z0-9])(?!\1{4})){5}-){2,5}[A-Z0-9]{5}/g;
 const eol = "\n";
 const tab = "\t";
 const has = Object.prototype.hasOwnProperty;
+const forEachAsync = (array, callback, lastIterationCallback) => {
+    if (!Array.isArray(array)) throw Error('Not an array');
+    if (typeof callback !== 'function') throw Error('Not an function');
+
+    const iterators = [...array.keys()];
+    const processor = (taskStartTime) => {
+        let taskFinishTime;
+
+        do {
+            const iterator = iterators.shift();
+
+            if (iterator in array) callback(array[iterator], iterator, array);
+
+            taskFinishTime = window.performance.now();
+        } while (taskFinishTime - taskStartTime < 1000 / 60);
+
+        if (iterators.length > 0) requestAnimationFrame(processor);
+        // finished iterating array
+        else if (typeof lastIterationCallback === 'function') lastIterationCallback();
+    };
+
+    requestAnimationFrame(processor);
+};
 const unique = a => [...new Set(a)];
 const isArray = value => Array.isArray(value);
 const isObject = value => Object(value) === value;
@@ -446,6 +463,15 @@ const request = options => new Promise((resolve, reject) => {
 
     GM_xmlhttpRequest(options);
 });
+
+// setup jQuery
+const $ = jQuery.noConflict(true);
+
+$.fn.pop = [].pop;
+$.fn.shift = [].shift;
+$.fn.eachAsync = function eachAsync(callback, lastIterationCallback) {
+    forEachAsync(this.get(), callback, lastIterationCallback);
+};
 
 const config = {
     data: JSON.parse(GM_getValue('SBSE_config', '{}')),
@@ -3655,6 +3681,11 @@ const siteHandlers = {
             // force sync library
             steam.sync([{ key: 'library' }]);
 
+            // update DIG balance
+            const balance = parseInt($('div:contains(Usable DIG Points) > span').text(), 10);
+
+            if (!isNaN(balance)) GM_setValue('SBSE_DIGBalance', balance);
+
             // inject css
             GM_addStyle(`
                 .SBSE-container { padding: 5px; border: 1px solid #424242; }
@@ -3742,7 +3773,8 @@ const siteHandlers = {
                    pathname.includes('/account_trades') ||
                    pathname.includes('/account_tradesXT') ||
                    pathname.includes('/store_update') ||
-                   pathname.includes('/storeXT_update')) {
+                   pathname.includes('/storeXT_update') ||
+                   pathname.includes('/site_content_marketplace')) {
             // inject css styles
             GM_addStyle(`
                 .DIGEasyBuy-row { height: 30px; }
@@ -3757,55 +3789,74 @@ const siteHandlers = {
                     background-color: white;
                     border: none;
                 }
-                .SBSE-item--owned a[href*="steam"] .DIG3_14_Gray { color: #9ccc65; }
-                .SBSE-item--wished a[href*="steam"] .DIG3_14_Gray { color: #29b6f6; }
-                .SBSE-item--ignored a[href*="steam"] .DIG3_14_Gray { text-decoration: line-through; }
+                .SBSE-item--owned .DIG3_14_Gray { color: #9ccc65; }
+                .SBSE-item--wished .DIG3_14_Gray { color: #29b6f6; }
+                .SBSE-item--ignored .DIG3_14_Gray { text-decoration: line-through; }
                 .DIG2content select { max-width: 200px; }
             `);
 
-            // setup row data & event
-            const easyBuySetup = (i, ele) => {
-                const $game = $(ele);
-                const $row = $game.closest('tr');
+            swal.showLoading();
 
-                $row.attr('data-id', $game.attr('href').replace(/\D/g, ''));
-                $row.attr('data-title', $row.children('td').eq(pathname.includes('/account_digstore') ? 3 : 1).text().trim());
-                $row.attr('data-price', () => {
-                    let price = 0;
-                    const $DIGPoints = $row.find('td:contains( DIG Points)');
+            $('a[href^="account_buy"]').eachAsync((ele) => {
+                const $ele = $(ele);
+                const $tr = $ele.closest('tr');
+                const $title = $tr.children('td').eq(pathname.includes('/account_digstore') ? 3 : 1);
 
-                    if ($DIGPoints.length === 1) price = $DIGPoints.text();
+                const id = $ele.attr('href').replace(/\D/g, '');
+                const title = $title.text().trim();
+                const price = (() => {
+                    let p = 0;
+                    const $DIGPoints = $tr.find('td:contains( DIG Points)');
+
+                    if ($DIGPoints.length === 1) p = $DIGPoints.text();
                     else {
-                        const tds = $row.children('td').get();
+                        const tds = $tr.children('td').get();
 
                         for (let j = tds.length - 1; j >= 0; j -= 1) {
-                            const text = tds[j].textContent.trim();
+                            const t = tds[j].textContent.trim();
 
-                            if (text.startsWith('$')) {
-                                price = text.replace(/\D/g, '');
+                            if (t.startsWith('$')) {
+                                p = t.replace(/\D/g, '');
                                 break;
                             }
                         }
                     }
 
-                    return parseInt(price, 10);
+                    return parseInt(p, 10);
                 });
-                $row.click(() => {
-                    $row.toggleClass('DIGEasyBuy-row--checked');
+                const onclickHandler = $tr.attr('onclick');
+
+                // setup row data & event
+                $tr.attr('data-id', id);
+                $tr.attr('data-title', title);
+                $tr.attr('data-price', price);
+                $tr.click(() => {
+                    $tr.toggleClass('DIGEasyBuy-row--checked');
                 });
-                $row.addClass('DIGEasyBuy-row');
-            };
+                $tr.addClass('DIGEasyBuy-row');
 
-            $('a[href^="account_buy"]').each(easyBuySetup);
+                // re-locate onclick handler
+                if (pathname.includes('/site_content_marketplace') && onclickHandler.length > 0) {
+                    $title.wrapInner(
+                        $('<span></span>').attr('onclick', onclickHandler),
+                    );
+                    $tr.removeAttr('onclick');
+                }
 
-            // check if owned / manually hid
-            const check = (i, a) => {
-                const $a = $(a);
-                const $tr = $a.closest('tr');
-                const data = a.pathname.slice(1).split('/');
-                const steamID = parseInt(data[1], 10);
-                const id = parseInt($tr.attr('data-id'), 10);
-                const d = { [data[0]]: steamID };
+                // check if owned / manually hid
+                const $a = $tr.find('a[href*="steampowered"]');
+                const d = {};
+                let steamID = 0;
+
+                if ($a.length === 1) {
+                    const data = $a[0].pathname.slice(1).split('/');
+
+                    steamID = parseInt(data[1], 10);
+                    d[data[0]] = steamID;
+                } else if (onclickHandler.includes('site_gamelisting_')) {
+                    steamID = parseInt(onclickHandler.match(/_(\d+)\./)[1], 10);
+                    d.app = steamID;
+                }
 
                 if (steam.isOwned(d)) $tr.addClass('SBSE-item--owned DIGEasyBuy-row--hide');
                 if (steam.isWished(d)) $tr.addClass('SBSE-item--wished');
@@ -3879,9 +3930,14 @@ const siteHandlers = {
                             .slideToggle('fast');
                     });
                 }
-            };
-
-            $('tr a[href*="steampowered"]').each(check);
+            }, () => {
+                swal({
+                    titleText: i18n.get('successTitle'),
+                    text: i18n.get('DIGEasyBuyLoadingComplete'),
+                    type: 'success',
+                    timer: 3000,
+                });
+            });
 
             // append menu buttons
             const $target = $('#form3').closest('tr').children().eq(0);
@@ -3902,12 +3958,6 @@ const siteHandlers = {
 
             $target.empty().append($DIGEasyBuy);
 
-            if (pathname === '/account_tradesXT.html') {
-                $DIGEasyBuy.append(`
-                    <button class="DIGButtonLoadAllPages DIG3_Orange_15_Form">${i18n.get('DIGEasyBuyLoadAllPages')}</button>
-                `);
-            }
-
             // append sync time and event
             const seconds = Math.round((Date.now() - steam.lastSync('library')) / 1000);
 
@@ -3917,7 +3967,7 @@ const siteHandlers = {
 
             // bind button event
             $('.DIGButtonPurchase').click(() => {
-                let balance = parseInt($('div:contains(Usable DIG Points) > span').text().split(' ').shift().replace(/\D/g, ''), 10);
+                let balance = GM_getValue('SBSE_DIGBalance');
                 const $games = $('.DIGEasyBuy-row--checked:visible');
 
                 swal({
@@ -3940,7 +3990,7 @@ const siteHandlers = {
                         if (title.length > 0) swal.getContent().querySelector('p').textContent = title;
 
                         if (id && price > 0) {
-                            if (balance - price > 0) {
+                            if (balance - price >= 0) {
                                 let url = `${location.origin}/account_buy.html`;
                                 const requestInit = {
                                     method: 'POST',
@@ -3952,7 +4002,7 @@ const siteHandlers = {
                                     referrer: `${location.origin}/account_buy_${id}.html`,
                                 };
 
-                                if (pathname === '/account_trades.html' || pathname === '/account_tradesXT.html') {
+                                if (pathname === '/account_trades.html' || pathname === '/account_tradesXT.html' || pathname === '/site_content_marketplace.html') {
                                     url = `${location.origin}/account_buytrade_${id}.html`;
                                     requestInit.body = `gameid=${id}&send=Purchase`;
                                     requestInit.referrer = url;
@@ -3975,6 +4025,7 @@ const siteHandlers = {
                             }
                         } else purchaseHandler();
                     } else {
+                        GM_setValue('SBSE_DIGBalance', balance);
                         swal({
                             title: i18n.get('successTitle'),
                             text: i18n.get('DIGFinishedPurchasing'),
@@ -3999,34 +4050,6 @@ const siteHandlers = {
                 $('#TableKeys').toggleClass('DIGEasyBuy--hideOwned', state);
                 $self.data('state', state);
                 $self.text(state ? i18n.get('DIGEasyBuyShowOwned') : i18n.get('DIGEasyBuyHideOwned'));
-            });
-            $('.DIGButtonLoadAllPages').click((e) => {
-                // auto load all pages at marketplace
-                const $self = $(e.currentTarget);
-                const $tbody = $('#TableKeys > tbody');
-                const load = async (page, retry = 0) => {
-                    $self.text(i18n.get('DIGEasyBuyLoading').replace('%page%', page));
-
-                    const res = await fetch(`${location.origin}/account_tradesXT_${page}.html`, {
-                        method: 'GET',
-                        credentials: 'same-origin',
-                    });
-
-                    if (res.ok) {
-                        const $result = $(await res.text()).find('#TableKeys tr.DIG3_14_Gray');
-
-                        if ($result.length > 0) {
-                            $result.find('a[href^="account_buy"]').each(easyBuySetup);
-                            $result.find('a[href*="steampowered"]').each(check);
-                            $tbody.append($result);
-                            load((page + 1));
-                        } else $self.text(i18n.get('DIGEasyBuyLoadingComplete'));
-                    } else if (retry < 3) load(page, (retry + 1));
-                    else load((page + 1));
-                };
-
-                load(1);
-                $self.prop('disabled', true);
             });
         // extension for creating trade at market place
         } else if (pathname === '/account_createtrade.html') {
