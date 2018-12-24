@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.10.5
+// @version      2.10.6
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -17,7 +17,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @include      https://www.fanatical.com/*
 // @include      https://www.humblebundle.com/*
 // @include      http*://*dailyindiegame.com/*
-// @include      http*://bundle.ccyycn.com/order/*
+// @include      http*://www.ccyyshop.com/order/*
 // @include      https://groupees.com/purchases
 // @include      https://groupees.com/profile/purchases/*
 // @include      http*://*agiso.com/*
@@ -4150,14 +4150,17 @@ const siteHandlers = {
             }
         }
     },
-    ccyycn() {
+    ccyyshop() {
         // inject css
         GM_addStyle(`
+            .cta .cta-inner:before { z-index: 10; }
             .SBSE-container {
                 width: 80%;
+                position: relative;
                 margin: 0 auto;
                 font-size: 16px;
                 color: #000;
+                z-index: 999;
             }
             .SBSE-container__content__model > textarea {
                 background-color: #EEE;
@@ -4193,7 +4196,7 @@ const siteHandlers = {
                 $('.deliver-gkey > *:contains(-)').each((i, ele) => {
                     const $ele = $(ele);
                     const d = {
-                        title: $ele.parent().prev().text().trim(),
+                        title: $ele.closest('.deliver-game').prev().text().trim(),
                         key: $ele.text().trim()
                     };
 
