@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.10.6
+// @version      2.11.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -508,6 +508,7 @@ const i18n = {
             successDetail: '無資料',
             skippedStatus: '跳過',
             activatedDetail: '已啟動',
+            loadingSuccess: '加載完成！',
             failStatus: '失敗',
             failTitle: '糟糕！',
             failDetailUnexpected: '發生未知錯誤，請稍後再試',
@@ -552,17 +553,14 @@ const i18n = {
             DIGEasyBuyPurchase: '購買',
             DIGEasyBuySelectAll: '全選',
             DIGEasyBuySelectCancel: '取消',
-            DIGEasyBuyHideOwned: '隱藏已擁有',
-            DIGEasyBuyShowOwned: '顯示已擁有',
-            DIGEasyBuyLoadAllPages: '加載所有頁',
-            DIGEasyBuyLoading: '加載第%page%頁中',
-            DIGEasyBuyLoadingComplete: '加載完成',
             DIGButtonPurchasing: '購買中',
             DIGInsufficientFund: '餘額不足',
             DIGFinishedPurchasing: '購買完成',
             DIGMarketSearchResult: '目前市集上架中',
             DIGRateAllPositive: '全部好評',
             DIGClickToHideThisRow: '隱藏此上架遊戲',
+            DIGCurrentBalance: '當前餘額：',
+            DIGTotalAmount: '購買總額：',
             buttonReveal: '刮開',
             buttonRetrieve: '提取',
             buttonActivate: '啟動',
@@ -611,6 +609,7 @@ const i18n = {
             successTitle: '好极了！',
             successDetail: '无信息',
             activatedDetail: '已激活',
+            loadingSuccess: '加载完成！',
             skippedStatus: '跳过',
             failStatus: '失败',
             failTitle: '糟糕！',
@@ -656,17 +655,14 @@ const i18n = {
             DIGEasyBuyPurchase: '购买',
             DIGEasyBuySelectAll: '全选',
             DIGEasyBuySelectCancel: '取消',
-            DIGEasyBuyHideOwned: '隐藏已拥有',
-            DIGEasyBuyShowOwned: '显示已拥有',
-            DIGEasyBuyLoadAllPages: '加载所有页',
-            DIGEasyBuyLoading: '加载第%page%页中',
-            DIGEasyBuyLoadingComplete: '加载完成',
             DIGButtonPurchasing: '购买中',
             DIGInsufficientFund: '余额不足',
             DIGFinishedPurchasing: '购买完成',
             DIGMarketSearchResult: '目前市集上架中',
             DIGRateAllPositive: '全部好评',
             DIGClickToHideThisRow: '隐藏此上架游戏',
+            DIGCurrentBalance: '当前余额：',
+            DIGTotalAmount: '购买总额：',
             buttonReveal: '刮开',
             buttonRetrieve: '提取',
             buttonActivate: '激活',
@@ -715,6 +711,7 @@ const i18n = {
             successTitle: 'Hurray!',
             successDetail: 'No Detail',
             activatedDetail: 'Activated',
+            loadingSuccess: 'Loaded',
             skippedStatus: 'Skipped',
             failStatus: 'Fail',
             failTitle: 'Opps!',
@@ -760,17 +757,14 @@ const i18n = {
             DIGEasyBuyPurchase: 'Purchase',
             DIGEasyBuySelectAll: 'Select All',
             DIGEasyBuySelectCancel: 'Cancel',
-            DIGEasyBuyHideOwned: 'Hide Owned',
-            DIGEasyBuyShowOwned: 'Show Owned',
-            DIGEasyBuyLoadAllPages: 'Load All Pages',
-            DIGEasyBuyLoading: 'Loading page %page%',
-            DIGEasyBuyLoadingComplete: 'Loaded',
             DIGButtonPurchasing: 'Purchassing',
             DIGInsufficientFund: 'Insufficient fund',
             DIGFinishedPurchasing: 'Finished Purchasing',
             DIGMarketSearchResult: 'Currently listing in marketplace',
             DIGRateAllPositive: 'Mark All Positive',
             DIGClickToHideThisRow: 'Hide this game from listings',
+            DIGCurrentBalance: 'Current Balance: ',
+            DIGTotalAmount: 'Total Amount: ',
             buttonReveal: 'Reveal',
             buttonRetrieve: 'Retrieve',
             buttonActivate: 'Activate',
@@ -3777,11 +3771,14 @@ const siteHandlers = {
                    pathname.includes('/site_content_marketplace')) {
             // inject css styles
             GM_addStyle(`
+                body.hideOwned .SBSE-item--owned,
+                body.hideOwned .SBSE-item--owned + .DIGEasyBuy-searchResults { display: none; }
+                .headerRow > td:first-child { padding-left: 0; }
+                .headerRow > td:last-child { padding-right: 0; }
+                .DIGEasyBuy > * { margin-right: 10px; padding: 4px 8px !important; cursor: pointer; }
                 .DIGEasyBuy-row { height: 30px; }
                 .DIGEasyBuy button { padding: 4px 8px; outline: none; cursor: pointer; }
                 .DIGEasyBuy-row--checked { background-color: #222; }
-                .DIGEasyBuy--hideOwned tr.DIGEasyBuy-row--hide { display: none; }
-                .DIGEasyBuy--hideOwned tr.DIGEasyBuy-row--hide + .DIGEasyBuy-searchResults { display: none; }
                 .DIGEasyBuy-searchResults td { padding: 0 }
                 .DIGEasyBuy-searchResults iframe {
                     width: 100%; height: 300px;
@@ -3793,9 +3790,200 @@ const siteHandlers = {
                 .SBSE-item--wished .DIG3_14_Gray { color: #29b6f6; }
                 .SBSE-item--ignored .DIG3_14_Gray { text-decoration: line-through; }
                 .DIG2content select { max-width: 200px; }
+                #DIGSelectAll { display: none; }
+                #DIGSelectAll + span { display: inline-block; }
+                #DIGSelectAll ~ span:last-child { display: none; }
+                #DIGSelectAll:checked + span { display: none; }
+                #DIGSelectAll:checked ~ span:last-child { display: inline-block; }
+                .showOwnedListings { color: #FD5E0F;}
+                .showOwnedListings > label { vertical-align: text-bottom; }
+                .showOwnedListings input:checked + .SBSE-switch__slider { background-color: #FD5E0F; }
+                .DIGBalanceDetails > span { margin-right: 20px; }
             `);
 
             swal.showLoading();
+
+            // append menu buttons
+            const $target = $('#form3').closest('tr').children().eq(0);
+            const $DIGEasyBuy = $(`
+                <div class="DIGEasyBuy">
+                    <label class="DIGSelectAll DIG3_Orange_15_Form">
+                        <input type="checkbox" id="DIGSelectAll">
+                        <span>${i18n.get('DIGEasyBuySelectAll')}</span>
+                        <span>${i18n.get('DIGEasyBuySelectCancel')}</span>
+                    </label>
+                    <span class="DIGButtonPurchase DIG3_Orange_15_Form">${i18n.get('DIGEasyBuyPurchase')}</span>
+                    <label class="showOwnedListings">
+                        <label class="SBSE-switch SBSE-switch--small">
+                            <input type="checkbox" id="showOwnedListings" checked>
+                            <span class="SBSE-switch__slider"></span>
+                        </label>
+                        <span>${i18n.get('owned')}</span>
+                    </label>
+                </div>
+            `);
+
+            if ($target.children().length > 0) {
+                const $tr = $('<tr/>');
+
+                $tr.append($target.clone());
+                $target.parent().before($tr);
+            }
+
+            $target.empty().append($DIGEasyBuy);
+            $target.parent().addClass('headerRow');
+
+            // bind button event
+            $('.DIGButtonPurchase').click(() => {
+                let balance = GM_getValue('SBSE_DIGBalance');
+                const $games = $('.DIGEasyBuy-row--checked:visible');
+
+                swal({
+                    title: i18n.get('DIGButtonPurchasing'),
+                    html: '<p></p>',
+                    onOpen: () => {
+                        swal.showLoading();
+                    },
+                });
+
+                (async function purchaseHandler() {
+                    const game = $games.shift();
+
+                    if (game) {
+                        const $game = $(game);
+                        const id = $game.attr('data-id');
+                        const price = parseInt($game.attr('data-price'), 10);
+                        const title = $game.attr('data-title');
+
+                        if (title.length > 0) swal.getContent().querySelector('p').textContent = title;
+
+                        if (id && price > 0) {
+                            if (balance - price >= 0) {
+                                let url = `${location.origin}/account_buy.html`;
+                                const requestInit = {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                    body: `quantity=1&xgameid=${id}&xgameprice1=${price}&send=Purchase`,
+                                    mode: 'same-origin',
+                                    credentials: 'same-origin',
+                                    cache: 'no-store',
+                                    referrer: `${location.origin}/account_buy_${id}.html`,
+                                };
+
+                                if (pathname === '/account_trades.html' || pathname === '/account_tradesXT.html' || pathname === '/site_content_marketplace.html') {
+                                    url = `${location.origin}/account_buytrade_${id}.html`;
+                                    requestInit.body = `gameid=${id}&send=Purchase`;
+                                    requestInit.referrer = url;
+                                }
+
+                                const res = await fetch(url, requestInit);
+
+                                if (res.ok) {
+                                    $game.click();
+                                    balance -= price;
+
+                                    $('.DIG__current_balance').attr('data-value', (i, value) => parseInt(value, 10) - price);
+                                }
+
+                                purchaseHandler();
+                            } else {
+                                swal({
+                                    title: i18n.get('failTitle'),
+                                    text: i18n.get('DIGInsufficientFund'),
+                                    type: 'error',
+                                });
+                            }
+                        } else purchaseHandler();
+                    } else {
+                        GM_setValue('SBSE_DIGBalance', balance);
+                        swal({
+                            title: i18n.get('successTitle'),
+                            text: i18n.get('DIGFinishedPurchasing'),
+                            type: 'success',
+                        });
+                    }
+                }());
+            });
+            $('#DIGSelectAll').on('change', (e) => {
+                const checked = e.delegateTarget.checked;
+                let total = 0;
+
+                $('.DIGEasyBuy-row:visible').toggleClass('DIGEasyBuy-row--checked', checked);
+
+                if (checked) {
+                    total = $('.DIGEasyBuy-row--checked:visible').map((i, row) => parseInt(row.dataset.price, 10)).get().reduce((a, b) => a + b);
+                }
+
+                $('.DIG_total_amount').attr('data-value', total);
+            });
+            $('#showOwnedListings').on('change', (e) => {
+                const showOwnedListings = e.delegateTarget.checked;
+                const $rows = $('.DIGEasyBuy-row--checked.SBSE-item--owned');
+
+                $('body').toggleClass('hideOwned', !showOwnedListings);
+                GM_setValue('DIGShowOwnedListings', showOwnedListings);
+
+                if (!showOwnedListings && $rows.length > 0) {
+                    const total = $rows.map((i, row) => parseInt(row.dataset.price, 10)).get().reduce((a, b) => a + b);
+
+                    $rows.removeClass('DIGEasyBuy-row--checked');
+                    $('.DIG_total_amount').attr('data-value', (i, value) => parseInt(value, 10) - total);
+                }
+            });
+
+            // menu settings
+            $('#showOwnedListings').prop('checked', GM_getValue('DIGShowOwnedListings', true)).change();
+
+            // append sync time and event
+            const seconds = Math.round((Date.now() - steam.lastSync('library')) / 1000);
+
+            $target.closest('table').before(`
+                <span> ${i18n.get('lastSyncTime').replace('%seconds%', seconds)}</span>
+            `);
+
+            // append balance details
+            $target.closest('table').before(`
+                <div class="DIGBalanceDetails">
+                    <span>${i18n.get('DIGCurrentBalance')}$<span class="DIG__current_balance" data-value="0">0.00</span></span>
+                    <span>${i18n.get('DIGTotalAmount')}$<span class="DIG_total_amount" data-value="0">0.00</span></span>
+                </div>
+            `);
+
+            // bind balance details event
+            $('.DIGBalanceDetails span[data-value]').each((i, span) => {
+                new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.attributeName === 'data-value') {
+                            const target = mutation.target;
+
+                            target.textContent = (target.dataset.value / 100).toFixed(2);
+                        }
+                    });
+                }).observe(span, { attributes: true });
+            });
+
+            // bind row event
+            const $totalAmount = $('.DIG_total_amount');
+            const getPrice = ($tr) => {
+                let p = 0;
+                const $DIGPoints = $tr.find('td:contains( DIG Points)');
+
+                if ($DIGPoints.length === 1) p = $DIGPoints.text();
+                else {
+                    const tds = $tr.children('td').get();
+
+                    for (let j = tds.length - 1; j >= 0; j -= 1) {
+                        const t = tds[j].textContent.trim();
+
+                        if (t.startsWith('$')) {
+                            p = t.replace(/\D/g, '');
+                            break;
+                        }
+                    }
+                }
+
+                return parseInt(p, 10);
+            };
 
             $('a[href^="account_buy"]').eachAsync((ele) => {
                 const $ele = $(ele);
@@ -3804,36 +3992,19 @@ const siteHandlers = {
 
                 const id = $ele.attr('href').replace(/\D/g, '');
                 const title = $title.text().trim();
-                const price = (() => {
-                    let p = 0;
-                    const $DIGPoints = $tr.find('td:contains( DIG Points)');
-
-                    if ($DIGPoints.length === 1) p = $DIGPoints.text();
-                    else {
-                        const tds = $tr.children('td').get();
-
-                        for (let j = tds.length - 1; j >= 0; j -= 1) {
-                            const t = tds[j].textContent.trim();
-
-                            if (t.startsWith('$')) {
-                                p = t.replace(/\D/g, '');
-                                break;
-                            }
-                        }
-                    }
-
-                    return parseInt(p, 10);
-                });
+                const price = getPrice($tr);
                 const onclickHandler = $tr.attr('onclick');
 
                 // setup row data & event
-                $tr.attr('data-id', id);
-                $tr.attr('data-title', title);
-                $tr.attr('data-price', price);
-                $tr.click(() => {
-                    $tr.toggleClass('DIGEasyBuy-row--checked');
+                $tr.attr({
+                    'data-id': id,
+                    'data-title': title,
+                    'data-price': price,
                 });
-                $tr.addClass('DIGEasyBuy-row');
+                $tr.addClass('DIGEasyBuy-row').on('click', () => {
+                    $tr.toggleClass('DIGEasyBuy-row--checked');
+                    $totalAmount.attr('data-value', (index, value) => parseInt(value, 10) + (price * ($tr.hasClass('DIGEasyBuy-row--checked') ? 1 : -1)));
+                });
 
                 // re-locate onclick handler
                 if (pathname.includes('/site_content_marketplace') && onclickHandler.length > 0) {
@@ -3843,7 +4014,7 @@ const siteHandlers = {
                     $tr.removeAttr('onclick');
                 }
 
-                // check if owned / manually hid
+                // check if owned
                 const $a = $tr.find('a[href*="steampowered"]');
                 const d = {};
                 let steamID = 0;
@@ -3858,22 +4029,9 @@ const siteHandlers = {
                     d.app = steamID;
                 }
 
-                if (steam.isOwned(d)) $tr.addClass('SBSE-item--owned DIGEasyBuy-row--hide');
+                if (steam.isOwned(d)) $tr.addClass('SBSE-item--owned');
                 if (steam.isWished(d)) $tr.addClass('SBSE-item--wished');
                 if (steam.isIgnored(d)) $tr.addClass('SBSE-item--ignored');
-                if (MPHideList.includes(id)) $tr.addClass('DIGEasyBuy-row--hide');
-
-                // append manual hide feature
-                $tr.children().eq(0).attr('title', i18n.get('DIGClickToHideThisRow')).click((e) => {
-                    e.stopPropagation();
-
-                    if (id > 0) {
-                        MPHideList.push(id);
-                        GM_setValue('SBSE_DIGMPHideList', JSON.stringify(MPHideList));
-
-                        $tr.addClass('DIGEasyBuy-row--hide');
-                    }
-                });
 
                 // no appID found, pre-load Google search result
                 if (steamID === -1 && !MPHideList.includes(id)) {
@@ -3930,127 +4088,33 @@ const siteHandlers = {
                             .slideToggle('fast');
                     });
                 }
+
+                // remove row if manually hid
+                if (MPHideList.includes(id)) $tr.remove();
+                else {
+                    // append manual hide feature
+                    $tr.children().eq(0).attr('title', i18n.get('DIGClickToHideThisRow')).click((e) => {
+                        e.stopPropagation();
+
+                        if (id > 0) {
+                            MPHideList.push(id);
+                            GM_setValue('SBSE_DIGMPHideList', JSON.stringify(MPHideList));
+
+                            $tr.remove();
+                        }
+                    });
+                }
             }, () => {
                 swal({
                     titleText: i18n.get('successTitle'),
-                    text: i18n.get('DIGEasyBuyLoadingComplete'),
+                    text: i18n.get('loadingSuccess'),
                     type: 'success',
                     timer: 3000,
                 });
             });
 
-            // append menu buttons
-            const $target = $('#form3').closest('tr').children().eq(0);
-            const $DIGEasyBuy = $(`
-                <div class="DIGEasyBuy">
-                    <button class="DIGButtonPurchase DIG3_Orange_15_Form">${i18n.get('DIGEasyBuyPurchase')}</button>
-                    <button class="DIGButtonSelectAll DIG3_Orange_15_Form">${i18n.get('DIGEasyBuySelectAll')}</button>
-                    <button class="DIGButtonHideOwned DIG3_Orange_15_Form">${i18n.get('DIGEasyBuyHideOwned')}</button>
-                </div>
-            `);
-
-            if ($target.children().length > 0) {
-                const $tr = $('<tr/>');
-
-                $tr.append($target.clone());
-                $target.parent().before($tr);
-            }
-
-            $target.empty().append($DIGEasyBuy);
-
-            // append sync time and event
-            const seconds = Math.round((Date.now() - steam.lastSync('library')) / 1000);
-
-            $DIGEasyBuy.append(`
-                <span> ${i18n.get('lastSyncTime').replace('%seconds%', seconds)}</span>
-            `);
-
-            // bind button event
-            $('.DIGButtonPurchase').click(() => {
-                let balance = GM_getValue('SBSE_DIGBalance');
-                const $games = $('.DIGEasyBuy-row--checked:visible');
-
-                swal({
-                    title: i18n.get('DIGButtonPurchasing'),
-                    html: '<p></p>',
-                    onOpen: () => {
-                        swal.showLoading();
-                    },
-                });
-
-                (async function purchaseHandler() {
-                    const game = $games.shift();
-
-                    if (game) {
-                        const $game = $(game);
-                        const id = $game.data('id');
-                        const price = parseInt($game.data('price'), 10);
-                        const title = $game.data('title');
-
-                        if (title.length > 0) swal.getContent().querySelector('p').textContent = title;
-
-                        if (id && price > 0) {
-                            if (balance - price >= 0) {
-                                let url = `${location.origin}/account_buy.html`;
-                                const requestInit = {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                    body: `quantity=1&xgameid=${id}&xgameprice1=${price}&send=Purchase`,
-                                    mode: 'same-origin',
-                                    credentials: 'same-origin',
-                                    cache: 'no-store',
-                                    referrer: `${location.origin}/account_buy_${id}.html`,
-                                };
-
-                                if (pathname === '/account_trades.html' || pathname === '/account_tradesXT.html' || pathname === '/site_content_marketplace.html') {
-                                    url = `${location.origin}/account_buytrade_${id}.html`;
-                                    requestInit.body = `gameid=${id}&send=Purchase`;
-                                    requestInit.referrer = url;
-                                }
-
-                                const res = await fetch(url, requestInit);
-
-                                if (res.ok) {
-                                    $game.click();
-                                    balance -= price;
-                                }
-
-                                purchaseHandler();
-                            } else {
-                                swal({
-                                    title: i18n.get('failTitle'),
-                                    text: i18n.get('DIGInsufficientFund'),
-                                    type: 'error',
-                                });
-                            }
-                        } else purchaseHandler();
-                    } else {
-                        GM_setValue('SBSE_DIGBalance', balance);
-                        swal({
-                            title: i18n.get('successTitle'),
-                            text: i18n.get('DIGFinishedPurchasing'),
-                            type: 'success',
-                        });
-                    }
-                }());
-            });
-            $('.DIGButtonSelectAll').click((e) => {
-                const $self = $(e.currentTarget);
-                const state = !$self.data('state');
-                const selector = $('.DIGEasyBuy--hideOwned').length > 0 ? '.DIGEasyBuy-row:not(.DIGEasyBuy-row--hide)' : '.DIGEasyBuy-row';
-
-                $(selector).toggleClass('DIGEasyBuy-row--checked', state);
-                $self.data('state', state);
-                $self.text(state ? i18n.get('DIGEasyBuySelectCancel') : i18n.get('DIGEasyBuySelectAll'));
-            });
-            $('.DIGButtonHideOwned').click((e) => {
-                const $self = $(e.currentTarget);
-                const state = !$self.data('state');
-
-                $('#TableKeys').toggleClass('DIGEasyBuy--hideOwned', state);
-                $self.data('state', state);
-                $self.text(state ? i18n.get('DIGEasyBuyShowOwned') : i18n.get('DIGEasyBuyHideOwned'));
-            });
+            // setup current balance
+            $('.DIG__current_balance').attr('data-value', GM_getValue('SBSE_DIGBalance', 0));
         // extension for creating trade at market place
         } else if (pathname === '/account_createtrade.html') {
             const $form = $('#form_createtrade');
