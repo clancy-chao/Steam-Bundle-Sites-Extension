@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.11.0
+// @version      2.11.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -4030,7 +4030,7 @@ const siteHandlers = {
                 });
 
                 // re-locate onclick handler
-                if (pathname.includes('/site_content_marketplace') && onclickHandler.length > 0) {
+                if (pathname.includes('/site_content_marketplace') && onclickHandler) {
                     $title.wrapInner($('<span></span>').attr('onclick', onclickHandler));
                     $tr.removeAttr('onclick');
                 }
