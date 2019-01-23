@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.11.1
+// @version      2.11.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -3689,7 +3689,8 @@ const siteHandlers = {
             steam.sync([{ key: 'library' }]);
 
             // update DIG balance
-            const balance = parseInt($('div:contains(Usable DIG Points) > span').text(), 10);
+            const balanceText = $('a[href*="transactionhistory.html"]').eq(0).closest('div').text().match(/\$\d+\.\d+/);
+            const balance = balanceText ? parseInt(balanceText[0].replace(/\D/g, ''), 10) : '';
 
             if (!isNaN(balance)) GM_setValue('SBSE_DIGBalance', balance);
 
@@ -3897,9 +3898,7 @@ const siteHandlers = {
                                         $game.click();
                                         balance -= price;
 
-                                        $('.DIG__current_balance').attr('data-value', function (i, value) {
-                                            return parseInt(value, 10) - price;
-                                        });
+                                        $('.DIG__current_balance').attr('data-value', balance);
                                     }
 
                                     purchaseHandler();
