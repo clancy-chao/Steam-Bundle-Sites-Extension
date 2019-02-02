@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.11.2
+// @version      2.12.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -488,6 +488,7 @@ const config = {
     },
     init() {
         if (!has.call(this.data, 'autoUpdateSessionID')) this.data.autoUpdateSessionID = true;
+        if (!has.call(this.data, 'autoSyncLibrary')) this.data.autoSyncLibrary = true;
         if (!has.call(this.data, 'ASFFormat')) this.data.ASFFormat = false;
         if (!has.call(this.data, 'titleComesLast')) this.data.titleComesLast = false;
         if (!has.call(this.data, 'activateAllKeys')) this.data.activateAllKeys = false;
@@ -533,6 +534,7 @@ const i18n = {
             settingsTitle: '設定',
             settingsAutoUpdateSessionID: '自動更新SessionID',
             settingsSessionID: '我的SessionID',
+            settingsAutoSyncLibrary: '自動同步Steam 遊戲庫',
             settingsSyncLibrary: '同步遊戲庫',
             settingsSyncLibraryButton: '同步',
             settingsLanguage: '語言',
@@ -562,6 +564,8 @@ const i18n = {
             DIGRateAllPositive: '全部好評',
             DIGClickToHideThisRow: '隱藏此上架遊戲',
             DIGCurrentBalance: '當前餘額：',
+            DIGEditBalance: '更新DIG 錢包餘額',
+            DIGPoint: 'DIG 點數',
             DIGTotalAmount: '購買總額：',
             buttonReveal: '刮開',
             buttonRetrieve: '提取',
@@ -635,6 +639,7 @@ const i18n = {
             settingsTitle: '设置',
             settingsAutoUpdateSessionID: '自动更新SessionID',
             settingsSessionID: '我的SessionID',
+            settingsAutoSyncLibrary: '自动同步Steam 游戏库',
             settingsSyncLibrary: '同步游戏库',
             settingsSyncLibraryButton: '同步',
             settingsLanguage: '语言',
@@ -664,6 +669,8 @@ const i18n = {
             DIGRateAllPositive: '全部好评',
             DIGClickToHideThisRow: '隐藏此上架游戏',
             DIGCurrentBalance: '当前余额：',
+            DIGEditBalance: '更新DIG 錢包餘額',
+            DIGPoint: 'DIG 点数',
             DIGTotalAmount: '购买总额：',
             buttonReveal: '刮开',
             buttonRetrieve: '提取',
@@ -737,6 +744,7 @@ const i18n = {
             settingsTitle: 'Settings',
             settingsAutoUpdateSessionID: 'Auto Update SessionID',
             settingsSessionID: 'Your sessionID',
+            settingsAutoSyncLibrary: 'Auto Sync Library',
             settingsSyncLibrary: 'Sync Library',
             settingsSyncLibraryButton: 'Sync',
             settingsLanguage: 'Language',
@@ -766,6 +774,8 @@ const i18n = {
             DIGRateAllPositive: 'Mark All Positive',
             DIGClickToHideThisRow: 'Hide this game from listings',
             DIGCurrentBalance: 'Current Balance: ',
+            DIGEditBalance: 'Edit DIG balance',
+            DIGPoint: 'DIG Point',
             DIGTotalAmount: 'Total Amount: ',
             buttonReveal: 'Reveal',
             buttonRetrieve: 'Retrieve',
@@ -1938,17 +1948,19 @@ const steam = {
 
         if (!isObject(this.games) || !has.call(this.games, 'list')) this.reset([{ key: 'games' }]);
 
-        // update Steam library every 10 min
-        const libraryTimer = 10 * 60 * 1000;
-        const libraryLastSync = this.lastSync('library');
+        if (config.get('autoSyncLibrary')) {
+            // sync Steam library every 10 min
+            const libraryTimer = 10 * 60 * 1000;
+            const libraryLastSync = this.lastSync('library');
 
-        if (!libraryLastSync || libraryLastSync < Date.now() - libraryTimer) this.sync([{ key: 'library' }]);
+            if (!libraryLastSync || libraryLastSync < Date.now() - libraryTimer) this.sync([{ key: 'library' }]);
 
-        // update Steam games list every day
-        const gamesTimer = 1 * 24 * 60 * 60 * 1000;
-        const gamesLastSync = this.lastSync('games');
+            // sync Steam games list every day
+            const gamesTimer = 1 * 24 * 60 * 60 * 1000;
+            const gamesLastSync = this.lastSync('games');
 
-        if (!gamesLastSync || gamesLastSync < Date.now() - gamesTimer || this.games.list.length === 0) this.sync([{ key: 'games' }]);
+            if (!gamesLastSync || gamesLastSync < Date.now() - gamesTimer || this.games.list.length === 0) this.sync([{ key: 'games' }]);
+        }
 
         // delete odd values
         GM_deleteValue('SBSE_steam');
@@ -2148,6 +2160,10 @@ const settings = {
             name: i18n.get('settingsSessionID'),
             configItem: 'sessionID',
             type: 'text'
+        }, {
+            name: i18n.get('settingsAutoSyncLibrary'),
+            configItem: 'autoSyncLibrary',
+            type: 'switch'
         }, {
             name: i18n.get('settingsSyncLibrary'),
             configItem: 'syncLibrary',
@@ -3814,6 +3830,34 @@ const siteHandlers = {
                 .showOwnedListings > label { vertical-align: text-bottom; }
                 .showOwnedListings input:checked + .SBSE-switch__slider { background-color: #FD5E0F; }
                 .DIGBalanceDetails > span { margin-right: 20px; }
+                .DIG__edit_balance {
+                    display: inline-block;
+                    position: relative;
+                    transform: rotate(45deg);
+                    cursor: pointer;
+                }
+                .DIG__edit_balance > span {
+                    display: inline-block;
+                }
+                .DIG__edit_balance .tip {
+                    width: 0; height: 0;
+                    position: absolute;
+                    top: 13px;
+                    border-left: 2px solid transparent;
+                    border-right: 2px solid transparent;
+                    border-top: 3px solid #999;
+                }
+                .DIG__edit_balance .body {
+                    width: 4px; height: 12px;
+                    background-color: #999;
+                }
+                .DIG__edit_balance .rubber {
+                    width: 4px; height: 2px;
+                    position: absolute;
+                    top: -3px;
+                    background-color: #999;
+                    top: -3px;
+                }
             `);
 
             swal.showLoading();
@@ -3851,6 +3895,7 @@ const siteHandlers = {
             // bind button event
             $('.DIGButtonPurchase').click(() => {
                 let balance = GM_getValue('SBSE_DIGBalance');
+                throw balance;
                 const $games = $('.DIGEasyBuy-row--checked:visible');
 
                 swal({
@@ -3968,6 +4013,11 @@ const siteHandlers = {
             $target.closest('table').before(`
                 <div class="DIGBalanceDetails">
                     <span>${i18n.get('DIGCurrentBalance')}$<span class="DIG__current_balance" data-value="0">0.00</span></span>
+                    <span class="DIG__edit_balance">
+                        <span class="tip"></span>
+                        <span class="body"></span>
+                        <span class="rubber"></span>
+                    </span>
                     <span>${i18n.get('DIGTotalAmount')}$<span class="DIG_total_amount" data-value="0">0.00</span></span>
                 </div>
             `);
@@ -3983,6 +4033,23 @@ const siteHandlers = {
                         }
                     });
                 }).observe(span, { attributes: true });
+            });
+
+            $('.DIG__edit_balance').on('click', () => {
+                swal({
+                    title: i18n.get('DIGEditBalance'),
+                    input: 'number',
+                    inputPlaceholder: i18n.get('DIGPoint'),
+                    inputAttributes: { min: 1 },
+                    showCancelButton: true
+                }).then(result => {
+                    if (!isNaN(result.value)) {
+                        const balance = Math.trunc(result.value);
+
+                        GM_setValue('SBSE_DIGBalance', balance);
+                        $('.DIG__current_balance').attr('data-value', balance);
+                    }
+                });
             });
 
             // bind row event
