@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.12.0
+// @version      2.12.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -3534,7 +3534,7 @@ const siteHandlers = {
                     const tooltipsData = [];
 
                     data.tpkd_dict.all_tpks.forEach(function (game) {
-                        const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[data-title="${game.human_name}"])`);
+                        const $keyRedeemer = $node.find(`.key-redeemer:has(.heading-text[data-title="${game.human_name.replace(/"/g, '\\"')}"])`);
 
                         if ($keyRedeemer.length > 0) {
                             if (game.key_type === 'steam') {
