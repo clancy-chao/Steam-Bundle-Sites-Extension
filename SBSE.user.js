@@ -4,7 +4,7 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.12.1
+// @version      2.12.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -3895,7 +3895,6 @@ const siteHandlers = {
             // bind button event
             $('.DIGButtonPurchase').click(() => {
                 let balance = GM_getValue('SBSE_DIGBalance');
-                throw balance;
                 const $games = $('.DIGEasyBuy-row--checked:visible');
 
                 swal({
