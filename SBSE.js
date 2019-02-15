@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.12.2
+// @version      2.12.3
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -71,8 +71,8 @@ GM_addStyle(GM_getResourceText('flagIcon').replace(/\.\.\//g, 'https://cdnjs.clo
 // inject script css styles
 GM_addStyle(`
     pre.SBSE-errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
-    a.SBSE-link-steam_store { text-decoration: none; font-size: smaller; }
-    a.SBSE-link-steam_store:hover { text-decoration: none; }
+    a.SBSE-link-steam_store, a.SBSE-link-steam_db { text-decoration: none; font-size: smaller; }
+    a.SBSE-link-steam_store:hover, a.SBSE-link-steam_db:hover { text-decoration: none; }
 
     /* switch */
     .SBSE-switch { position: relative; display: inline-block; width: 60px; height: 30px; }
@@ -2827,19 +2827,21 @@ const steamCNTooltip = {
             const $container = $('<div/>');
 
             (Array.isArray(data) ? data : [data]).forEach((d) => {
-                ['app', 'sub'].forEach((type) => {
-                    if (has.call(d, type)) {
-                        const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${d[type]}#steam_info_${type}_${d[type]}_1`;
+                let type = null;
 
-                        $container.append(
-                            $(`<iframe id="SBSE-tooltip_${type + d[type]}" class="SBSE-tooltip" data-url="${url}"></iframe>`)
-                                .mouseenter(() => {
-                                    clearTimeout(this.timeoutID);
-                                })
-                                .mouseout(this.hide),
-                        );
-                    }
-                });
+                if (has.call(d, 'sub')) type = 'sub';
+                if (has.call(d, 'app')) type = 'app';
+                if (type !== null) {
+                    const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${d[type]}#steam_info_${type}_${d[type]}_1`;
+
+                    $container.append(
+                        $(`<iframe id="SBSE-tooltip_${type + d[type]}" class="SBSE-tooltip" data-url="${url}"></iframe>`)
+                            .mouseenter(() => {
+                                clearTimeout(this.timeoutID);
+                            })
+                            .mouseout(this.hide),
+                    );
+                }
             });
 
             $('body').append($container);
@@ -3290,7 +3292,7 @@ const siteHandlers = {
             },
         };
         const process = ($node) => {
-            const title = $node.find('h5').eq(0).text();
+            const title = $('.account-content h5').eq(0).text();
             const slug = title.trim().toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
 
             // empty textarea
@@ -3348,17 +3350,10 @@ const siteHandlers = {
             mutations.forEach((mutation) => {
                 Array.from(mutation.addedNodes).filter(x => x.nodeType === 1).forEach((node) => {
                     const $node = $(node);
+                    const currentURL = location.href;
 
                     // url changed
                     if (node.matches('[property="og:url"]')) {
-                        const currentURL = location.href;
-
-                        if (currentURL.includes('/orders/')) {
-                            // insert container
-                            const $anchor = $('h3:contains(Order Keys)');
-
-                            if ($('.SBSE_container').length === 0 && $anchor.length > 0) $anchor.eq(0).before($container);
-                        }
                         if (currentURL.includes('/bundle/') ||
                             currentURL.includes('/game/') ||
                             currentURL.includes('/dlc/')
@@ -3366,7 +3361,16 @@ const siteHandlers = {
                     }
 
                     // order contents loaded
-                    if ($node.find('dl').length > 0) process($node);
+                    if ($node.children('div').filter('[class]').length === 0 && $node.find('dl').length > 0) {
+                        if (currentURL.includes('/orders/')) {
+                            // insert container
+                            const $anchor = $('h3:contains(Order Keys)');
+
+                            if ($('.SBSE_container').length === 0 && $anchor.length > 0) $anchor.eq(0).before($container);
+                        }
+
+                        process($node);
+                    }
                 });
             });
         }).observe($('html')[0], {
@@ -3543,6 +3547,7 @@ const siteHandlers = {
                             const d = {
                                 title: game.human_name,
                                 app: parseInt(game.steam_app_id, 10),
+                                sub: parseInt(game.steam_package_id, 10),
                             };
 
                             d.owned = steam.isOwned(d);
@@ -3560,7 +3565,14 @@ const siteHandlers = {
                             });
 
                             // append Steam store link
-                            $keyRedeemer.find('h4 > span').eq(0).after(`<span> | </span><a class="SBSE-link-steam_store" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`);
+                            const $target = $keyRedeemer.find('h4 > span').eq(0);
+
+                            if (d.app > 0) {
+                                $target.after(`<span> | </span><a class="SBSE-link-steam_store" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`);
+                            }
+                            if (d.sub > 0) {
+                                $target.after(`<span> | </span><a class="SBSE-link-steam_db" href="https://steamdb.info/sub/${d.sub}/" target="_blank">Steam DB</a>`);
+                            }
 
                             tooltipsData.push(d);
                         }
