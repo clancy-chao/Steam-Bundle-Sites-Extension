@@ -6,7 +6,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.12.4
+// @version      2.12.5
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -3098,7 +3098,6 @@ const siteHandlers = {
             .swal2-popup table { background-color: white; }
             .SBSE-icon { vertical-align: bottom; }
         `);
-    let APIData = null;
 
     const fetchAPIData =
     /*#__PURE__*/
@@ -3123,8 +3122,7 @@ const siteHandlers = {
           } else JSONString = '{}';
         }
 
-        APIData = JSON.parse(JSONString);
-        if (typeof callback === 'function') callback();
+        if (typeof callback === 'function') callback(JSON.parse(JSONString));
       });
 
       return function fetchAPIData(_x2, _x3) {
@@ -3135,7 +3133,7 @@ const siteHandlers = {
     const productHandler =
     /*#__PURE__*/
     function () {
-      var _ref5 = _asyncToGenerator(function* () {
+      var _ref5 = _asyncToGenerator(function* (APIData) {
         if (Object.keys(APIData).length > 0) {
           const language = config.get('language');
           const $priceExt = $(`
@@ -3220,7 +3218,7 @@ const siteHandlers = {
         }
       });
 
-      return function productHandler() {
+      return function productHandler(_x4) {
         return _ref5.apply(this, arguments);
       };
     }();
@@ -3279,13 +3277,13 @@ const siteHandlers = {
     };
 
     const process = $node => {
-      const title = $('.account-content h5').eq(0).text();
-      const slug = title.trim().toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, ''); // empty textarea
+      // empty textarea
+      SBSE.getModel().find('textarea').val(''); // retrieve title
 
-      SBSE.getModel().find('textarea').val('');
-
-      if (slug.length > 0) {
-        fetchAPIData(slug, () => {
+      $('.account-content h5').each((i, h5) => {
+        const title = h5.textContent.trim();
+        const slug = title.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
+        fetchAPIData(slug, APIData => {
           if (Object.keys(APIData).length > 0) {
             const tooltipsData = [];
 
@@ -3317,7 +3315,7 @@ const siteHandlers = {
             steamCNTooltip.load(tooltipsData);
           }
         });
-      }
+      });
     };
 
     const $container = container.get('SBSE', handlers);
@@ -3434,7 +3432,7 @@ const siteHandlers = {
         } else $node.click();
       });
 
-      return function fetchKey(_x4, _x5, _x6) {
+      return function fetchKey(_x5, _x6, _x7) {
         return _ref6.apply(this, arguments);
       };
     }();
@@ -3605,7 +3603,7 @@ const siteHandlers = {
         }
       });
 
-      return function process(_x7) {
+      return function process(_x8) {
         return _ref7.apply(this, arguments);
       };
     }();
@@ -3652,7 +3650,7 @@ const siteHandlers = {
               }
             });
 
-            return function (_x8) {
+            return function (_x9) {
               return _ref8.apply(this, arguments);
             };
           }());
@@ -3773,7 +3771,7 @@ const siteHandlers = {
               if (res.ok) $(a).parent('td').html('<span class="DIG3_14_Orange">Positive</span>');
             });
 
-            return function (_x9, _x10) {
+            return function (_x10, _x11) {
               return _ref9.apply(this, arguments);
             };
           }());
@@ -4396,7 +4394,7 @@ const siteHandlers = {
           });
         });
 
-        return function (_x11, _x12) {
+        return function (_x12, _x13) {
           return _ref11.apply(this, arguments);
         };
       }()); // bind custom event
@@ -4878,7 +4876,7 @@ const siteHandlers = {
           } else plati.save();
         });
 
-        function fetchItem(_x13) {
+        function fetchItem(_x14) {
           return _fetchItem.apply(this, arguments);
         }
 
