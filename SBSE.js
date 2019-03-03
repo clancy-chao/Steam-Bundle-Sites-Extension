@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.12.4
+// @version      2.12.5
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -3109,7 +3109,6 @@ const siteHandlers = {
             .SBSE-icon { vertical-align: bottom; }
         `);
 
-        let APIData = null;
         const fetchAPIData = async (s, c) => {
             let slug = s;
             let callback = c;
@@ -3130,11 +3129,9 @@ const siteHandlers = {
                 } else JSONString = '{}';
             }
 
-            APIData = JSON.parse(JSONString);
-
-            if (typeof callback === 'function') callback();
+            if (typeof callback === 'function') callback(JSON.parse(JSONString));
         };
-        const productHandler = async () => {
+        const productHandler = async (APIData) => {
             if (Object.keys(APIData).length > 0) {
                 const language = config.get('language');
                 const $priceExt = $(`
@@ -3292,14 +3289,15 @@ const siteHandlers = {
             },
         };
         const process = ($node) => {
-            const title = $('.account-content h5').eq(0).text();
-            const slug = title.trim().toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
-
             // empty textarea
             SBSE.getModel().find('textarea').val('');
 
-            if (slug.length > 0) {
-                fetchAPIData(slug, () => {
+            // retrieve title
+            $('.account-content h5').each((i, h5) => {
+                const title = h5.textContent.trim();
+                const slug = title.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
+
+                fetchAPIData(slug, (APIData) => {
                     if (Object.keys(APIData).length > 0) {
                         const tooltipsData = [];
                         const matchGame = (data) => {
@@ -3339,7 +3337,7 @@ const siteHandlers = {
                         steamCNTooltip.load(tooltipsData);
                     }
                 });
-            }
+            });
         };
         const $container = container.get('SBSE', handlers);
 
