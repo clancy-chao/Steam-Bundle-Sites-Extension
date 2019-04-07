@@ -6,7 +6,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.12.5
+// @version      2.13.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -557,9 +557,9 @@ const i18n = {
       HBDisallowedCountries: '限制以下地區啟動',
       HBExclusiveCountries: '僅限以下地區啟動',
       HBCurrentLocation: '當前位於：',
-      DIGEasyBuyPurchase: '購買',
-      DIGEasyBuySelectAll: '全選',
-      DIGEasyBuySelectCancel: '取消',
+      DIGMenuPurchase: '購買',
+      DIGMenuSelectAll: '全選',
+      DIGMenuSelectCancel: '取消',
       DIGButtonPurchasing: '購買中',
       DIGInsufficientFund: '餘額不足',
       DIGFinishedPurchasing: '購買完成',
@@ -662,9 +662,9 @@ const i18n = {
       HBDisallowedCountries: '限制以下地区激活',
       HBExclusiveCountries: '仅限以下地区激活',
       HBCurrentLocation: '当前位于：',
-      DIGEasyBuyPurchase: '购买',
-      DIGEasyBuySelectAll: '全选',
-      DIGEasyBuySelectCancel: '取消',
+      DIGMenuPurchase: '购买',
+      DIGMenuSelectAll: '全选',
+      DIGMenuSelectCancel: '取消',
       DIGButtonPurchasing: '购买中',
       DIGInsufficientFund: '余额不足',
       DIGFinishedPurchasing: '购买完成',
@@ -767,9 +767,9 @@ const i18n = {
       HBDisallowedCountries: 'Cannot be activated in the following regions',
       HBExclusiveCountries: 'Can only be activated in the following regions',
       HBCurrentLocation: 'Current Location: ',
-      DIGEasyBuyPurchase: 'Purchase',
-      DIGEasyBuySelectAll: 'Select All',
-      DIGEasyBuySelectCancel: 'Cancel',
+      DIGMenuPurchase: 'Purchase',
+      DIGMenuSelectAll: 'Select All',
+      DIGMenuSelectCancel: 'Cancel',
       DIGButtonPurchasing: 'Purchassing',
       DIGInsufficientFund: 'Insufficient fund',
       DIGFinishedPurchasing: 'Finished Purchasing',
@@ -3577,7 +3577,7 @@ const siteHandlers = {
           }); // override default popups
 
           document.addEventListener('click', e => {
-            const $target = $(e.target).closest('.keyfield:not(.redeemed)');
+            const $target = $(e.target).closest('.keyfield:not(.redeemed, .redeemed-gift)');
             const $keyRedeemer = $target.closest('.key-redeemer.SBSE-item--steam');
             const machineName = $keyRedeemer.attr('data-machineName');
 
@@ -3776,21 +3776,21 @@ const siteHandlers = {
             };
           }());
         });
-      } // DIG EasyBuy
+      } // DIG Menu
 
     } else if (pathname.includes('/account_digstore') || pathname.includes('/account_trades') || pathname.includes('/account_tradesXT') || pathname.includes('/store_update') || pathname.includes('/storeXT_update') || pathname.includes('/site_content_marketplace')) {
       // inject css styles
       GM_addStyle(`
                 body.hideOwned .SBSE-item--owned,
-                body.hideOwned .SBSE-item--owned + .DIGEasyBuy-searchResults { display: none; }
+                body.hideOwned .SBSE-item--owned + .DIGMenu-searchResults { display: none; }
                 .headerRow > td:first-child { padding-left: 0; }
                 .headerRow > td:last-child { padding-right: 0; }
-                .DIGEasyBuy > * { margin-right: 10px; padding: 4px 8px !important; cursor: pointer; }
-                .DIGEasyBuy-row { height: 30px; }
-                .DIGEasyBuy button { padding: 4px 8px; outline: none; cursor: pointer; }
-                .DIGEasyBuy-row--checked { background-color: #222; }
-                .DIGEasyBuy-searchResults td { padding: 0 }
-                .DIGEasyBuy-searchResults iframe {
+                .DIGMenu > * { margin-right: 10px; padding: 4px 8px !important; cursor: pointer; }
+                .DIG-row { height: 30px; }
+                .DIGMenu button { padding: 4px 8px; outline: none; cursor: pointer; }
+                .DIG-row--checked { background-color: #222; }
+                .DIGMenu-searchResults td { padding: 0 }
+                .DIGMenu-searchResults iframe {
                     width: 100%; height: 300px;
                     display: none;
                     background-color: white;
@@ -3805,7 +3805,7 @@ const siteHandlers = {
                 #DIGSelectAll ~ span:last-child { display: none; }
                 #DIGSelectAll:checked + span { display: none; }
                 #DIGSelectAll:checked ~ span:last-child { display: inline-block; }
-                .showOwnedListings { color: #FD5E0F;}
+                .showOwnedListings { color: #FD5E0F; }
                 .showOwnedListings > label { vertical-align: text-bottom; }
                 .showOwnedListings input:checked + .SBSE-switch__slider { background-color: #FD5E0F; }
                 .DIGBalanceDetails > span { margin-right: 20px; }
@@ -3841,14 +3841,14 @@ const siteHandlers = {
       swal.showLoading(); // append menu buttons
 
       const $target = $('#form3').closest('tr').children().eq(0);
-      const $DIGEasyBuy = $(`
-                <div class="DIGEasyBuy">
+      const $DIGMenu = $(`
+                <div class="DIGMenu">
                     <label class="DIGSelectAll DIG3_Orange_15_Form">
                         <input type="checkbox" id="DIGSelectAll">
-                        <span>${i18n.get('DIGEasyBuySelectAll')}</span>
-                        <span>${i18n.get('DIGEasyBuySelectCancel')}</span>
+                        <span>${i18n.get('DIGMenuSelectAll')}</span>
+                        <span>${i18n.get('DIGMenuSelectCancel')}</span>
                     </label>
-                    <span class="DIGButtonPurchase DIG3_Orange_15_Form">${i18n.get('DIGEasyBuyPurchase')}</span>
+                    <span class="DIGButtonPurchase DIG3_Orange_15_Form">${i18n.get('DIGMenuPurchase')}</span>
                     <label class="showOwnedListings">
                         <label class="SBSE-switch SBSE-switch--small">
                             <input type="checkbox" id="showOwnedListings" checked>
@@ -3865,12 +3865,12 @@ const siteHandlers = {
         $target.parent().before($tr);
       }
 
-      $target.empty().append($DIGEasyBuy);
+      $target.empty().append($DIGMenu);
       $target.parent().addClass('headerRow'); // bind button event
 
       $('.DIGButtonPurchase').click(() => {
         let balance = GM_getValue('SBSE_DIGBalance');
-        const $games = $('.DIGEasyBuy-row--checked:visible');
+        const $games = $('.DIG-row--checked:visible');
         swal({
           title: i18n.get('DIGButtonPurchasing'),
           html: '<p></p>',
@@ -3947,23 +3947,23 @@ const siteHandlers = {
       $('#DIGSelectAll').on('change', e => {
         const checked = e.delegateTarget.checked;
         let total = 0;
-        $('.DIGEasyBuy-row:visible').toggleClass('DIGEasyBuy-row--checked', checked);
+        $('.DIG-row:visible').toggleClass('DIG-row--checked', checked);
 
         if (checked) {
-          total = $('.DIGEasyBuy-row--checked:visible').map((i, row) => parseInt(row.dataset.price, 10)).get().reduce((a, b) => a + b);
+          total = $('.DIG-row--checked:visible').map((i, row) => parseInt(row.dataset.price, 10)).get().reduce((a, b) => a + b);
         }
 
         $('.DIG_total_amount').attr('data-value', total);
       });
       $('#showOwnedListings').on('change', e => {
         const showOwnedListings = e.delegateTarget.checked;
-        const $rows = $('.DIGEasyBuy-row--checked.SBSE-item--owned');
+        const $rows = $('.DIG-row--checked.SBSE-item--owned');
         $('body').toggleClass('hideOwned', !showOwnedListings);
         GM_setValue('DIGShowOwnedListings', showOwnedListings);
 
         if (!showOwnedListings && $rows.length > 0) {
           const total = $rows.map((i, row) => parseInt(row.dataset.price, 10)).get().reduce((a, b) => a + b);
-          $rows.removeClass('DIGEasyBuy-row--checked');
+          $rows.removeClass('DIG-row--checked');
           $('.DIG_total_amount').attr('data-value', (i, value) => parseInt(value, 10) - total);
         }
       }); // menu settings
@@ -4051,9 +4051,9 @@ const siteHandlers = {
           'data-title': title,
           'data-price': price
         });
-        $tr.addClass('DIGEasyBuy-row').on('click', () => {
-          $tr.toggleClass('DIGEasyBuy-row--checked');
-          $totalAmount.attr('data-value', (index, value) => parseInt(value, 10) + price * ($tr.hasClass('DIGEasyBuy-row--checked') ? 1 : -1));
+        $tr.addClass('DIG-row').on('click', () => {
+          $tr.toggleClass('DIG-row--checked');
+          $totalAmount.attr('data-value', (index, value) => parseInt(value, 10) + price * ($tr.hasClass('DIG-row--checked') ? 1 : -1));
         }); // re-locate onclick handler
 
         if (pathname.includes('/site_content_marketplace') && onclickHandler) {
@@ -4109,7 +4109,7 @@ const siteHandlers = {
 
               html = html.replace(/\/images\//g, 'https://www.google.com/images/').replace(/\/url\?/g, 'https://www.google.com/url?');
               $tr.after(`
-                                <tr class="DIGEasyBuy-searchResults">
+                                <tr class="DIGMenu-searchResults">
                                     <td colspan="11"><iframe sandbox="allow-scripts" srcdoc='${html.replace(/[&<>"']/g, m => map[m])}'></frame></td>
                                 </tr>
                             `);
@@ -4120,7 +4120,7 @@ const siteHandlers = {
             color: 'red'
           }).click(e => {
             e.stopPropagation();
-            $tr.next('.DIGEasyBuy-searchResults').find('iframe').slideToggle('fast');
+            $tr.next('.DIGMenu-searchResults').find('iframe').slideToggle('fast');
           });
         } // remove row if manually hid
 
@@ -4147,6 +4147,149 @@ const siteHandlers = {
       }); // setup current balance
 
       $('.DIG__current_balance').attr('data-value', GM_getValue('SBSE_DIGBalance', 0)); // extension for creating trade at market place
+    } else if (pathname === '/site_content_giveaways.html') {
+      swal.showLoading(); // inject css styles
+
+      GM_addStyle(`
+                body.hideOwned .SBSE-item--owned { display: none; }
+                .DIGMenu > * { margin-right: 10px; padding: 4px 0 !important; cursor: pointer; }
+                .DIG-row { height: 30px; }
+                .SBSE-item--owned .DIG4-Orange-14 { color: #9ccc65; }
+                .SBSE-item--wished .DIG4-Orange-14 { color: #29b6f6; }
+                .SBSE-item--ignored .DIG4-Orange-14 { text-decoration: line-through; }
+                .showOwnedListings { display: inline-block; color: #FD5E0F; }
+                .showOwnedListings > label { vertical-align: text-bottom; }
+                .showOwnedListings input:checked + .SBSE-switch__slider { background-color: #FD5E0F; }
+            `); // append menu buttons
+
+      const $target = $('a[href^="site_content_giveaways_"]').eq(0).closest('table#DIG2TableGray');
+      const $DIGMenu = $(`
+                <div class="DIGMenu">
+                    <label class="showOwnedListings">
+                        <label class="SBSE-switch SBSE-switch--small">
+                            <input type="checkbox" id="showOwnedListings" checked>
+                            <span class="SBSE-switch__slider"></span>
+                        </label>
+                        <span>${i18n.get('owned')}</span>
+                    </label>
+                </div>
+            `);
+      $target.before($DIGMenu); // bind button event
+
+      $('.DIGButtonPurchase').click(() => {
+        let balance = GM_getValue('SBSE_DIGBalance');
+        const $games = $('.DIG-row--checked:visible');
+        swal({
+          title: i18n.get('DIGButtonPurchasing'),
+          html: '<p></p>',
+          onOpen: () => {
+            swal.showLoading();
+          }
+        });
+        (function () {
+          var _purchaseHandler2 = _asyncToGenerator(function* () {
+            const game = $games.shift();
+
+            if (game) {
+              const $game = $(game);
+              const id = $game.attr('data-id');
+              const price = parseInt($game.attr('data-price'), 10);
+              const title = $game.attr('data-title');
+              if (title.length > 0) swal.getContent().querySelector('p').textContent = title;
+
+              if (id && price > 0) {
+                if (balance - price >= 0) {
+                  let url = `${location.origin}/account_buy.html`;
+                  const requestInit = {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `quantity=1&xgameid=${id}&xgameprice1=${price}&send=Purchase`,
+                    mode: 'same-origin',
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    referrer: `${location.origin}/account_buy_${id}.html`
+                  };
+
+                  if (pathname === '/account_trades.html' || pathname === '/account_tradesXT.html' || pathname === '/site_content_marketplace.html') {
+                    url = `${location.origin}/account_buytrade_${id}.html`;
+                    requestInit.body = `gameid=${id}&send=Purchase`;
+                    requestInit.referrer = url;
+                  }
+
+                  const res = yield fetch(url, requestInit);
+
+                  if (res.ok) {
+                    $game.click();
+                    balance -= price;
+                    $('.DIG__current_balance').attr('data-value', balance);
+                  }
+
+                  purchaseHandler();
+                } else {
+                  swal({
+                    title: i18n.get('failTitle'),
+                    text: i18n.get('DIGInsufficientFund'),
+                    type: 'error'
+                  });
+                }
+              } else purchaseHandler();
+            } else {
+              GM_setValue('SBSE_DIGBalance', balance);
+              swal({
+                title: i18n.get('successTitle'),
+                text: i18n.get('DIGFinishedPurchasing'),
+                type: 'success'
+              });
+            }
+          });
+
+          function purchaseHandler() {
+            return _purchaseHandler2.apply(this, arguments);
+          }
+
+          return purchaseHandler;
+        })()();
+      });
+      $('#showOwnedListings').on('change', e => {
+        const showOwnedListings = e.delegateTarget.checked;
+        $('body').toggleClass('hideOwned', !showOwnedListings);
+        GM_setValue('DIGShowOwnedListings', showOwnedListings);
+      }); // menu settings
+
+      $('#showOwnedListings').prop('checked', GM_getValue('DIGShowOwnedListings', true)).change(); // append sync time and event
+
+      const seconds = Math.round((Date.now() - steam.lastSync('library')) / 1000);
+      $DIGMenu.prepend(`
+                <span class="DIG4-Gray-13"> ${i18n.get('lastSyncTime').replace('%seconds%', seconds)}</span>
+            `);
+      $('a[href^="site_gamelisting_"]').eachAsync(ele => {
+        const $ele = $(ele);
+        const $tr = $ele.closest('tr');
+        const $title = $tr.children('td').eq(1);
+        const id = $ele.attr('href').replace(/\D/g, '');
+        const title = $title.text().trim(); // setup row data & event
+
+        $tr.addClass('DIG-row').attr({
+          'data-id': id,
+          'data-title': title
+        }); // check if owned
+
+        const d = {
+          app: parseInt(id, 10)
+        };
+        if (steam.isOwned(d)) $tr.addClass('SBSE-item--owned');
+        if (steam.isWished(d)) $tr.addClass('SBSE-item--wished');
+        if (steam.isIgnored(d)) $tr.addClass('SBSE-item--ignored');
+      }, () => {
+        swal({
+          titleText: i18n.get('successTitle'),
+          text: i18n.get('loadingSuccess'),
+          type: 'success',
+          timer: 3000
+        });
+      });
     } else if (pathname === '/account_createtrade.html') {
       const $form = $('#form_createtrade'); // create trade page
 
