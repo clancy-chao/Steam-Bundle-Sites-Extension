@@ -6,7 +6,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.13.0
+// @version      2.14.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -3231,15 +3231,15 @@ const siteHandlers = {
           filename: `Fanatical ${bundleTitle} Keys`,
           items: []
         };
-        $('.account-content dl:has(input)').each((i, dl) => {
-          const $dl = $(dl);
-          const key = $dl.find('input').val();
+        $('.account-content .order-item').each((i, orderItem) => {
+          const $orderItem = $(orderItem);
+          const key = $orderItem.find('input[type="text"]').val();
 
           if (key) {
-            const d = JSON.parse($dl.closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
+            const d = JSON.parse($orderItem.closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
 
             if (Object.keys(d).length === 0) {
-              d.title = $dl.find('dd').eq(1).text().trim();
+              d.title = $orderItem.find('.game-name').text().trim();
             }
 
             d.key = key;
@@ -3268,7 +3268,7 @@ const siteHandlers = {
         };
 
         $revealBtn.addClass('SBSE-button--working');
-        handler($('.account-content dl button'), () => {
+        handler($('.account-content .key-container button'), () => {
           $revealBtn.removeClass('SBSE-button--working');
           $('.SBSE-button-retrieve').click();
         });
@@ -3289,8 +3289,8 @@ const siteHandlers = {
 
             const matchGame = data => {
               if (has.call(data, 'steam') && data.steam.id) {
-                const $gameTitle = $node.find(`dd > div:contains(${data.name})`).filter((index, name) => data.name === name.textContent.trim());
-                const $dl = $gameTitle.closest('dl');
+                const $gameTitle = $node.find(`.order-item .game-name:contains(${data.name})`).filter((index, name) => data.name === name.textContent.trim());
+                const $orderItem = $gameTitle.closest('.order-item');
                 const d = {
                   title: data.name,
                   app: parseInt(data.steam.id, 10)
@@ -3298,12 +3298,12 @@ const siteHandlers = {
                 d.owned = steam.isOwned(d);
                 d.wished = steam.isWished(d); // check if owned & wished
 
-                if (d.owned) $dl.addClass('SBSE-item--owned');
-                if (d.wished) $dl.addClass('SBSE-item--wished'); // append Steam store link
+                if (d.owned) $orderItem.addClass('SBSE-item--owned');
+                if (d.wished) $orderItem.addClass('SBSE-item--wished'); // append Steam store link
 
-                $gameTitle.find('.game-name').append(`<span> | </span><a class="SBSE-link-steam_store" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`, $('<span class="SBSE-icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
+                $gameTitle.append(`<span> | </span><a class="SBSE-link-steam_store" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`, $('<span class="SBSE-icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
                 tooltipsData.push(d);
-                $dl.addClass('SBSE-item--processed SBSE-item--steam').attr('data-gameinfo', JSON.stringify(d));
+                $orderItem.addClass('SBSE-item--processed SBSE-item--steam').attr('data-gameinfo', JSON.stringify(d));
               }
             };
 
@@ -3334,7 +3334,7 @@ const siteHandlers = {
           } // order contents loaded
 
 
-          if ($node.children('div').filter('[class]').length === 0 && $node.find('dl').length > 0) {
+          if ($node.is('.order-item') || $node.children('div.order-bundle-items-container, div.order-item').length > 0) {
             if (currentURL.includes('/orders/')) {
               // insert container
               const $anchor = $('.account-content h3');
