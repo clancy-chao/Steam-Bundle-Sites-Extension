@@ -2546,7 +2546,8 @@ const ASF = {
     self.push('log', 'Establishing connection to ASF IPC server');
     const domain = `${config.get('ASFIPCServer')}:${config.get('ASFIPCPort')}`;
     const password = config.get('ASFIPCPassword');
-    const url = `ws://${domain}/Api/NLog${password.length > 0 ? `?password=${password}` : ''}`;
+    const protocol = config.get('ASFIPCProtocol');
+    const url = `${protocol === 'https' ? 'wss' : 'ws'}://${domain}/Api/NLog${password.length > 0 ? `?password=${password}` : ''}`;
 
     try {
       const ws = new WebSocket(url);
