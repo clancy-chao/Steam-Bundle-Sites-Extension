@@ -6,7 +6,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.14.1
+// @version      2.14.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -497,6 +497,7 @@ const config = {
     if (!has.call(this.data, 'activateAllKeys')) this.data.activateAllKeys = false;
     if (!has.call(this.data, 'enableTooltips')) this.data.enableTooltips = this.get('language') !== 'english';
     if (!has.call(this.data, 'enableASFIPC')) this.data.enableASFIPC = false;
+    if (!has.call(this.data, 'ASFWSProtocol')) this.data.ASFWSProtocol = 'ws';
     if (!has.call(this.data, 'ASFIPCProtocol')) this.data.ASFIPCProtocol = 'http';
     if (!has.call(this.data, 'ASFIPCServer')) this.data.ASFIPCServer = '127.0.0.1';
     if (!has.call(this.data, 'ASFIPCPort')) this.data.ASFIPCPort = 1242;
@@ -547,6 +548,7 @@ const i18n = {
       settingsActivateAllKeys: '不跳過、啟動所有序號',
       settingsEnableTooltips: 'SteamCN 論壇提示框',
       settingsEnableASFIPC: '啟用ASF IPC',
+      settingsASFWSProtocol: 'ASF WS 傳輸協定',
       settingsASFIPCProtocol: 'ASF IPC 傳輸協定',
       settingsASFIPCServer: 'ASF IPC IP位址',
       settingsASFIPCPort: 'ASF IPC 連接埠',
@@ -652,6 +654,7 @@ const i18n = {
       settingsActivateAllKeys: '不跳过、激活所有激活码',
       settingsEnableTooltips: 'SteamCN 论坛提示窗',
       settingsEnableASFIPC: '启用ASF IPC',
+      settingsASFWSProtocol: 'ASF WS 传输协议',
       settingsASFIPCProtocol: 'ASF IPC 传输协议',
       settingsASFIPCServer: 'ASF IPC IP地址',
       settingsASFIPCPort: 'ASF IPC 端口',
@@ -757,6 +760,7 @@ const i18n = {
       settingsActivateAllKeys: 'No skip & activate all keys',
       settingsEnableTooltips: 'Tooltips from SteamCN',
       settingsEnableASFIPC: 'Enable ASF IPC',
+      settingsASFWSProtocol: 'ASF WS Protocol',
       settingsASFIPCProtocol: 'ASF IPC Protocol',
       settingsASFIPCServer: 'ASF IPC IP Address',
       settingsASFIPCPort: 'ASF IPC Port',
@@ -2247,6 +2251,11 @@ const settings = {
       configItem: 'enableASFIPC',
       type: 'switch'
     }, {
+      name: i18n.get('settingsASFWSProtocol'),
+      configItem: 'ASFWSProtocol',
+      type: 'select',
+      options: ['ws', 'wss']
+    }, {
       name: i18n.get('settingsASFIPCProtocol'),
       configItem: 'ASFIPCProtocol',
       type: 'select',
@@ -2298,7 +2307,7 @@ const settings = {
 
     const $sessionID = $model.find('[data-config="sessionID"]');
     const $language = $model.find('[data-config="language"]');
-    const $ASFIPC = $model.find('[data-config^="ASFIPC"]'); // toggles
+    const $ASFIPC = $model.find('[data-config^="ASFIPC"], [data-config^="ASFWS"]'); // toggles
 
     $model.find('.SBSE-switch input[type="checkbox"]').each((i, input) => {
       const $input = $(input);
@@ -2339,9 +2348,10 @@ const settings = {
       $language.append(new Option(i18n.data[lang].name, lang));
     }); // select - language
 
-    $language.val(config.get('language')); // select - ASF IPC protocol
+    $language.val(config.get('language')); // select - ASF protocols
 
-    $ASFIPC.filter('select').val(config.get('ASFIPCProtocol')); // button - sync library
+    $ASFIPC.filter('select[data-config="ASFIPCProtocol"]').val(config.get('ASFIPCProtocol'));
+    $ASFIPC.filter('select[data-config="ASFWSProtocol"]').val(config.get('ASFWSProtocol')); // button - sync library
 
     $model.find('[data-config="syncLibrary"]').on('click', () => {
       steam.sync([{
@@ -2544,9 +2554,10 @@ const ASF = {
   listenLogs() {
     const self = this;
     self.push('log', 'Establishing connection to ASF IPC server');
+    const protocol = config.get('ASFWSProtocol');
     const domain = `${config.get('ASFIPCServer')}:${config.get('ASFIPCPort')}`;
     const password = config.get('ASFIPCPassword');
-    const url = `ws://${domain}/Api/NLog${password.length > 0 ? `?password=${password}` : ''}`;
+    const url = `${protocol}://${domain}/Api/NLog${password.length > 0 ? `?password=${password}` : ''}`;
 
     try {
       const ws = new WebSocket(url);
@@ -4367,7 +4378,6 @@ const siteHandlers = {
   ccyyshop() {
     // inject css
     GM_addStyle(`
-            .cta .cta-inner:before { z-index: 10; }
             .SBSE-container {
                 width: 80%;
                 position: relative;
