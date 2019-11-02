@@ -23,7 +23,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @include      https://groupees.com/purchases
 // @include      https://groupees.com/profile/purchases/*
 // @include      http*://*agiso.com/*
-// @include      https://steamdb.steamcn.com/tooltip*
+// @include      https://steamdb.keylol.com/tooltip*
 // @include      https://yuplay.ru/orders/*/
 // @include      https://yuplay.ru/product/*/
 // @include      http*://gama-gama.ru/personal/settings/*
@@ -49,7 +49,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @connect      www.google.it
 // @connect      www.google.fr
 // @connect      www.ecb.europa.eu
-// @connect      steamdb.steamcn.com
+// @connect      steamdb.keylol.com
 // @connect      steamdb.info
 // @connect      steamspy.com
 // @connect      github.com
@@ -2848,7 +2848,7 @@ const steamCNTooltip = {
         if (has.call(d, 'app')) type = 'app';
 
         if (type !== null) {
-          const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${d[type]}#steam_info_${type}_${d[type]}_1`;
+          const url = `https://steamdb.keylol.com/tooltip?v=4#${type}/${d[type]}#steam_info_${type}_${d[type]}_1`;
           $container.append($(`<iframe id="SBSE-tooltip_${type + d[type]}" class="SBSE-tooltip" data-url="${url}"></iframe>`).mouseenter(() => {
             clearTimeout(this.timeoutID);
           }).mouseout(this.hide));
@@ -2908,7 +2908,7 @@ const steamCNTooltip = {
 
   listen() {
     window.addEventListener('message', e => {
-      if (e.origin === 'https://steamdb.steamcn.com' && e.data.height && e.data.src) {
+      if (e.origin === 'https://steamdb.keylol.com' && e.data.height && e.data.src) {
         const $tooltip = $(`.SBSE-tooltip[src="${e.data.src}"]`);
         $tooltip.height(e.data.height);
         this.reposition($tooltip, e.data.height);
