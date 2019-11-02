@@ -6,7 +6,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.14.2
+// @version      2.14.3
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -23,7 +23,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @include      https://groupees.com/purchases
 // @include      https://groupees.com/profile/purchases/*
 // @include      http*://*agiso.com/*
-// @include      https://steamdb.steamcn.com/tooltip*
+// @include      https://steamdb.keylol.com/tooltip*
 // @include      https://yuplay.ru/orders/*/
 // @include      https://yuplay.ru/product/*/
 // @include      http*://gama-gama.ru/personal/settings/*
@@ -49,7 +49,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @connect      www.google.it
 // @connect      www.google.fr
 // @connect      www.ecb.europa.eu
-// @connect      steamdb.steamcn.com
+// @connect      steamdb.keylol.com
 // @connect      steamdb.info
 // @connect      steamspy.com
 // @connect      github.com
@@ -546,7 +546,7 @@ const i18n = {
       settingsASFFormat: '啟用ASF 格式',
       settingsTitleComesLast: '遊戲名置後',
       settingsActivateAllKeys: '不跳過、啟動所有序號',
-      settingsEnableTooltips: 'SteamCN 論壇提示框',
+      settingsEnableTooltips: 'Keylol 論壇提示框',
       settingsEnableASFIPC: '啟用ASF IPC',
       settingsASFWSProtocol: 'ASF WS 傳輸協定',
       settingsASFIPCProtocol: 'ASF IPC 傳輸協定',
@@ -652,7 +652,7 @@ const i18n = {
       settingsASFFormat: '启用ASF 格式',
       settingsTitleComesLast: '游戏名置后',
       settingsActivateAllKeys: '不跳过、激活所有激活码',
-      settingsEnableTooltips: 'SteamCN 论坛提示窗',
+      settingsEnableTooltips: 'Keylol 论坛提示窗',
       settingsEnableASFIPC: '启用ASF IPC',
       settingsASFWSProtocol: 'ASF WS 传输协议',
       settingsASFIPCProtocol: 'ASF IPC 传输协议',
@@ -758,7 +758,7 @@ const i18n = {
       settingsASFFormat: 'Enable ASF Format',
       settingsTitleComesLast: 'Title Comes Last',
       settingsActivateAllKeys: 'No skip & activate all keys',
-      settingsEnableTooltips: 'Tooltips from SteamCN',
+      settingsEnableTooltips: 'Tooltips from Keylol',
       settingsEnableASFIPC: 'Enable ASF IPC',
       settingsASFWSProtocol: 'ASF WS Protocol',
       settingsASFIPCProtocol: 'ASF IPC Protocol',
@@ -2836,7 +2836,7 @@ const container = {
   }
 
 };
-const steamCNTooltip = {
+const keylolTooltip = {
   timeoutID: 0,
 
   load(data) {
@@ -2848,7 +2848,7 @@ const steamCNTooltip = {
         if (has.call(d, 'app')) type = 'app';
 
         if (type !== null) {
-          const url = `https://steamdb.steamcn.com/tooltip?v=4#${type}/${d[type]}#steam_info_${type}_${d[type]}_1`;
+          const url = `https://steamdb.keylol.com/tooltip?v=4#${type}/${d[type]}#steam_info_${type}_${d[type]}_1`;
           $container.append($(`<iframe id="SBSE-tooltip_${type + d[type]}" class="SBSE-tooltip" data-url="${url}"></iframe>`).mouseenter(() => {
             clearTimeout(this.timeoutID);
           }).mouseout(this.hide));
@@ -2879,7 +2879,7 @@ const steamCNTooltip = {
           $tooltip[0].contentWindow.postMessage('show', '*'); // get height
 
           $target.one('mouseout', () => {
-            this.timeoutID = setTimeout(this.hide.bind(steamCNTooltip), 500);
+            this.timeoutID = setTimeout(this.hide.bind(keylolTooltip), 500);
           });
         }
       });
@@ -2908,7 +2908,7 @@ const steamCNTooltip = {
 
   listen() {
     window.addEventListener('message', e => {
-      if (e.origin === 'https://steamdb.steamcn.com' && e.data.height && e.data.src) {
+      if (e.origin === 'https://steamdb.keylol.com' && e.data.height && e.data.src) {
         const $tooltip = $(`.SBSE-tooltip[src="${e.data.src}"]`);
         $tooltip.height(e.data.height);
         this.reposition($tooltip, e.data.height);
@@ -3036,12 +3036,12 @@ const siteHandlers = {
         if (d.owned) $ele.addClass('SBSE-item--owned');
         if (d.wished) $ele.addClass('SBSE-item--wished'); // append icon
 
-        $a.after($('<span class="SBSE-icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
+        $a.after($('<span class="SBSE-icon"></span>').mouseenter(keylolTooltip.show.bind(keylolTooltip)));
         tooltipsData.push(d);
         $ele.attr('data-gameinfo', JSON.stringify(d)).addClass('SBSE-item--processed SBSE-item--steam');
-      }); // load SteamCN tooltip
+      }); // load Keylol tooltip
 
-      steamCNTooltip.load(tooltipsData);
+      keylolTooltip.load(tooltipsData);
     };
 
     const $container = container.get('SBSE', handlers);
@@ -3313,7 +3313,7 @@ const siteHandlers = {
                 if (d.owned) $orderItem.addClass('SBSE-item--owned');
                 if (d.wished) $orderItem.addClass('SBSE-item--wished'); // append Steam store link
 
-                $gameTitle.append(`<span> | </span><a class="SBSE-link-steam_store" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`, $('<span class="SBSE-icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
+                $gameTitle.append(`<span> | </span><a class="SBSE-link-steam_store" href="https://store.steampowered.com/app/${d.app}/" target="_blank">${i18n.get('steamStore')}</a>`, $('<span class="SBSE-icon"></span>').mouseenter(keylolTooltip.show.bind(keylolTooltip)));
                 tooltipsData.push(d);
                 $orderItem.addClass('SBSE-item--processed SBSE-item--steam').attr('data-gameinfo', JSON.stringify(d));
               }
@@ -3322,9 +3322,9 @@ const siteHandlers = {
             matchGame(APIData);
             APIData.bundles.forEach(tier => {
               tier.games.forEach(matchGame);
-            }); // load SteamCN tooltip
+            }); // load Keylol tooltip
 
-            steamCNTooltip.load(tooltipsData);
+            keylolTooltip.load(tooltipsData);
           }
         });
       });
@@ -3607,9 +3607,9 @@ const siteHandlers = {
                 });
               } else fetchKey($target, machineName);
             }
-          }, true); // load SteamCN tooltip
+          }, true); // load Keylol tooltip
 
-          steamCNTooltip.load(tooltipsData);
+          keylolTooltip.load(tooltipsData);
         } catch (e) {
           throw e;
         }
@@ -3655,7 +3655,7 @@ const siteHandlers = {
                 $node.find('.heading-text > h4').each((i, heading) => {
                   heading.parentElement.dataset.title = heading.innerText.trim();
                   $(heading.firstChild).wrap('<span/>');
-                  $(heading).append($('<span class="SBSE-icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip)));
+                  $(heading).append($('<span class="SBSE-icon"></span>').mouseenter(keylolTooltip.show.bind(keylolTooltip)));
                 }); // fetch & process key data
 
                 process($node);
@@ -4687,7 +4687,7 @@ const siteHandlers = {
     }
   },
 
-  steamcn() {
+  keylol() {
     if (location.pathname.startsWith('/tooltip')) {
       GM_addStyle('body { overflow: hidden; }');
     }
@@ -4742,7 +4742,7 @@ const siteHandlers = {
         $appList.append('<tr><td colspan="2">App List</td></tr>');
         data.forEach(d => {
           const $row = $('<tr/>');
-          $row.append($('<td/>').append($('<span class="SBSE-icon"></span>').mouseenter(steamCNTooltip.show.bind(steamCNTooltip))), $(`<td><a href="https://store.steampowered.com/app/${d.app}" target="_blank">${d.title}</a></td>`));
+          $row.append($('<td/>').append($('<span class="SBSE-icon"></span>').mouseenter(keylolTooltip.show.bind(keylolTooltip))), $(`<td><a href="https://store.steampowered.com/app/${d.app}" target="_blank">${d.title}</a></td>`));
           d.owned = steam.isOwned(d);
           d.wished = steam.isWished(d);
           if (d.owned) $row.addClass('SBSE-item--owned');
@@ -4750,9 +4750,9 @@ const siteHandlers = {
           $row.addClass('SBSE-item--processed SBSE-item--steam').attr('data-gameinfo', JSON.stringify(d));
           $appList.append($row);
         });
-        $('.list-character').after($appList); // load SteamCN tooltip
+        $('.list-character').after($appList); // load Keylol tooltip
 
-        steamCNTooltip.load(data);
+        keylolTooltip.load(data);
       }
     };
 
@@ -5361,7 +5361,7 @@ const init = () => {
     if (has.call(siteHandlers, site)) siteHandlers[site](true);
   }
 
-  steamCNTooltip.listen();
+  keylolTooltip.listen();
 };
 
 $(init);
