@@ -6,7 +6,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.14.3
+// @version      2.15.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -73,358 +73,369 @@ GM_addStyle(GM_getResourceText('currencyFlags'));
 GM_addStyle(GM_getResourceText('flagIcon').replace(/\.\.\//g, 'https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.1.0/')); // inject script css styles
 
 GM_addStyle(`
-    pre.SBSE-errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
-    a.SBSE-link-steam_store, a.SBSE-link-steam_db { text-decoration: none; font-size: smaller; }
-    a.SBSE-link-steam_store:hover, a.SBSE-link-steam_db:hover { text-decoration: none; }
+  pre.SBSE-errorMsg { height: 200px; text-align: left; white-space: pre-wrap; }
+  a.SBSE-link-steam_store, a.SBSE-link-steam_db { text-decoration: none; font-size: smaller; }
+  a.SBSE-link-steam_store:hover, a.SBSE-link-steam_db:hover { text-decoration: none; }
 
-    /* switch */
-    .SBSE-switch { position: relative; display: inline-block; width: 60px; height: 30px; }
-    .SBSE-switch input { display: none; }
-    .SBSE-switch__slider {
-        position: absolute;
-        top: 0; right: 0; bottom: 0; left: 0;
-        background-color: #CCC;
-        transition: 0.4s;
-        cursor: pointer;
-    }
-    .SBSE-switch__slider:before {
-        width: 26px; height: 26px;
-        position: absolute;
-        bottom: 2px; left: 2px;
-        background-color: white;
-        transition: 0.4s;
-        content: "";
-    }
-    .SBSE-switch input:checked + .SBSE-switch__slider { background-color: #2196F3; }
-    .SBSE-switch input:focus + .SBSE-switch__slider { box-shadow: 0 0 1px #2196F3; }
-    .SBSE-switch input:checked + .SBSE-switch__slider:before { transform: translateX(30px); }
-    .SBSE-switch--small { width: 40px; height: 20px; }
-    .SBSE-switch--small .SBSE-switch__slider:before { width: 16px; height: 16px; }
-    .SBSE-switch--small input:checked + .SBSE-switch__slider:before { transform: translateX(20px); }
+  /* switch */
+  .SBSE-switch { position: relative; display: inline-block; width: 60px; height: 30px; }
+  .SBSE-switch input { display: none; }
+  .SBSE-switch__slider {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background-color: #CCC;
+    transition: 0.4s;
+    cursor: pointer;
+  }
+  .SBSE-switch__slider:before {
+    width: 26px; height: 26px;
+    position: absolute;
+    bottom: 2px; left: 2px;
+    background-color: white;
+    transition: 0.4s;
+    content: "";
+  }
+  .SBSE-switch input:checked + .SBSE-switch__slider { background-color: #2196F3; }
+  .SBSE-switch input:focus + .SBSE-switch__slider { box-shadow: 0 0 1px #2196F3; }
+  .SBSE-switch input:checked + .SBSE-switch__slider:before { transform: translateX(30px); }
+  .SBSE-switch--small { width: 40px; height: 20px; }
+  .SBSE-switch--small .SBSE-switch__slider:before { width: 16px; height: 16px; }
+  .SBSE-switch--small input:checked + .SBSE-switch__slider:before { transform: translateX(20px); }
 
-    /* dropdown */
-    .SBSE-dropdown { display: inline-block; position: relative; }
-    .SBSE-dropdown__list {
-        width: calc(100% - 10px);
-        max-height: 0;
-        display: inline-block;
-        position: absolute;
-        top: 35px; left: 0;
-        padding: 0;
-        transition: max-height 0.5s ease;
-        overflow: hidden;
-        list-style-type: none;
-        background-color: #EEE;
-    }
-    .SBSE-dropdown__list > li { width: 100%; display: block; padding: 3px 0; text-align: center; }
-    .SBSE-dropdown:hover > .SBSE-dropdown__list { max-height: 500px; }
+  /* dropdown */
+  .SBSE-dropdown { display: inline-block; position: relative; }
+  .SBSE-dropdown__list {
+    width: calc(100% - 10px);
+    max-height: 0;
+    display: inline-block;
+    position: absolute;
+    top: 35px; left: 0;
+    padding: 0;
+    transition: all 0.15s;
+    overflow: hidden;
+    list-style-type: none;
+    background-color: #EEE;
+    box-shadow: 1px 2px 3px rgba(0,0,0,0.45);
+    z-index: 999;
+  }
+  .SBSE-dropdown__list > li { width: 100%; display: block; padding: 3px 0; text-align: center; }
+  .SBSE-dropdown:hover > .SBSE-dropdown__list { max-height: 500px; }
 
-    /* settings */
-    .SBSE-container__content__model[data-feature="setting"] .name { text-align: right; vertical-align: top; }
-    .SBSE-container__content__model[data-feature="setting"] .value { text-align: left; }
-    .SBSE-container__content__model[data-feature="setting"] .value > * { height: 30px; margin: 0 20px 10px; }
-    .SBSE-container__content__model[data-feature="setting"] > span { display: inline-block; color: white; cursor: pointer; }
+  /* grid */
+  .SBSE-grid { display: flex; flex-wrap: wrap; }
+  .SBSE-grid > span {
+    display: inline-block;
+    margin: 2px 10px;
+    padding: 0 5px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .SBSE-grid > .separator {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    text-align: left;
+    font-weight: bold;
+    cursor: default;
+  }
+  .SBSE-grid > span.selected { background-color: antiquewhite; }
 
-    /* container */
-    .SBSE-container { width: 100%; }
-    .SBSE-container__nav > ul { display: flex; margin: 0; padding: 0; list-style: none; }
-    .SBSE-container__nav__item {
-        flex: 1 1 auto;
-        text-align: center;
-        cursor: pointer;
-    }
-    .SBSE-container__nav__item--show {
-        border-bottom: 1px solid #29B6F6;
-        color: #29B6F6;
-    }
-    .SBSE-container__nav__item > span { display: block; padding: 10px; }
-    .SBSE-container__content__model {
-        width: 100%; height: 200px;
-        display: flex;
-        margin-top: 10px;
-        flex-direction: column;
-        box-sizing: border-box;
-    }
-    .SBSE-container__content__model { display: none; }
-    .SBSE-container__content__model[data-feature="setting"] { height: 100%; display: block; }
-    .SBSE-container__content__model--show { display: block; }
-    .SBSE-container__content__model > textarea {
-        width: 100%; height: 150px;
-        padding: 5px;
-        border: none;
-        box-sizing: border-box;
-        resize: none;
-        outline: none;
-    }
-    .SBSE-container__content__model > div { width: 100%; padding-top: 5px; box-sizing: border-box; }
-    .SBSE-button {
-        width: 120px;
-        position: relative;
-        margin-right: 10px;
-        line-height: 28px;
-        transition: all 0.5s;
-        box-sizing: border-box;
-        outline: none;
-        cursor: pointer;
-    }
-    .SBSE-select { max-width:120px; height: 30px; }
-    .SBSE-container label { margin-right: 10px; }
-    .SBSE-dropdown__list-export a { text-decoration: none; color: #333; transition: color 0.3s ease; }
-    .SBSE-dropdown__list-export a:hover { text-decoration: none; color: #787878; }
-    .SBSE-button-setting {
-        width: 20px; height: 20px;
-        float: right;
-        margin-top: 3px; margin-right: 0; margin-left: 10px;
-        background-color: transparent;
-        background-image: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjwhRE9DVFlQRSBzdmcgIFBVQkxJQyAnLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4nICAnaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkJz48c3ZnIGhlaWdodD0iMzJweCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMzIgMzI7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMycHgiIHhtbDpzcGFjZT0icHJlc2VydmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxnIGlkPSJMYXllcl8xIi8+PGcgaWQ9ImNvZyI+PHBhdGggZD0iTTMyLDE3Ljk2OXYtNGwtNC43ODEtMS45OTJjLTAuMTMzLTAuMzc1LTAuMjczLTAuNzM4LTAuNDQ1LTEuMDk0bDEuOTMtNC44MDVMMjUuODc1LDMuMjUgICBsLTQuNzYyLDEuOTYxYy0wLjM2My0wLjE3Ni0wLjczNC0wLjMyNC0xLjExNy0wLjQ2MUwxNy45NjksMGgtNGwtMS45NzcsNC43MzRjLTAuMzk4LDAuMTQxLTAuNzgxLDAuMjg5LTEuMTYsMC40NjlsLTQuNzU0LTEuOTEgICBMMy4yNSw2LjEyMWwxLjkzOCw0LjcxMUM1LDExLjIxOSw0Ljg0OCwxMS42MTMsNC43MDMsMTIuMDJMMCwxNC4wMzF2NGw0LjcwNywxLjk2MWMwLjE0NSwwLjQwNiwwLjMwMSwwLjgwMSwwLjQ4OCwxLjE4OCAgIGwtMS45MDIsNC43NDJsMi44MjgsMi44MjhsNC43MjMtMS45NDVjMC4zNzksMC4xOCwwLjc2NiwwLjMyNCwxLjE2NCwwLjQ2MUwxNC4wMzEsMzJoNGwxLjk4LTQuNzU4ICAgYzAuMzc5LTAuMTQxLDAuNzU0LTAuMjg5LDEuMTEzLTAuNDYxbDQuNzk3LDEuOTIybDIuODI4LTIuODI4bC0xLjk2OS00Ljc3M2MwLjE2OC0wLjM1OSwwLjMwNS0wLjcyMywwLjQzOC0xLjA5NEwzMiwxNy45Njl6ICAgIE0xNS45NjksMjJjLTMuMzEyLDAtNi0yLjY4OC02LTZzMi42ODgtNiw2LTZzNiwyLjY4OCw2LDZTMTkuMjgxLDIyLDE1Ljk2OSwyMnoiIHN0eWxlPSJmaWxsOiM0RTRFNTA7Ii8+PC9nPjwvc3ZnPg==);
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-origin: border-box;
-        border: none;
-        vertical-align: top;
-        cursor: pointer;
-    }
+  /* settings */
+  .SBSE-container__content__model[data-feature="setting"] .name { text-align: right; vertical-align: top; }
+  .SBSE-container__content__model[data-feature="setting"] .value { text-align: left; }
+  .SBSE-container__content__model[data-feature="setting"] .value > * { height: 30px; margin: 0 20px 10px; }
+  .SBSE-container__content__model[data-feature="setting"] > span { display: inline-block; color: white; cursor: pointer; }
 
-    /* terminal */
-    .SBSE-terminal {
-        height: 150px;
-        display: none;
-        margin: 0;
-        padding: 0;
-        background-color: #000;
-    }
-    .SBSE-terminal--show { display: block; }
-    .SBSE-terminal > div {
-        max-height: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow: auto;
-        background-color: transparent;
-    }
-    .SBSE-terminal > div > span {
-        display: inline-block;
-        padding-left: 20px;
-        color: #FFF;
-        text-indent: -20px;
-    }
-    .SBSE-terminal > div > span:before {
-        content: '>';
-        width: 20px;
-        display: inline-block;
-        text-align: center;
-        text-indent: 0;
-    }
-    .SBSE-terminal__message {}
-    .SBSE-terminal__input {
-        width: 100%;
-        position: relative;
-        order: 9999;
-        box-sizing: border-box;
-    }
-    .SBSE-terminal__input > input {
-        width: inherit;
-        max-width: calc(100% - 30px);
-        position: absolute;
-        top: 0; right: 0; bottom: 0; left: 20px;
-        padding: 0;
-        border: none;
-        outline: none;
-        background-color: transparent;
-        color: #FFF;
-    }
-    .SBSE-terminal__input > input:first-child { z-index: 9; }
-    .SBSE-terminal__input > input:last-child {
-        z-index: 3;
-        color: gray;
-    }
+  /* container */
+  .SBSE-container { width: 100%; }
+  .SBSE-container__nav > ul { display: flex; margin: 0; padding: 0; list-style: none; }
+  .SBSE-container__nav__item { flex: 1 1 auto; text-align: center; cursor: pointer; }
+  .SBSE-container__nav__item--show { border-bottom: 1px solid #29B6F6; color: #29B6F6; }
+  .SBSE-container__nav__item > span { display: block; padding: 10px; }
+  .SBSE-container__content__model {
+    width: 100%; height: 200px;
+    display: flex;
+    margin-top: 10px;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+  .SBSE-container__content__model { display: none; }
+  .SBSE-container__content__model[data-feature="setting"] { height: 100%; display: block; }
+  .SBSE-container__content__model--show { display: block; }
+  .SBSE-container__content__model > textarea {
+    width: 100%; height: 150px;
+    padding: 5px;
+    border: none;
+    box-sizing: border-box;
+    resize: none;
+    outline: none;
+  }
+  .SBSE-container__content__model > div { width: 100%; padding-top: 5px; box-sizing: border-box; }
+  .SBSE-button {
+    width: 120px;
+    position: relative;
+    margin-right: 10px;
+    line-height: 28px;
+    transition: all 0.5s;
+    box-sizing: border-box;
+    outline: none;
+    cursor: pointer;
+  }
+  .SBSE-select { max-width:120px; height: 30px; }
+  .SBSE-container label { margin-right: 10px; }
+  .SBSE-dropdown__list-export a { text-decoration: none; color: #333; transition: color 0.3s ease; }
+  .SBSE-dropdown__list-export a:hover { text-decoration: none; color: #787878; }
+  .SBSE-button-setting {
+    width: 20px; height: 20px;
+    float: right;
+    margin-top: 3px; margin-right: 0; margin-left: 10px;
+    background-color: transparent;
+    background-image: url(data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjwhRE9DVFlQRSBzdmcgIFBVQkxJQyAnLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4nICAnaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkJz48c3ZnIGhlaWdodD0iMzJweCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMzIgMzI7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMycHgiIHhtbDpzcGFjZT0icHJlc2VydmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxnIGlkPSJMYXllcl8xIi8+PGcgaWQ9ImNvZyI+PHBhdGggZD0iTTMyLDE3Ljk2OXYtNGwtNC43ODEtMS45OTJjLTAuMTMzLTAuMzc1LTAuMjczLTAuNzM4LTAuNDQ1LTEuMDk0bDEuOTMtNC44MDVMMjUuODc1LDMuMjUgICBsLTQuNzYyLDEuOTYxYy0wLjM2My0wLjE3Ni0wLjczNC0wLjMyNC0xLjExNy0wLjQ2MUwxNy45NjksMGgtNGwtMS45NzcsNC43MzRjLTAuMzk4LDAuMTQxLTAuNzgxLDAuMjg5LTEuMTYsMC40NjlsLTQuNzU0LTEuOTEgICBMMy4yNSw2LjEyMWwxLjkzOCw0LjcxMUM1LDExLjIxOSw0Ljg0OCwxMS42MTMsNC43MDMsMTIuMDJMMCwxNC4wMzF2NGw0LjcwNywxLjk2MWMwLjE0NSwwLjQwNiwwLjMwMSwwLjgwMSwwLjQ4OCwxLjE4OCAgIGwtMS45MDIsNC43NDJsMi44MjgsMi44MjhsNC43MjMtMS45NDVjMC4zNzksMC4xOCwwLjc2NiwwLjMyNCwxLjE2NCwwLjQ2MUwxNC4wMzEsMzJoNGwxLjk4LTQuNzU4ICAgYzAuMzc5LTAuMTQxLDAuNzU0LTAuMjg5LDEuMTEzLTAuNDYxbDQuNzk3LDEuOTIybDIuODI4LTIuODI4bC0xLjk2OS00Ljc3M2MwLjE2OC0wLjM1OSwwLjMwNS0wLjcyMywwLjQzOC0xLjA5NEwzMiwxNy45Njl6ICAgIE0xNS45NjksMjJjLTMuMzEyLDAtNi0yLjY4OC02LTZzMi42ODgtNiw2LTZzNiwyLjY4OCw2LDZTMTkuMjgxLDIyLDE1Ljk2OSwyMnoiIHN0eWxlPSJmaWxsOiM0RTRFNTA7Ii8+PC9nPjwvc3ZnPg==);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-origin: border-box;
+    border: none;
+    vertical-align: top;
+    cursor: pointer;
+  }
 
-    /* spinner button affect */
-    .SBSE-button:before {
-        width: 20px; height: 20px;
-        content: '';
-        position: absolute;
-        margin-top: 5px;
-        right: 10px;
-        border: 3px solid;
-        border-left-color: transparent;
-        border-radius: 50%;
-        box-sizing: border-box;
-        opacity: 0;
-        transition: opacity 0.5s;
-        animation-duration: 1s;
-        animation-iteration-count: infinite;
-        animation-name: rotate;
-        animation-timing-function: linear;
-    }
-    .SBSE-button.SBSE-button--narrow.SBSE-button--working {
-        width: 100px;
-        padding-right: 40px;
-        transition: all 0.5s;
-    }
-    .SBSE-button.SBSE-button--working:before {
-        transition-delay: 0.5s;
-        transition-duration: 1s;
-        opacity: 1;
-    }
-    @keyframes rotate {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
+  /* terminal */
+  .SBSE-terminal {
+    height: 150px;
+    display: none;
+    margin: 0;
+    padding: 0;
+    background-color: #000;
+  }
+  .SBSE-terminal--show { display: block; }
+  .SBSE-terminal > div {
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    background-color: transparent;
+  }
+  .SBSE-terminal > div > span {
+    display: inline-block;
+    padding-left: 20px;
+    color: #FFF;
+    text-indent: -20px;
+  }
+  .SBSE-terminal > div > span:before {
+    content: '>';
+    width: 20px;
+    display: inline-block;
+    text-align: center;
+    text-indent: 0;
+  }
+  .SBSE-terminal__message {}
+  .SBSE-terminal__input {
+    width: 100%;
+    position: relative;
+    order: 9999;
+    box-sizing: border-box;
+  }
+  .SBSE-terminal__input > input {
+    width: inherit;
+    max-width: calc(100% - 30px);
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 20px;
+    padding: 0;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    color: #FFF;
+  }
+  .SBSE-terminal__input > input:first-child { z-index: 9; }
+  .SBSE-terminal__input > input:last-child { z-index: 3; color: gray; }
 
-    /* types */
-    .SBSE-type {
-        height: 20px;
-        display: none;
-        margin-right: 5px;
-        justify-content: center;
-    }
-    .SBSE-type:before, .SBSE-type:after {
-        content: '';
-        box-sizing: border-box;
-        pointer-events: none;
-    }
-    .SBSE-type:after { padding: 0 2px; }
-    .SBSE-item--game .SBSE-type { background-color: rgba(97,100,101,0.3); }
-    .SBSE-item--game .SBSE-type:after { content: 'Game'; }
-    .SBSE-item--DLC .SBSE-type { background-color: rgba(165,84,177,0.8); }
-    .SBSE-item--DLC .SBSE-type:before {
-        content: 'ꜜ';
-        width: 14px; height: 14px;
-        margin: 3px 0 0 2px;
-        border-radius: 50%;
-        background-color: #000;
-        color: rgba(165,84,177,0.8);
-        text-align: center;
-        font-size: 28px;
-        line-height: 28px;
-    }
-    .SBSE-item--DLC .SBSE-type:after { content: 'DLC'; }
-    .SBSE-item--package .SBSE-type { background-color: rgba(47,137,188,0.8); }
-    .SBSE-item--package .SBSE-type:after { content: 'Package'; }
-    .SBSE-item--steam .SBSE-type { display: flex; }
+  /* spinner button affect */
+  .SBSE-button:before {
+    width: 20px; height: 20px;
+    content: '';
+    position: absolute;
+    margin-top: 5px;
+    right: 10px;
+    border: 3px solid;
+    border-left-color: transparent;
+    border-radius: 50%;
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 0.5s;
+    animation-duration: 1s;
+    animation-iteration-count: infinite;
+    animation-name: rotate;
+    animation-timing-function: linear;
+  }
+  .SBSE-button.SBSE-button--narrow.SBSE-button--working {
+    width: 100px;
+    padding-right: 40px;
+    transition: all 0.5s;
+  }
+  .SBSE-button.SBSE-button--working:before {
+    transition-delay: 0.5s;
+    transition-duration: 1s;
+    opacity: 1;
+  }
+  @keyframes rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 
-    /* icons */
-    .SBSE-icon {
-        width: 20px; height: 20px;
-        display: none;
-        margin-left: 5px;
-        border-radius: 50%;
-        background-color: #E87A90;
-        transform: rotate(45deg);
-    }
-    .SBSE-icon:before, .SBSE-icon:after {
-        content: '';
-        width: 3px; height: 14px;
-        position: absolute;
-        top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: white;
-        border-radius: 5px;
-        pointer-events: none;
-    }
-    .SBSE-icon:after { transform: translate(-50%, -50%) rotate(-90deg); }
-    .SBSE-item--owned .SBSE-icon { background-color: #9CCC65; }
-    .SBSE-item--owned .SBSE-icon:before, .SBSE-item--owned .SBSE-icon:after { transform: none; }
-    .SBSE-item--owned .SBSE-icon:before {
-        width: 3px; height: 11px;
-        top: 4px; left: 10px;
-        border-radius: 5px 5px 5px 0;
-    }
-    .SBSE-item--owned .SBSE-icon:after {
-        width: 5px; height: 3px;
-        top: 12px; left: 6px;
-        border-radius: 5px 0 0 5px;
-    }
-    .SBSE-item--wished .SBSE-icon { transform: rotate(0); background-color: #29B6F6; }
-    .SBSE-item--wished .SBSE-icon:before, .SBSE-item--wished .SBSE-icon:after {
-        width: 6px; height: 10px;
-        top: 5px; left: 10px;
-        border-radius: 6px 6px 0 0;
-        transform: rotate(-45deg);
-        transform-origin: 0 100%;
-    }
-    .SBSE-item--wished .SBSE-icon:after {
-        left: 4px;
-        transform: rotate(45deg);
-        transform-origin :100% 100%;
-    }
-    .SBSE-item--ignored .SBSE-icon { background-color: rgb(135, 173, 189); }
-    .SBSE-item--notApplicable .SBSE-icon { transform: rotate(0); background-color: rgb(248, 187, 134); }
-    .SBSE-item--notApplicable .SBSE-icon:before {
-        content: '?';
-        width: 0; height: 10px;
-        top: 5px; left: 7px;
-        color: white;
-        font-size: 16px; font-weight: 900;
-    }
-    .SBSE-item--notApplicable .SBSE-icon:after { display: none; }
-    .SBSE-item--fetching .SBSE-icon { transform: rotate(0); background-color: transparent; }
-    .SBSE-item--fetching .SBSE-icon:before {
-        width: 20px; height: 20px;
-        top: 0; left: 0;
-        border: 3px solid grey;
-        border-left-color: transparent;
-        border-radius: 50%;
-        box-sizing: border-box;
-        transition: opacity 0.5s;
-        animation-duration: 1s;
-        animation-iteration-count: infinite;
-        animation-name: rotate;
-        animation-timing-function: linear;
-    }
-    .SBSE-item--fetching .SBSE-icon:after { display: none; }
-    .SBSE-item--notFetched .SBSE-icon { background-color: transparent; }
-    .SBSE-item--notFetched .SBSE-icon:before, .SBSE-item--notFetched .SBSE-icon:after { display: none; }
-    .SBSE-item--failed .SBSE-icon { transform: rotate(0); }
-    .SBSE-item--failed .SBSE-icon:before {
-        content: '!';
-        width: 0; height: 10px;
-        top: 5px; left: 8.5px;
-        color: white;
-        font-size: 16px; font-weight: 900;
-    }
-    .SBSE-item--failed .SBSE-icon:after { display: none; }
-    .SBSE-item--steam .SBSE-icon { display: inline-block; }
+  /* types */
+  .SBSE-type {
+    height: 20px;
+    display: none;
+    margin-right: 5px;
+    justify-content: center;
+  }
+  .SBSE-type:before, .SBSE-type:after {
+    content: '';
+    box-sizing: border-box;
+    pointer-events: none;
+  }
+  .SBSE-type:after { padding: 0 2px; }
+  .SBSE-item--game .SBSE-type { background-color: rgba(97,100,101,0.3); }
+  .SBSE-item--game .SBSE-type:after { content: 'Game'; }
+  .SBSE-item--DLC .SBSE-type { background-color: rgba(165,84,177,0.8); }
+  .SBSE-item--DLC .SBSE-type:before {
+    content: 'ꜜ';
+    width: 14px; height: 14px;
+    margin: 3px 0 0 2px;
+    border-radius: 50%;
+    background-color: #000;
+    color: rgba(165,84,177,0.8);
+    text-align: center;
+    font-size: 28px;
+    line-height: 28px;
+  }
+  .SBSE-item--DLC .SBSE-type:after { content: 'DLC'; }
+  .SBSE-item--package .SBSE-type { background-color: rgba(47,137,188,0.8); }
+  .SBSE-item--package .SBSE-type:after { content: 'Package'; }
+  .SBSE-item--steam .SBSE-type { display: flex; }
 
-    /* Steam Tooltip */
-    .SBSE-tooltip {
-        width: 308px;
-        display: none;
-        position: fixed;
-        overflow: hidden;
-        background: url(https://steamstore-a.akamaihd.net/public/images/v6/blue_body_darker_repeat.jpg) -700px center repeat-y scroll rgb(0, 0, 0);
-        border: 0;
-        box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5);
-        transition: all 0.5s;
-        z-index: 999;
-    }
-    .SBSE-tooltip--show{ display: block; }
+  /* icons */
+  .SBSE-icon {
+    width: 20px; height: 20px;
+    display: none;
+    margin-left: 5px;
+    border-radius: 50%;
+    background-color: #E87A90;
+    transform: rotate(45deg);
+  }
+  .SBSE-icon:before, .SBSE-icon:after {
+    content: '';
+    width: 3px; height: 14px;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border-radius: 5px;
+    pointer-events: none;
+  }
+  .SBSE-icon:after { transform: translate(-50%, -50%) rotate(-90deg); }
+  .SBSE-item--owned .SBSE-icon { background-color: #9CCC65; }
+  .SBSE-item--owned .SBSE-icon:before, .SBSE-item--owned .SBSE-icon:after { transform: none; }
+  .SBSE-item--owned .SBSE-icon:before {
+    width: 3px; height: 11px;
+    top: 4px; left: 10px;
+    border-radius: 5px 5px 5px 0;
+  }
+  .SBSE-item--owned .SBSE-icon:after {
+    width: 5px; height: 3px;
+    top: 12px; left: 6px;
+    border-radius: 5px 0 0 5px;
+  }
+  .SBSE-item--wished .SBSE-icon { transform: rotate(0); background-color: #29B6F6; }
+  .SBSE-item--wished .SBSE-icon:before, .SBSE-item--wished .SBSE-icon:after {
+    width: 6px; height: 10px;
+    top: 5px; left: 10px;
+    border-radius: 6px 6px 0 0;
+    transform: rotate(-45deg);
+    transform-origin: 0 100%;
+  }
+  .SBSE-item--wished .SBSE-icon:after {
+    left: 4px;
+    transform: rotate(45deg);
+    transform-origin :100% 100%;
+  }
+  .SBSE-item--ignored .SBSE-icon { background-color: rgb(135, 173, 189); }
+  .SBSE-item--notApplicable .SBSE-icon { transform: rotate(0); background-color: rgb(248, 187, 134); }
+  .SBSE-item--notApplicable .SBSE-icon:before {
+    content: '?';
+    width: 0; height: 10px;
+    top: 5px; left: 7px;
+    color: white;
+    font-size: 16px; font-weight: 900;
+  }
+  .SBSE-item--notApplicable .SBSE-icon:after { display: none; }
+  .SBSE-item--fetching .SBSE-icon { transform: rotate(0); background-color: transparent; }
+  .SBSE-item--fetching .SBSE-icon:before {
+    width: 20px; height: 20px;
+    top: 0; left: 0;
+    border: 3px solid grey;
+    border-left-color: transparent;
+    border-radius: 50%;
+    box-sizing: border-box;
+    transition: opacity 0.5s;
+    animation-duration: 1s;
+    animation-iteration-count: infinite;
+    animation-name: rotate;
+    animation-timing-function: linear;
+  }
+  .SBSE-item--fetching .SBSE-icon:after { display: none; }
+  .SBSE-item--notFetched .SBSE-icon { background-color: transparent; }
+  .SBSE-item--notFetched .SBSE-icon:before, .SBSE-item--notFetched .SBSE-icon:after { display: none; }
+  .SBSE-item--failed .SBSE-icon { transform: rotate(0); }
+  .SBSE-item--failed .SBSE-icon:before {
+    content: '!';
+    width: 0; height: 10px;
+    top: 5px; left: 8.5px;
+    color: white;
+    font-size: 16px; font-weight: 900;
+  }
+  .SBSE-item--failed .SBSE-icon:after { display: none; }
+  .SBSE-item--steam .SBSE-icon { display: inline-block; }
 
-    /* Tooltip */
-    [tooltip]::before, [tooltip]::after {
-        position: absolute;
-        opacity: 0;
-        transition: all 0.15s ease;
-    }
-    [tooltip]::before {
-        width: max-content;
-        content: attr(tooltip);
-        top: calc(100% + 10px); left: 0;
-        padding: 10px;
-        color: #4a4c45;
-        background-color: white;
-        border-radius: 3px;
-        box-shadow: 1px 2px 3px rgba(0,0,0,0.45);
-    }
-    [tooltip]::after {
-        content: "";
-        top: calc(100% + 5px); left: 10px;
-        border-left: 5px solid transparent;
-        border-right: 5px solid transparent;
-        border-bottom: 5px solid white;
-    }
-    [tooltip]:hover::before, [tooltip]:hover::after { opacity: 1; }
-    [tooltip]:not([tooltip-persistent])::before, [tooltip]:not([tooltip-persistent])::after { pointer-events: none; }
+  /* Steam Tooltip */
+  .SBSE-tooltip {
+    width: 308px;
+    display: none;
+    position: fixed;
+    overflow: hidden;
+    background: url(https://steamstore-a.akamaihd.net/public/images/v6/blue_body_darker_repeat.jpg) -700px center repeat-y scroll rgb(0, 0, 0);
+    border: 0;
+    box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.5);
+    transition: all 0.5s;
+    z-index: 999;
+  }
+  .SBSE-tooltip--show{ display: block; }
+
+  /* Tooltip */
+  [tooltip]::before, [tooltip]::after {
+    position: absolute;
+    opacity: 0;
+    transition: all 0.15s ease;
+  }
+  [tooltip]::before {
+    width: max-content;
+    content: attr(tooltip);
+    top: calc(100% + 10px); left: 0;
+    padding: 10px;
+    color: #4a4c45;
+    background-color: white;
+    border-radius: 3px;
+    box-shadow: 1px 2px 3px rgba(0,0,0,0.45);
+  }
+  [tooltip]::after {
+    content: "";
+    top: calc(100% + 5px); left: 10px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid white;
+  }
+  [tooltip]:hover::before, [tooltip]:hover::after { opacity: 1; }
+  [tooltip]:not([tooltip-persistent])::before, [tooltip]:not([tooltip-persistent])::after { pointer-events: none; }
 `); // load up
 
 const regURL = /(https?:\/\/)?([.\w]*steam[-.\w]*){1}\/.*?(apps?|subs?){1}\/(\d+){1}(\/.*\/?)?/m;
@@ -496,6 +507,7 @@ const config = {
     if (!has.call(this.data, 'titleComesLast')) this.data.titleComesLast = false;
     if (!has.call(this.data, 'activateAllKeys')) this.data.activateAllKeys = false;
     if (!has.call(this.data, 'enableTooltips')) this.data.enableTooltips = this.get('language') !== 'english';
+    if (!has.call(this.data, 'highlightedRegions')) this.data.highlightedRegions = ['CN', 'HK', 'TW'];
     if (!has.call(this.data, 'enableASFIPC')) this.data.enableASFIPC = false;
     if (!has.call(this.data, 'ASFWSProtocol')) this.data.ASFWSProtocol = 'ws';
     if (!has.call(this.data, 'ASFIPCProtocol')) this.data.ASFIPCProtocol = 'http';
@@ -508,7 +520,7 @@ const config = {
 const i18n = {
   data: {
     tchinese: {
-      name: '繁體中文',
+      name: '正體中文',
       updateSuccessTitle: '更新成功！',
       updateSuccess: '成功更新Steam sessionID',
       successStatus: '成功',
@@ -547,6 +559,8 @@ const i18n = {
       settingsTitleComesLast: '遊戲名置後',
       settingsActivateAllKeys: '不跳過、啟動所有序號',
       settingsEnableTooltips: 'Keylol 論壇提示框',
+      settingshighlightedRegions: '標示出地區',
+      settingshighlightedRegionsButton: '選擇地區',
       settingsEnableASFIPC: '啟用ASF IPC',
       settingsASFWSProtocol: 'ASF WS 傳輸協定',
       settingsASFIPCProtocol: 'ASF IPC 傳輸協定',
@@ -653,6 +667,8 @@ const i18n = {
       settingsTitleComesLast: '游戏名置后',
       settingsActivateAllKeys: '不跳过、激活所有激活码',
       settingsEnableTooltips: 'Keylol 论坛提示窗',
+      settingshighlightedRegions: '标示出地区',
+      settingshighlightedRegionsButton: '选择地区',
       settingsEnableASFIPC: '启用ASF IPC',
       settingsASFWSProtocol: 'ASF WS 传输协议',
       settingsASFIPCProtocol: 'ASF IPC 传输协议',
@@ -759,6 +775,8 @@ const i18n = {
       settingsTitleComesLast: 'Title Comes Last',
       settingsActivateAllKeys: 'No skip & activate all keys',
       settingsEnableTooltips: 'Tooltips from Keylol',
+      settingshighlightedRegions: 'Highlighted Regions',
+      settingshighlightedRegionsButton: 'Select Regions',
       settingsEnableASFIPC: 'Enable ASF IPC',
       settingsASFWSProtocol: 'ASF WS Protocol',
       settingsASFIPCProtocol: 'ASF IPC Protocol',
@@ -2247,6 +2265,11 @@ const settings = {
       configItem: 'enableTooltips',
       type: 'switch'
     }, {
+      name: i18n.get('settingshighlightedRegions'),
+      configItem: 'highlightedRegions',
+      type: 'button',
+      textContent: i18n.get('settingshighlightedRegionsButton')
+    }, {
       name: i18n.get('settingsEnableASFIPC'),
       configItem: 'enableASFIPC',
       type: 'switch'
@@ -2281,11 +2304,11 @@ const settings = {
       switch (detail.type) {
         case 'switch':
           $tr.find('.value').append(`
-                        <label class="SBSE-switch">
-                            <input type="checkbox" data-config="${detail.configItem}">
-                            <span class="SBSE-switch__slider"></span>
-                        </label>
-                    `);
+            <label class="SBSE-switch">
+              <input type="checkbox" data-config="${detail.configItem}">
+              <span class="SBSE-switch__slider"></span>
+            </label>
+          `);
           break;
 
         case 'text':
@@ -2358,6 +2381,52 @@ const settings = {
         key: 'library',
         notify: true
       }]);
+    }); // button - select regions
+
+    $model.find('[data-config="highlightedRegions"]').on('click', () => {
+      swal({
+        title: i18n.get('settingshighlightedRegionsButton'),
+        width: '1200px',
+        onBeforeOpen: dom => {
+          const data = Object.assign({}, ISO2.name.english);
+          ;
+          const sortedCode = Object.keys(data).sort((a, b) => data[a] < data[b] ? -1 : data[a] > data[b] ? 1 : 0);
+          const separators = {
+            A: 'A',
+            B: 'B',
+            C: 'C',
+            D: 'D, E, F',
+            G: 'G, H, I',
+            J: 'J, K, L',
+            M: 'M',
+            N: 'N',
+            O: 'O, P, Q, R',
+            S: 'S',
+            T: 'T',
+            U: 'U, V, W, X, Y, Z'
+          };
+          let html = '';
+          sortedCode.forEach(code => {
+            if (separators[data[code].charAt(0)]) {
+              html += `<span class="separator">${separators[data[code].charAt(0)]}</span>`;
+              separators[data[code].charAt(0)] = undefined;
+            }
+
+            html += `<span data-code="${code}">${ISO2.get(code)}</span>`;
+          });
+          $(dom).find('.swal2-content').append(`<div class="SBSE-grid">${html}</div>`);
+          $(dom).find('.swal2-content span[data-code]').on('click', e => {
+            $(e.delegateTarget).toggleClass('selected');
+          });
+          config.get('highlightedRegions').forEach(code => {
+            $(dom).find(`.swal2-content span[data-code="${code}"]`).addClass('selected');
+          });
+        },
+        onClose: dom => {
+          config.set('highlightedRegions', $(dom).find(`.swal2-content span[data-code].selected`).map((i, ele) => $(ele).attr('data-code')).get());
+        },
+        onAfterClose: settings.display
+      });
     });
     this.model = $model;
   }
@@ -2473,31 +2542,31 @@ const SBSE = {
     // construct SBSE model
     const $model = $('<div class="SBSE-container__content__model" data-feature="SBSE"></div>');
     $model.append(`
-            <textarea></textarea>
-            <div>
-                <button class="SBSE-button SBSE-button-reveal">${i18n.get('buttonReveal')}</button>
-                <button class="SBSE-button SBSE-button-retrieve">${i18n.get('buttonRetrieve')}</button>
-                <button class="SBSE-button SBSE-button-activate">${i18n.get('buttonActivate')}</button>
-                <button class="SBSE-button SBSE-button-copy">${i18n.get('buttonCopy')}</button>
-                <button class="SBSE-button SBSE-button-reset">${i18n.get('buttonReset')}</button>
-                <div class="SBSE-dropdown SBSE-dropdown-export">
-                    <button class="SBSE-button SBSE-button-export">${i18n.get('buttonExport')}</button>
-                    <ul class="SBSE-dropdown__list SBSE-dropdown__list-export">
-                        <li><a data-fileType="txt">.txt</a></li>
-                        <li><a data-fileType="csv">.csv</a></li>
-                        <li><a data-fileType="keys">.keys</a></li>
-                    </ul>
-                </div>
-                <label><input type="checkbox" class="SBSE-checkbox SBSE-checkbox-title" data-config="SBSE_ChkTitle">${i18n.get('checkboxIncludeGameTitle')}</label>
-                <label><input type="checkbox" class="SBSE-checkbox SBSE-checkbox-join" data-config="SBSE_ChkJoin">${i18n.get('checkboxJoinKeys')}</label>
-                <select class="SBSE-select SBSE-select-filter">
-                    <option value="All" selected>${i18n.get('selectFilterAll')}</option>
-                    <option value="Owned">${i18n.get('selectFilterOwned')}</option>
-                    <option value="NotOwned">${i18n.get('selectFilterNotOwned')}</option>
-                </select>
-                <button class="SBSE-button-setting"> </button>
-            </div>
-        `); // bind handlers
+      <textarea></textarea>
+        <div>
+          <button class="SBSE-button SBSE-button-reveal">${i18n.get('buttonReveal')}</button>
+          <button class="SBSE-button SBSE-button-retrieve">${i18n.get('buttonRetrieve')}</button>
+          <button class="SBSE-button SBSE-button-activate">${i18n.get('buttonActivate')}</button>
+          <button class="SBSE-button SBSE-button-copy">${i18n.get('buttonCopy')}</button>
+          <button class="SBSE-button SBSE-button-reset">${i18n.get('buttonReset')}</button>
+          <div class="SBSE-dropdown SBSE-dropdown-export">
+            <button class="SBSE-button SBSE-button-export">${i18n.get('buttonExport')}</button>
+            <ul class="SBSE-dropdown__list SBSE-dropdown__list-export">
+              <li><a data-fileType="txt">.txt</a></li>
+              <li><a data-fileType="csv">.csv</a></li>
+              <li><a data-fileType="keys">.keys</a></li>
+            </ul>
+          </div>
+          <label><input type="checkbox" class="SBSE-checkbox SBSE-checkbox-title" data-config="SBSE_ChkTitle">${i18n.get('checkboxIncludeGameTitle')}</label>
+          <label><input type="checkbox" class="SBSE-checkbox SBSE-checkbox-join" data-config="SBSE_ChkJoin">${i18n.get('checkboxJoinKeys')}</label>
+          <select class="SBSE-select SBSE-select-filter">
+            <option value="All" selected>${i18n.get('selectFilterAll')}</option>
+            <option value="Owned">${i18n.get('selectFilterOwned')}</option>
+            <option value="NotOwned">${i18n.get('selectFilterNotOwned')}</option>
+          </select>
+          <button class="SBSE-button-setting"> </button>
+      </div>
+    `); // bind handlers
 
     const handlers = this.handlers;
     $model.find('button').click(e => {
@@ -2626,11 +2695,11 @@ const ASF = {
 
 
       const $input = $(`
-            <span class="SBSE-terminal__input">
-                <input type="text">
-                <input type="text">
-            </span>
-        `).appendTo(self.terminal.commands).find('input:first-child');
+      <span class="SBSE-terminal__input">
+        <input type="text">
+        <input type="text">
+      </span>
+    `).appendTo(self.terminal.commands).find('input:first-child');
       const $hint = $input.next('input'); // bind event
       // display hint on input
 
@@ -2754,14 +2823,14 @@ const ASF = {
     // construct SBSE model
     const $model = $('<div class="SBSE-container__content__model" data-feature="ASF"></div>');
     $model.append(`
-            <div class="SBSE-terminal SBSE-terminal-commands"><div></div></div>
-            <div class="SBSE-terminal SBSE-terminal-log SBSE-terminal--show"><div></div></div>
-            <div>
-                <button class="SBSE-button SBSE-button-commands">${i18n.get('buttonCommands')}</button>
-                <button class="SBSE-button SBSE-button-log">${i18n.get('buttonLog')}</button>
-                <button class="SBSE-button-setting"> </button>
-            </div>
-        `);
+      <div class="SBSE-terminal SBSE-terminal-commands"><div></div></div>
+      <div class="SBSE-terminal SBSE-terminal-log SBSE-terminal--show"><div></div></div>
+      <div>
+        <button class="SBSE-button SBSE-button-commands">${i18n.get('buttonCommands')}</button>
+        <button class="SBSE-button SBSE-button-log">${i18n.get('buttonLog')}</button>
+        <button class="SBSE-button-setting"> </button>
+      </div>
+    `);
     $model.find('.SBSE-button-commands').on('click.commands', () => {
       $model.find('.SBSE-terminal--show').removeClass('SBSE-terminal--show');
       $model.find('.SBSE-terminal-commands').addClass('SBSE-terminal--show');
@@ -2816,11 +2885,11 @@ const container = {
     const $content = $('<div class="SBSE-container__content"></div>').appendTo(this.self); // construct nav
 
     $nav.append(`
-            <ul>
-                <li class="SBSE-container__nav__item" data-feature="SBSE"><span>Steam Ext</span></li>
-                <li class="SBSE-container__nav__item" data-feature="ASF"><span>ASF IPC</span></li>
-            </ul>
-        `); // bind event
+      <ul>
+        <li class="SBSE-container__nav__item" data-feature="SBSE"><span>Steam Ext</span></li>
+        <li class="SBSE-container__nav__item" data-feature="ASF"><span>ASF IPC</span></li>
+      </ul>
+    `); // bind event
 
     $nav.find('.SBSE-container__nav__item').on('click', e => {
       const $target = $(e.delegateTarget);
@@ -2921,16 +2990,13 @@ const siteHandlers = {
   indiegala() {
     // inject css
     GM_addStyle(`
-            .SBSE-container { margin-top: 10px; }
-            .SBSE-container__nav__item--show {
-                border-bottom: 1px solid #CC001D;
-                color: #CC001D;
-            }
-            .SBSE-container__content__model > textarea { border: 1px solid #CC001D; border-radius: 3px; }
-            .SBSE-button { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
-            .swal2-popup .SBSE-switch__slider { margin: 0; }
-            .SBSE-icon { vertical-align: middle; }
-        `);
+      .SBSE-container { margin-top: 10px; }
+      .SBSE-container__nav__item--show { border-bottom: 1px solid #CC001D; color: #CC001D; }
+      .SBSE-container__content__model > textarea { border: 1px solid #CC001D; border-radius: 3px; }
+      .SBSE-button { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
+      .swal2-popup .SBSE-switch__slider { margin: 0; }
+      .SBSE-icon { vertical-align: middle; }
+    `);
     const handlers = {
       extract() {
         const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
@@ -3072,44 +3138,44 @@ const siteHandlers = {
   fanatical() {
     // inject css
     GM_addStyle(`
-            .SBSE-container { margin-top: 10px; }
-            .SBSE-container__nav { background-color: rgb(28, 28, 28); }
-            .SBSE-container__nav__item--show {
-                border-bottom: 1px solid #ff9800;
-                color: #ff9800;
-            }
-            .SBSE-container__content { margin: 0; }
-            .SBSE-container__content__model > textarea { background-color: #434343; color: #eee; }
-            .SBSE-container__content__model label { color: #DEDEDE; }
-            .SBSE-button, .SBSE-select { border: 1px solid transparent; background-color: #1c1c1c; color: #eee; }
-            .SBSE-button:hover, .SBSE-select:hover { color: #A8A8A8; }
-            .SBSE-button--narrow { width: 80px; }
+      .SBSE-container { margin-top: 10px; }
+      .SBSE-container__nav { background-color: rgb(28, 28, 28); }
+      .SBSE-container__nav__item--show {
+        border-bottom: 1px solid #ff9800;
+        color: #ff9800;
+      }
+      .SBSE-container__content { margin: 0; }
+      .SBSE-container__content__model > textarea { background-color: #434343; color: #eee; }
+      .SBSE-container__content__model label { color: #DEDEDE; }
+      .SBSE-button, .SBSE-select { border: 1px solid transparent; background-color: #1c1c1c; color: #eee; }
+      .SBSE-button:hover, .SBSE-select:hover { color: #A8A8A8; }
+      .SBSE-button--narrow { width: 80px; }
 
-            /* currency converter */
-            .SBSE-priceExt { positon: relative; }
-            .SBSE-priceExt ~ .SBSE-priceExt { display: none; }
-            .SBSE-priceExt--portrait { width: 100%; padding: 0 .875rem 0 .875rem; }
-            .SBSE-priceExt--portrait > div { padding: 1rem; }
-            .SBSE-priceExt--portrait .SBSE-priceExt__currencyToggler {
-                width: 100%; height: 40px;
-                margin-bottom: 10px;
-                font-size: 20px;
-                border-radius: 3px;
-            }
-            .SBSE-priceExt--landscape { padding: 1rem; }
-            .SBSE-priceExt--landscape > div { display: flex; align-items: center; justify-content: space-evenly; }
-            .SBSE-priceExt--landscape .SBSE-priceExt__currencyToggler {
-                width: 300px; height: 40px;
-                font-size: 20px;
-                border-radius: 3px;
-            }
-            .SBSE-priceExt__pricingDetail { background-color: transparent; }
-            .SBSE-priceExt__pricingDetail th { padding-top: 10px; }
-            .SBSE-priceExt__pricingDetail .cheapest { border-bottom: 1px solid #ff9800; font-weight: bold; }
-            .SBSE-priceExt__pricingDetail .currency-flag { vertical-align: text-bottom; }
-            .swal2-popup table { background-color: white; }
-            .SBSE-icon { vertical-align: bottom; }
-        `);
+      /* currency converter */
+      .SBSE-priceExt { positon: relative; }
+      .SBSE-priceExt ~ .SBSE-priceExt { display: none; }
+      .SBSE-priceExt--portrait { width: 100%; padding: 0 .875rem 0 .875rem; }
+      .SBSE-priceExt--portrait > div { padding: 1rem; }
+      .SBSE-priceExt--portrait .SBSE-priceExt__currencyToggler {
+        width: 100%; height: 40px;
+        margin-bottom: 10px;
+        font-size: 20px;
+        border-radius: 3px;
+      }
+      .SBSE-priceExt--landscape { padding: 1rem; }
+      .SBSE-priceExt--landscape > div { display: flex; align-items: center; justify-content: space-evenly; }
+      .SBSE-priceExt--landscape .SBSE-priceExt__currencyToggler {
+        width: 300px; height: 40px;
+        font-size: 20px;
+        border-radius: 3px;
+      }
+      .SBSE-priceExt__pricingDetail { background-color: transparent; }
+      .SBSE-priceExt__pricingDetail th { padding-top: 10px; }
+      .SBSE-priceExt__pricingDetail .cheapest { border-bottom: 1px solid #ff9800; font-weight: bold; }
+      .SBSE-priceExt__pricingDetail .currency-flag { vertical-align: text-bottom; }
+      .swal2-popup table { background-color: white; }
+      .SBSE-icon { vertical-align: bottom; }
+    `);
 
     const fetchAPIData =
     /*#__PURE__*/
@@ -3149,12 +3215,12 @@ const siteHandlers = {
         if (Object.keys(APIData).length > 0) {
           const language = config.get('language');
           const $priceExt = $(`
-                    <div class="SBSE-priceExt SBSE-priceExt--portrait">
-                        <div>
-                            <select class="SBSE-priceExt__currencyToggler"></select>
-                        </div>
-                    </div>
-                `);
+          <div class="SBSE-priceExt SBSE-priceExt--portrait">
+            <div>
+              <select class="SBSE-priceExt__currencyToggler"></select>
+            </div>
+          </div>
+        `);
           const $currencyToggler = $priceExt.find('.SBSE-priceExt__currencyToggler');
           const $pricingDetail = $('<table class="SBSE-priceExt__pricingDetail"></table>');
           const selectedCurrency = GM_getValue('SBSE_selectedCurrency', 'USD');
@@ -3188,12 +3254,12 @@ const siteHandlers = {
               const symbol = xe.currencies[currency].symbol;
               const decimalPlace = xe.currencies[currency].decimal ? 2 : 0;
               $detail.append(`
-                            <tr class="tier${index + 1}">
-                                <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
-                                <td>${symbol + (value / 100).toFixed(decimalPlace)}</td>
-                                <td> ≈ <span class="SBSE-price" data-currency="${currency}" data-value="${value}"></span></td>
-                            </tr>
-                        `);
+              <tr class="tier${index + 1}">
+                <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
+                <td>${symbol + (value / 100).toFixed(decimalPlace)}</td>
+                <td> ≈ <span class="SBSE-price" data-currency="${currency}" data-value="${value}"></span></td>
+              </tr>
+            `);
             });
             $detail.appendTo($currencyToggler.parent());
           }); // game page
@@ -3209,12 +3275,12 @@ const siteHandlers = {
 
               if (has.call(starDeal, 'promoPrice')) value = starDeal.promoPrice[currency];
               $pricingDetail.append(`
-                            <tr class="tier1">
-                                <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
-                                <td>${symbol + (value / 100).toFixed(decimalPlace)}</td>
-                                <td> ≈ <span class="SBSE-price" data-currency="${currency}" data-value="${value}"></span></td>
-                            </tr>
-                        `).appendTo($currencyToggler.parent());
+              <tr class="tier1">
+                <td><div class="currency-flag currency-flag-${currency.toLowerCase()}"></div></td>
+                <td>${symbol + (value / 100).toFixed(decimalPlace)}</td>
+                <td> ≈ <span class="SBSE-price" data-currency="${currency}" data-value="${value}"></span></td>
+              </tr>
+            `).appendTo($currencyToggler.parent());
             });
           }
 
@@ -3366,44 +3432,58 @@ const siteHandlers = {
   humblebundle() {
     // inject css
     GM_addStyle(`
-            .SBSE-container__content__model > div { position: relative; }
-            .SBSE-container__content__model > textarea {
-                border: 1px solid #CFCFCF;
-                border-radius: 5px;
-                color: #4a4c45;
-                text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-            }
-            .SBSE-button {
-                width: 70px;
-                border: 1px solid #C9CCD3;
-                border-radius: 3px;
-                background-color: #C5C5C5;
-                background: linear-gradient(to top, #cacaca, #e7e7e7);
-                color: #4a4c45 !important;
-            }
-            .SBSE-button:hover {
-                border: 1px solid #b7bac0;
-                background-color: #fafcff;
-                color: #555961 !important;
-            }
-            .SBSE-button--narrow.SBSE-button--working { width: 76px; padding-right: 36px; }
-            .SBSE-button-setting { position: absolute; right: 0; }
-            .SBSE-item--owned .sr-unredeemed-steam-button {
-                background-color: #F3F3F3;
-                background: linear-gradient(to top, #E8E8E8, #F6F6F6);
-            }/*
-            .SBSE-item--owned .heading-text h4 > span:not(.steam-owned):last-child::after {
-                content: '\\f085';
-                font-family: hb-icons;
-                color: #17A1E5;
-            }*/
-            .SBSE-span-activationRestrictions { float: right; margin-right: 5px; cursor: pointer; }
-            .swal2-icon-text { font-size: inherit; }
-            .flag-icon { width: 4em; height: 3em; border-radius: 3px; }
-            .flag-icon-unknown { border: 1px solid; text-align: center; line-height: 3em; }
-            .key-redeemer h4 { position: relative; }
-            .key-redeemer .SBSE-icon { position: absolute; top: 50%; margin-top: -10px; }
-        `);
+      .SBSE-container__content__model > div { position: relative; }
+      .SBSE-container__content__model > textarea {
+        border: 1px solid #CFCFCF;
+        border-radius: 5px;
+        color: #4a4c45;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+      }
+      .SBSE-button {
+        width: 70px;
+        border: 1px solid #C9CCD3;
+        border-radius: 3px;
+        background-color: #C5C5C5;
+        background: linear-gradient(to top, #cacaca, #e7e7e7);
+        color: #4a4c45 !important;
+      }
+      .SBSE-button:hover {
+        border: 1px solid #b7bac0;
+        background-color: #fafcff;
+        color: #555961 !important;
+      }
+      .SBSE-button--narrow.SBSE-button--working { width: 76px; padding-right: 36px; }
+      .SBSE-button-setting { position: absolute; right: 0; }
+      .SBSE-item--owned .sr-unredeemed-steam-button {
+        background-color: #F3F3F3;
+        background: linear-gradient(to top, #E8E8E8, #F6F6F6);
+      }/*
+      .SBSE-item--owned .heading-text h4 > span:not(.steam-owned):last-child::after {
+        content: '\\f085';
+        font-family: hb-icons;
+        color: #17A1E5;
+      }*/
+      .SBSE-activationRestrictions-title {
+        margin: 0 0 5px;
+        display: flex;
+        positon: relative;
+        cursor: pointer;
+      }
+      .SBSE-activationRestrictions-title::before, .SBSE-activationRestrictions-title::after { padding: 0 5px; }
+      .SBSE-activationRestrictions-title::before { content: '＋'; display: none; order: 2; }
+      .SBSE-activationRestrictions-title::after { content: '－'; display: block; order: 3; }
+      .SBSE-activationRestrictions-details p { margin: 0; }
+      .SBSE-activationRestrictions-details .highlight { color: crimson; }
+      .SBSE-activationRestrictions--collapsed > h5::before { display: block; }
+      .SBSE-activationRestrictions--collapsed > h5::after { display: none; }
+      .SBSE-activationRestrictions--collapsed > div { display: none; }
+      .swal2-icon-text { font-size: inherit; }
+      .flag-icon { width: 4em; height: 3em; border-radius: 3px; }
+      .flag-icon-unknown { border: 1px solid; text-align: center; line-height: 3em; }
+      .key-redeemer:not(:first-child) h4 { margin-top: 50px; }
+      .key-redeemer h4 { position: relative; margin-bottom: 10px; }
+      .key-redeemer .SBSE-icon { position: absolute; top: 50%; margin-top: -10px; }
+    `);
     let gamekey;
     const atDownload = location.pathname === '/downloads';
 
@@ -3428,15 +3508,15 @@ const siteHandlers = {
 
             if (d.success) {
               $node.closest('.container').html(`
-                            <div title="${d.key}" class="keyfield redeemed">
-                                <div class="keyfield-value">${d.key}</div>
-                                <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
-                                    <div class="steam-redeem-text">Redeem</div>
-                                    <span class="tooltiptext">Redeem on Steam</span>
-                                </a>
-                                <div class="spinner"></div>
-                            </div>
-                        `);
+              <div title="${d.key}" class="keyfield redeemed">
+                <div class="keyfield-value">${d.key}</div>
+                <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
+                  <div class="steam-redeem-text">Redeem</div>
+                  <span class="tooltiptext">Redeem on Steam</span>
+                </a>
+                <div class="spinner"></div>
+              </div>
+            `);
             } else swal(i18n.get('failTitle'), JSON.stringify(d), 'error');
           } else $node.click();
 
@@ -3567,21 +3647,21 @@ const siteHandlers = {
               } // activation restrictions
 
 
-              let html = '';
-              const disallowed = game.disallowed_countries.map(c => ISO2.get(c));
-              const exclusive = game.exclusive_countries.map(c => ISO2.get(c));
-              const separator = config.get('language').includes('chinese') ? '、' : ', ';
-              if (disallowed.length > 0) html += `<p>${i18n.get('HBDisallowedCountries')}<br>${disallowed.join(separator)}</p>`;
-              if (exclusive.length > 0) html += `<p>${i18n.get('HBExclusiveCountries')}<br>${exclusive.join(separator)}</p>`;
+              const $container = $('<div class="SBSE-activationRestrictions"></div>');
+              const $title = $(`<h5 class="SBSE-activationRestrictions-title">${i18n.get('HBActivationRestrictions')}</h5>`);
+              const $details = $('<div class="SBSE-activationRestrictions-details"></div>');
+              const disallowed = game.disallowed_countries.map(c => config.get('highlightedRegions').includes(c) ? `<span class="highlight">${ISO2.get(c)}</span>` : ISO2.get(c));
+              const exclusive = game.exclusive_countries.map(c => config.get('highlightedRegions').includes(c) ? `<span class="highlight">${ISO2.get(c)}</span>` : ISO2.get(c));
+              const comma = config.get('language').includes('chinese') ? '、' : ', ';
+              if (disallowed.length > 0) $details.append(`<p>${i18n.get('HBDisallowedCountries')}<br>${disallowed.join(comma)}</p>`);
+              if (exclusive.length > 0) $details.append(`<p>${i18n.get('HBExclusiveCountries')}<br>${exclusive.join(comma)}</p>`);
 
               if (disallowed.length > 0 || exclusive.length > 0) {
-                $(`<span class="SBSE-span-activationRestrictions">${i18n.get('HBActivationRestrictions')}</span>`).click(() => {
-                  swal({
-                    title: `${game.human_name}<br>${i18n.get('HBActivationRestrictions')}`,
-                    html,
-                    type: 'info'
-                  });
-                }).insertBefore($keyRedeemer.find('.heading-text > h4'));
+                $container.append($title, $details);
+                $keyRedeemer.find('.heading-text').after($container);
+                $title.on('click', () => {
+                  $container.toggleClass('SBSE-activationRestrictions--collapsed');
+                });
               }
 
               $keyRedeemer.addClass('SBSE-item--processed');
@@ -3705,21 +3785,21 @@ const siteHandlers = {
       if (!isNaN(balance)) GM_setValue('SBSE_DIGBalance', balance); // inject css
 
       GM_addStyle(`
-                .SBSE-container { padding: 5px; border: 1px solid #424242; }
-                .SBSE-container__nav__item--show {
-                    border-bottom: 1px solid #FD5E0F;
-                    color: #FD5E0F;
-                }
-                .SBSE-container__content__model > textarea { border: 1px solid #000; }
-                .SBSE-button {
-                    border: none;
-                    background-color: #FD5E0F;
-                    color: rgb(49, 49, 49);
-                    font-family: Ropa Sans;
-                    font-size: 15px;
-                    font-weight: 600;
-                }
-            `);
+        .SBSE-container { padding: 5px; border: 1px solid #424242; }
+        .SBSE-container__nav__item--show {
+          border-bottom: 1px solid #FD5E0F;
+          color: #FD5E0F;
+        }
+        .SBSE-container__content__model > textarea { border: 1px solid #000; }
+        .SBSE-button {
+          border: none;
+          background-color: #FD5E0F;
+          color: rgb(49, 49, 49);
+          font-family: Ropa Sans;
+          font-size: 15px;
+          font-weight: 600;
+        }
+      `);
       const handlers = {
         extract() {
           const data = {
@@ -3763,8 +3843,8 @@ const siteHandlers = {
       const $container = container.get('SBSE', handlers);
       $container.find('.SBSE-button-export, .SBSE-select-filter').remove();
       $container.find('label:has(.SBSE-checkbox-join)').after(`
-                <label><input type="checkbox" class="SBSE-checkbox-marketListings">${i18n.get('checkboxMarketListings')}</label>
-            `); // append checkbox for market keys
+        <label><input type="checkbox" class="SBSE-checkbox-marketListings">${i18n.get('checkboxMarketListings')}</label>
+      `); // append checkbox for market keys
 
       $('#TableKeys').eq(0).before($container); // rate all positive
 
@@ -3793,82 +3873,82 @@ const siteHandlers = {
     } else if (pathname.includes('/account_digstore') || pathname.includes('/account_trades') || pathname.includes('/account_tradesXT') || pathname.includes('/store_update') || pathname.includes('/storeXT_update') || pathname.includes('/site_content_marketplace')) {
       // inject css styles
       GM_addStyle(`
-                body.hideOwned .SBSE-item--owned,
-                body.hideOwned .SBSE-item--owned + .DIGMenu-searchResults { display: none; }
-                .headerRow > td:first-child { padding-left: 0; }
-                .headerRow > td:last-child { padding-right: 0; }
-                .DIGMenu > * { margin-right: 10px; padding: 4px 8px !important; cursor: pointer; }
-                .DIG-row { height: 30px; }
-                .DIGMenu button { padding: 4px 8px; outline: none; cursor: pointer; }
-                .DIG-row--checked { background-color: #222; }
-                .DIGMenu-searchResults td { padding: 0 }
-                .DIGMenu-searchResults iframe {
-                    width: 100%; height: 300px;
-                    display: none;
-                    background-color: white;
-                    border: none;
-                }
-                .SBSE-item--owned .DIG3_14_Gray { color: #9ccc65; }
-                .SBSE-item--wished .DIG3_14_Gray { color: #29b6f6; }
-                .SBSE-item--ignored .DIG3_14_Gray { text-decoration: line-through; }
-                .DIG2content select { max-width: 200px; }
-                #DIGSelectAll { display: none; }
-                #DIGSelectAll + span { display: inline-block; }
-                #DIGSelectAll ~ span:last-child { display: none; }
-                #DIGSelectAll:checked + span { display: none; }
-                #DIGSelectAll:checked ~ span:last-child { display: inline-block; }
-                .showOwnedListings { color: #FD5E0F; }
-                .showOwnedListings > label { vertical-align: text-bottom; }
-                .showOwnedListings input:checked + .SBSE-switch__slider { background-color: #FD5E0F; }
-                .DIGBalanceDetails > span { margin-right: 20px; }
-                .DIG__edit_balance {
-                    display: inline-block;
-                    position: relative;
-                    transform: rotate(45deg);
-                    cursor: pointer;
-                }
-                .DIG__edit_balance > span {
-                    display: inline-block;
-                }
-                .DIG__edit_balance .tip {
-                    width: 0; height: 0;
-                    position: absolute;
-                    top: 13px;
-                    border-left: 2px solid transparent;
-                    border-right: 2px solid transparent;
-                    border-top: 3px solid #999;
-                }
-                .DIG__edit_balance .body {
-                    width: 4px; height: 12px;
-                    background-color: #999;
-                }
-                .DIG__edit_balance .rubber {
-                    width: 4px; height: 2px;
-                    position: absolute;
-                    top: -3px;
-                    background-color: #999;
-                    top: -3px;
-                }
-            `);
+        body.hideOwned .SBSE-item--owned,
+        body.hideOwned .SBSE-item--owned + .DIGMenu-searchResults { display: none; }
+        .headerRow > td:first-child { padding-left: 0; }
+        .headerRow > td:last-child { padding-right: 0; }
+        .DIGMenu > * { margin-right: 10px; padding: 4px 8px !important; cursor: pointer; }
+        .DIG-row { height: 30px; }
+        .DIGMenu button { padding: 4px 8px; outline: none; cursor: pointer; }
+        .DIG-row--checked { background-color: #222; }
+        .DIGMenu-searchResults td { padding: 0 }
+        .DIGMenu-searchResults iframe {
+          width: 100%; height: 300px;
+          display: none;
+          background-color: white;
+          border: none;
+        }
+        .SBSE-item--owned .DIG3_14_Gray { color: #9ccc65; }
+        .SBSE-item--wished .DIG3_14_Gray { color: #29b6f6; }
+        .SBSE-item--ignored .DIG3_14_Gray { text-decoration: line-through; }
+        .DIG2content select { max-width: 200px; }
+        #DIGSelectAll { display: none; }
+        #DIGSelectAll + span { display: inline-block; }
+        #DIGSelectAll ~ span:last-child { display: none; }
+        #DIGSelectAll:checked + span { display: none; }
+        #DIGSelectAll:checked ~ span:last-child { display: inline-block; }
+        .showOwnedListings { color: #FD5E0F; }
+        .showOwnedListings > label { vertical-align: text-bottom; }
+        .showOwnedListings input:checked + .SBSE-switch__slider { background-color: #FD5E0F; }
+        .DIGBalanceDetails > span { margin-right: 20px; }
+        .DIG__edit_balance {
+          display: inline-block;
+          position: relative;
+          transform: rotate(45deg);
+          cursor: pointer;
+        }
+        .DIG__edit_balance > span {
+          display: inline-block;
+        }
+        .DIG__edit_balance .tip {
+          width: 0; height: 0;
+          position: absolute;
+          top: 13px;
+          border-left: 2px solid transparent;
+          border-right: 2px solid transparent;
+          border-top: 3px solid #999;
+        }
+        .DIG__edit_balance .body {
+          width: 4px; height: 12px;
+          background-color: #999;
+        }
+        .DIG__edit_balance .rubber {
+          width: 4px; height: 2px;
+          position: absolute;
+          top: -3px;
+          background-color: #999;
+          top: -3px;
+        }
+      `);
       swal.showLoading(); // append menu buttons
 
       const $target = $('#form3').closest('tr').children().eq(0);
       const $DIGMenu = $(`
-                <div class="DIGMenu">
-                    <label class="DIGSelectAll DIG3_Orange_15_Form">
-                        <input type="checkbox" id="DIGSelectAll">
-                        <span>${i18n.get('DIGMenuSelectAll')}</span>
-                        <span>${i18n.get('DIGMenuSelectCancel')}</span>
-                    </label>
-                    <span class="DIGButtonPurchase DIG3_Orange_15_Form">${i18n.get('DIGMenuPurchase')}</span>
-                    <label class="showOwnedListings">
-                        <label class="SBSE-switch SBSE-switch--small">
-                            <input type="checkbox" id="showOwnedListings" checked>
-                            <span class="SBSE-switch__slider"></span>
-                        </label>
-                        <span>${i18n.get('owned')}</span>
-                    </label>
-                </div>
+        <div class="DIGMenu">
+          <label class="DIGSelectAll DIG3_Orange_15_Form">
+            <input type="checkbox" id="DIGSelectAll">
+            <span>${i18n.get('DIGMenuSelectAll')}</span>
+            <span>${i18n.get('DIGMenuSelectCancel')}</span>
+          </label>
+          <span class="DIGButtonPurchase DIG3_Orange_15_Form">${i18n.get('DIGMenuPurchase')}</span>
+          <label class="showOwnedListings">
+            <label class="SBSE-switch SBSE-switch--small">
+              <input type="checkbox" id="showOwnedListings" checked>
+              <span class="SBSE-switch__slider"></span>
+            </label>
+            <span>${i18n.get('owned')}</span>
+          </label>
+        </div>
             `);
 
       if ($target.children().length > 0) {
@@ -3984,20 +4064,20 @@ const siteHandlers = {
 
       const seconds = Math.round((Date.now() - steam.lastSync('library')) / 1000);
       $target.closest('table').before(`
-                <span> ${i18n.get('lastSyncTime').replace('%seconds%', seconds)}</span>
-            `); // append balance details
+        <span> ${i18n.get('lastSyncTime').replace('%seconds%', seconds)}</span>
+      `); // append balance details
 
       $target.closest('table').before(`
-                <div class="DIGBalanceDetails">
-                    <span>${i18n.get('DIGCurrentBalance')}$<span class="DIG__current_balance" data-value="0">0.00</span></span>
-                    <span class="DIG__edit_balance">
-                        <span class="tip"></span>
-                        <span class="body"></span>
-                        <span class="rubber"></span>
-                    </span>
-                    <span>${i18n.get('DIGTotalAmount')}$<span class="DIG_total_amount" data-value="0">0.00</span></span>
-                </div>
-            `); // bind balance details event
+        <div class="DIGBalanceDetails">
+          <span>${i18n.get('DIGCurrentBalance')}$<span class="DIG__current_balance" data-value="0">0.00</span></span>
+          <span class="DIG__edit_balance">
+            <span class="tip"></span>
+            <span class="body"></span>
+            <span class="rubber"></span>
+          </span>
+          <span>${i18n.get('DIGTotalAmount')}$<span class="DIG_total_amount" data-value="0">0.00</span></span>
+        </div>
+      `); // bind balance details event
 
       $('.DIGBalanceDetails span[data-value]').each((i, span) => {
         new MutationObserver(mutations => {
@@ -4109,22 +4189,22 @@ const siteHandlers = {
 
               const index = html.indexOf('</head>');
               const style = `
-                                <style>
-                                    body { overflow-x: hidden; }
-                                    .sfbgx, #sfcnt, #searchform, #top_nav, #appbar, #taw { display: none; }
-                                    #center_col { margin-left: 0 !important; }
-                                </style>
-                            `;
+                <style>
+                  body { overflow-x: hidden; }
+                  .sfbgx, #sfcnt, #searchform, #top_nav, #appbar, #taw { display: none; }
+                  #center_col { margin-left: 0 !important; }
+                </style>
+              `;
               html = html.slice(0, index) + style + html.slice(index); // stripe script tags
 
               html = html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, ''); // manipulate urls
 
               html = html.replace(/\/images\//g, 'https://www.google.com/images/').replace(/\/url\?/g, 'https://www.google.com/url?');
               $tr.after(`
-                                <tr class="DIGMenu-searchResults">
-                                    <td colspan="11"><iframe sandbox="allow-scripts" srcdoc='${html.replace(/[&<>"']/g, m => map[m])}'></frame></td>
-                                </tr>
-                            `);
+                <tr class="DIGMenu-searchResults">
+                  <td colspan="11"><iframe sandbox="allow-scripts" srcdoc='${html.replace(/[&<>"']/g, m => map[m])}'></frame></td>
+                </tr>
+              `);
             }
           });
           $game.unwrap('a').css({
@@ -4163,29 +4243,29 @@ const siteHandlers = {
       swal.showLoading(); // inject css styles
 
       GM_addStyle(`
-                body.hideOwned .SBSE-item--owned { display: none; }
-                .DIGMenu > * { margin-right: 10px; padding: 4px 0 !important; cursor: pointer; }
-                .DIG-row { height: 30px; }
-                .SBSE-item--owned .DIG4-Orange-14 { color: #9ccc65; }
-                .SBSE-item--wished .DIG4-Orange-14 { color: #29b6f6; }
-                .SBSE-item--ignored .DIG4-Orange-14 { text-decoration: line-through; }
-                .showOwnedListings { display: inline-block; color: #FD5E0F; }
-                .showOwnedListings > label { vertical-align: text-bottom; }
-                .showOwnedListings input:checked + .SBSE-switch__slider { background-color: #FD5E0F; }
-            `); // append menu buttons
+        body.hideOwned .SBSE-item--owned { display: none; }
+        .DIGMenu > * { margin-right: 10px; padding: 4px 0 !important; cursor: pointer; }
+        .DIG-row { height: 30px; }
+        .SBSE-item--owned .DIG4-Orange-14 { color: #9ccc65; }
+        .SBSE-item--wished .DIG4-Orange-14 { color: #29b6f6; }
+        .SBSE-item--ignored .DIG4-Orange-14 { text-decoration: line-through; }
+        .showOwnedListings { display: inline-block; color: #FD5E0F; }
+        .showOwnedListings > label { vertical-align: text-bottom; }
+        .showOwnedListings input:checked + .SBSE-switch__slider { background-color: #FD5E0F; }
+      `); // append menu buttons
 
       const $target = $('a[href^="site_content_giveaways_"]').eq(0).closest('table#DIG2TableGray');
       const $DIGMenu = $(`
-                <div class="DIGMenu">
-                    <label class="showOwnedListings">
-                        <label class="SBSE-switch SBSE-switch--small">
-                            <input type="checkbox" id="showOwnedListings" checked>
-                            <span class="SBSE-switch__slider"></span>
-                        </label>
-                        <span>${i18n.get('owned')}</span>
-                    </label>
-                </div>
-            `);
+        <div class="DIGMenu">
+          <label class="showOwnedListings">
+            <label class="SBSE-switch SBSE-switch--small">
+              <input type="checkbox" id="showOwnedListings" checked>
+              <span class="SBSE-switch__slider"></span>
+            </label>
+            <span>${i18n.get('owned')}</span>
+          </label>
+        </div>
+      `);
       $target.before($DIGMenu); // bind button event
 
       $('.DIGButtonPurchase').click(() => {
@@ -4274,8 +4354,8 @@ const siteHandlers = {
 
       const seconds = Math.round((Date.now() - steam.lastSync('library')) / 1000);
       $DIGMenu.prepend(`
-                <span class="DIG4-Gray-13"> ${i18n.get('lastSyncTime').replace('%seconds%', seconds)}</span>
-            `);
+        <span class="DIG4-Gray-13"> ${i18n.get('lastSyncTime').replace('%seconds%', seconds)}</span>
+      `);
       $('a[href^="site_gamelisting_"]').eachAsync(ele => {
         const $ele = $(ele);
         const $tr = $ele.closest('tr');
@@ -4350,24 +4430,24 @@ const siteHandlers = {
         }); // result page
       } else {
         GM_addStyle(`
-                    .check.icon {
-                        width: 42px; height: 24px;
-                        margin: 12px 0 5px 9px;
-                        border-bottom: solid 3px currentColor;
-                        border-left: solid 3px currentColor;
-                        transform: rotate(-45deg);
-                        color: #5cb85c;
-                    }
-                    .remove.icon { color: #d9534f; margin-left: 9px; margin-top: 30px; }
-                    .remove.icon:before, .remove.icon:after {
-                        width: 45px; height: 3px;
-                        position: absolute;
-                        content: '';
-                        background-color: currentColor;
-                        transform: rotate(45deg);
-                    }
-                    .remove.icon:after { transform: rotate(-45deg); }
-                `);
+          .check.icon {
+            width: 42px; height: 24px;
+            margin: 12px 0 5px 9px;
+            border-bottom: solid 3px currentColor;
+            border-left: solid 3px currentColor;
+            transform: rotate(-45deg);
+            color: #5cb85c;
+          }
+          .remove.icon { color: #d9534f; margin-left: 9px; margin-top: 30px; }
+          .remove.icon:before, .remove.icon:after {
+            width: 45px; height: 3px;
+            position: absolute;
+            content: '';
+            background-color: currentColor;
+            transform: rotate(45deg);
+          }
+          .remove.icon:after { transform: rotate(-45deg); }
+        `);
         const $anchor = $('td.DIG3_14_Gray > table:first-child');
         const IsSucceed = !!$('td.DIG3_14_Gray:contains("The game key has been added to the DIG MarketPlace.")').length;
         if (IsSucceed) $anchor.after('<div class="check icon"></div>');else $anchor.after('<div class="remove icon"></div>');
@@ -4378,36 +4458,36 @@ const siteHandlers = {
   ccyyshop() {
     // inject css
     GM_addStyle(`
-            .SBSE-container {
-                width: 80%;
-                position: relative;
-                margin: 0 auto;
-                font-size: 16px;
-                color: #000;
-                z-index: 999;
-            }
-            .SBSE-container__content__model > textarea {
-                background-color: #EEE;
-                box-shadow: 0 0 1px 1px rgba(204,204,204,0.5);
-                border-radius: 5px;
-            }
-            .SBSE-container__content__model > div { text-align: left; }
-            .SBSE-button {
-                width: 80px;
-                border: 1px solid #2e6da4;
-                border-radius: 5px;
-                background-color: #337ab7;
-                color: #FFF;
-            }
-            .SBSE-container label { color: #EEE; }
-            .expanded .showOrderMeta {
-                display: block !important;
-                position: absolute;
-                margin-top: -8px;
-                right: 265px;
-                z-index: 1;
-            }
-        `);
+      .SBSE-container {
+        width: 80%;
+        position: relative;
+        margin: 0 auto;
+        font-size: 16px;
+        color: #000;
+        z-index: 999;
+      }
+      .SBSE-container__content__model > textarea {
+        background-color: #EEE;
+        box-shadow: 0 0 1px 1px rgba(204,204,204,0.5);
+        border-radius: 5px;
+      }
+      .SBSE-container__content__model > div { text-align: left; }
+      .SBSE-button {
+        width: 80px;
+        border: 1px solid #2e6da4;
+        border-radius: 5px;
+        background-color: #337ab7;
+        color: #FFF;
+      }
+      .SBSE-container label { color: #EEE; }
+      .expanded .showOrderMeta {
+        display: block !important;
+        position: absolute;
+        margin-top: -8px;
+        right: 265px;
+        z-index: 1;
+      }
+    `);
     const handlers = {
       extract() {
         const data = {
@@ -4460,20 +4540,20 @@ const siteHandlers = {
     if (location.pathname.startsWith('/profile/')) {
       // inject css
       GM_addStyle(`
-                .SBSE-container__content__model > textarea, .SBSE-button {
-                    background: transparent;
-                    border: 1px solid #8cc53f;
-                    border-radius: 3px;
-                    color: #8cc53f;
-                    transition: all 0.8s ease;
-                }
-                .SBSE-button:hover {
-                    background-color: #8cc53f;
-                    color: white;
-                    text-decoration: none;
-                }
-                img.product-cover { display: none; }
-            `);
+        .SBSE-container__content__model > textarea, .SBSE-button {
+          background: transparent;
+          border: 1px solid #8cc53f;
+          border-radius: 3px;
+          color: #8cc53f;
+          transition: all 0.8s ease;
+        }
+        .SBSE-button:hover {
+          background-color: #8cc53f;
+          color: white;
+          text-decoration: none;
+        }
+        img.product-cover { display: none; }
+      `);
       const handlers = {
         extract() {
           const bundleTitle = $('h2').text().trim();
@@ -4530,8 +4610,8 @@ const siteHandlers = {
       // append checkbox for used-key
 
       $('.SBSE-button-setting').before(`
-                <label><input type="checkbox" class="SBSE-checkbox-skipUsed" checked>${i18n.get('checkboxSkipUsed')}</label>
-            `); // insert container
+        <label><input type="checkbox" class="SBSE-checkbox-skipUsed" checked>${i18n.get('checkboxSkipUsed')}</label>
+      `); // insert container
 
       $('.table-products').before($container); // load details
 
@@ -4559,11 +4639,11 @@ const siteHandlers = {
     } else {
       // inject css
       GM_addStyle(`
-                .SBSE-container { margin-bottom: 20px; }
-                .SBSE-container__content__model > textarea { background-color: #EEE; border-radius: 3px; }
-                .SBSE-button { outline: none !important; }
-                .SBSE-button-setting { margin-top: 8px; }
-            `);
+        .SBSE-container { margin-bottom: 20px; }
+        .SBSE-container__content__model > textarea { background-color: #EEE; border-radius: 3px; }
+        .SBSE-button { outline: none !important; }
+        .SBSE-button-setting { margin-top: 8px; }
+      `);
       const handlers = {
         extract() {
           const bundleTitle = $('.expanded .caption').text().trim();
@@ -4613,8 +4693,8 @@ const siteHandlers = {
       const $container = container.get('SBSE', handlers); // append checkbox for used-key
 
       $container.find('.SBSE-button-setting').before($(`
-                <label><input type="checkbox" class="SBSE-checkbox-skipUsed" checked>${i18n.get('checkboxSkipUsed')}</label>
-            `)); // add buttons style via groupees's class
+        <label><input type="checkbox" class="SBSE-checkbox-skipUsed" checked>${i18n.get('checkboxSkipUsed')}</label>
+      `)); // add buttons style via groupees's class
 
       $container.find('.SBSE-button').addClass('btn btn-default'); // insert container
 
@@ -4651,18 +4731,18 @@ const siteHandlers = {
     if (keys.length > 0) {
       // inject css
       GM_addStyle(`
-                .SBSE-container__content__model > textarea { border: 1px solid #AAAAAA; }
-                .SBSE-button {
-                    border: 1px solid #d3d3d3;
-                    background: #e6e6e6 url(images/ui-bg_glass_75_e6e6e6_1x400.png) 50% 50% repeat-x;
-                    color: #555555;
-                }
-                .SBSE-button:hover {
-                    border-color: #999999;
-                    background: #dadada url(images/ui-bg_glass_75_dadada_1x400.png) 50% 50% repeat-x;
-                    color: #212121;
-                }
-            `);
+        .SBSE-container__content__model > textarea { border: 1px solid #AAAAAA; }
+        .SBSE-button {
+          border: 1px solid #d3d3d3;
+          background: #e6e6e6 url(images/ui-bg_glass_75_e6e6e6_1x400.png) 50% 50% repeat-x;
+          color: #555555;
+        }
+        .SBSE-button:hover {
+          border-color: #999999;
+          background: #dadada url(images/ui-bg_glass_75_dadada_1x400.png) 50% 50% repeat-x;
+          color: #212121;
+        }
+      `);
       const handlers = {
         extract() {
           const bundleTitle = $('a[href*="tradeSnap.htm"]').eq(1).text().trim();
@@ -4696,25 +4776,25 @@ const siteHandlers = {
   yuplay() {
     // inject css
     GM_addStyle(`
-            .SBSE-container { margin-top: 20px; }
-            .SBSE-container__content__model > textarea { background-color: rgb(230, 230, 229); color: rgb(27, 26, 26); }
-            .SBSE-container__content__model > div { text-align: left; }
-            .SBSE-button {
-                width: 80px;
-                border: 1px solid #b4de0a;
-                background-color: #b4de0a;
-                color: #1a1a1a;
-            }
-            .SBSE-button:hover {
-                border: 1px solid #a4ca09;
-                background-color: #a4ca09;
-            }
-            .SBSE-container label { color: #1a1a1a; font-weight: 400; }
-            .SBSE-table-appList { margin-bottom: 10px; }
-            .SBSE-table-appList td { vertical-align: top; }
-            .SBSE-table-appList a { display: block; margin-bottom: 5px; }
-            .SBSE-icon { position: relative; top: 5px; }
-        `);
+      .SBSE-container { margin-top: 20px; }
+      .SBSE-container__content__model > textarea { background-color: rgb(230, 230, 229); color: rgb(27, 26, 26); }
+      .SBSE-container__content__model > div { text-align: left; }
+      .SBSE-button {
+        width: 80px;
+        border: 1px solid #b4de0a;
+        background-color: #b4de0a;
+        color: #1a1a1a;
+      }
+      .SBSE-button:hover {
+        border: 1px solid #a4ca09;
+        background-color: #a4ca09;
+      }
+      .SBSE-container label { color: #1a1a1a; font-weight: 400; }
+      .SBSE-table-appList { margin-bottom: 10px; }
+      .SBSE-table-appList td { vertical-align: top; }
+      .SBSE-table-appList a { display: block; margin-bottom: 5px; }
+      .SBSE-icon { position: relative; top: 5px; }
+    `);
     const handlers = {
       extract() {
         const data = {
@@ -4805,17 +4885,17 @@ const siteHandlers = {
   'gama-gama': () => {
     // inject css
     GM_addStyle(`
-            .SBSE-container__content__model > textarea { background-color: #ededed; color: #33; border-radius: 4px; }
-            .SBSE-button {
-                width: 80px; height: 35px;
-                border: none; border-radius: 4px;
-                background: linear-gradient(to bottom, #47bceb 0, #18a4dd 30%, #127ba6 100%);
-                color: #fff;
-                box-shadow: 0 1px 3px 1px rgba(0,0,0,.8);
-            }
-            .SBSE-button { font-family: inherit; font-size: inherit; }
-            .SBSE-button:hover { background: linear-gradient(to bottom, #47bceb, #18a4dd); }
-        `);
+      .SBSE-container__content__model > textarea { background-color: #ededed; color: #33; border-radius: 4px; }
+      .SBSE-button {
+        width: 80px; height: 35px;
+        border: none; border-radius: 4px;
+        background: linear-gradient(to bottom, #47bceb 0, #18a4dd 30%, #127ba6 100%);
+        color: #fff;
+        box-shadow: 0 1px 3px 1px rgba(0,0,0,.8);
+      }
+      .SBSE-button { font-family: inherit; font-size: inherit; }
+      .SBSE-button:hover { background: linear-gradient(to bottom, #47bceb, #18a4dd); }
+    `);
     const handlers = {
       extract() {
         const data = {
@@ -5052,9 +5132,9 @@ const siteHandlers = {
           const $trs = $rows && $rows.length > 0 ? $rows : $table.find('tbody > tr'); // setup type & icon node
 
           $trs.find('td:not(.icon) + .product-sold').before(`
-                        <td class="type"><span class="SBSE-type"></span></td>
-                        <td class="icon"><span class="SBSE-icon"></span></td>
-                    `); // setup price node
+            <td class="type"><span class="SBSE-type"></span></td>
+            <td class="icon"><span class="SBSE-icon"></span></td>
+          `); // setup price node
 
           $trs.filter(':not(:has(.SBSE-price))').find('.product-price div').each((i, price) => {
             const $price = $(price);
@@ -5147,56 +5227,56 @@ const siteHandlers = {
 
     const insertMenu = () => {
       const $menu = $(`
-                <ul class="SBSE-plati-menu">
-                    <li data-config="enablePlatiFeature">
-                        <label class="SBSE-switch SBSE-switch--small">
-                            <input type="checkbox" id="enablePlatiFeature">
-                            <span class="SBSE-switch__slider"></span>
-                        </label>
-                        <label for="enablePlatiFeature"><span>${i18n.get('enablePlatiFeature')}</span></label>
-                    </li>
-                    <li data-config="fetchOnStart">
-                        <label class="SBSE-switch SBSE-switch--small">
-                            <input type="checkbox" id="fetchOnStart">
-                            <span class="SBSE-switch__slider"></span>
-                        </label>
-                        <label for="fetchOnStart"><span>${i18n.get('platiFetchOnStart')}</span></label>
-                    </li>
-                    <li data-config="infiniteScroll">
-                        <label class="SBSE-switch SBSE-switch--small">
-                            <input type="checkbox" id="infiniteScroll">
-                            <span class="SBSE-switch__slider"></span>
-                        </label>
-                        <label for="infiniteScroll"><span>${i18n.get('platiInfiniteScroll')}</span></label>
-                    </li>
-                    <li data-config="fetchButton"><span>${i18n.get('platiFetchButton')}</span></li>
-                    <li data-config="filterType" class="SBSE-dropdown">
-                        <span>${i18n.get('platiFilterType')}</span>
-                        <ul class="SBSE-dropdown__list">
-                            <li><label><input type="checkbox" data-filter="filterGame"><span>${i18n.get('game')}</span></label></li>
-                            <li><label><input type="checkbox" data-filter="filterDLC"><span>${i18n.get('dlc')}</span></label></li>
-                            <li><label><input type="checkbox" data-filter="filterPackage"><span>${i18n.get('package')}</span></label></li>
-                            <li><label><input type="checkbox" data-filter="filterBundle"><span>${i18n.get('bundle')}</span></label></li>
-                        </ul>
-                    </li>
-                    <li data-config="filterStatus" class="SBSE-dropdown">
-                        <span>${i18n.get('platiFilterStatus')}</span>
-                        <ul class="SBSE-dropdown__list">
-                            <li><label><input type="checkbox" data-filter="filterOwned"><span>${i18n.get('owned')}</span></label></li>
-                            <li><label><input type="checkbox" data-filter="filterWished"><span>${i18n.get('wished')}</span></label></li>
-                            <li><label><input type="checkbox" data-filter="filterIgnored"><span>${i18n.get('ignored')}</span></label></li>
-                            <li><label><input type="checkbox" data-filter="filterNotOwned"><span>${i18n.get('notOwned')}</span></label></li>
-                            <li><label><input type="checkbox" data-filter="filterNotApplicable"><span>${i18n.get('notApplicable')}</span></label></li>
-                            <li><label><input type="checkbox" data-filter="filterNotFetched"><span>${i18n.get('notFetched')}</span></label></li>
-                        </ul>
-                    </li>
-                    <li data-config="currency" class="SBSE-dropdown">
-                        <span class="selectedCurrency">${xe.currencies[selectedCurrency][config.get('language')]}</span>
-                        <ul class="SBSE-dropdown__list"></ul>
-                    </li>
-                    <li data-config="syncButton"><span>${i18n.get('settingsSyncLibrary')}</span></li>
-                </ul>
-            `);
+        <ul class="SBSE-plati-menu">
+          <li data-config="enablePlatiFeature">
+            <label class="SBSE-switch SBSE-switch--small">
+              <input type="checkbox" id="enablePlatiFeature">
+              <span class="SBSE-switch__slider"></span>
+            </label>
+            <label for="enablePlatiFeature"><span>${i18n.get('enablePlatiFeature')}</span></label>
+          </li>
+          <li data-config="fetchOnStart">
+            <label class="SBSE-switch SBSE-switch--small">
+              <input type="checkbox" id="fetchOnStart">
+              <span class="SBSE-switch__slider"></span>
+            </label>
+            <label for="fetchOnStart"><span>${i18n.get('platiFetchOnStart')}</span></label>
+          </li>
+          <li data-config="infiniteScroll">
+            <label class="SBSE-switch SBSE-switch--small">
+              <input type="checkbox" id="infiniteScroll">
+              <span class="SBSE-switch__slider"></span>
+            </label>
+            <label for="infiniteScroll"><span>${i18n.get('platiInfiniteScroll')}</span></label>
+          </li>
+          <li data-config="fetchButton"><span>${i18n.get('platiFetchButton')}</span></li>
+          <li data-config="filterType" class="SBSE-dropdown">
+            <span>${i18n.get('platiFilterType')}</span>
+            <ul class="SBSE-dropdown__list">
+              <li><label><input type="checkbox" data-filter="filterGame"><span>${i18n.get('game')}</span></label></li>
+              <li><label><input type="checkbox" data-filter="filterDLC"><span>${i18n.get('dlc')}</span></label></li>
+              <li><label><input type="checkbox" data-filter="filterPackage"><span>${i18n.get('package')}</span></label></li>
+              <li><label><input type="checkbox" data-filter="filterBundle"><span>${i18n.get('bundle')}</span></label></li>
+            </ul>
+          </li>
+          <li data-config="filterStatus" class="SBSE-dropdown">
+            <span>${i18n.get('platiFilterStatus')}</span>
+            <ul class="SBSE-dropdown__list">
+              <li><label><input type="checkbox" data-filter="filterOwned"><span>${i18n.get('owned')}</span></label></li>
+              <li><label><input type="checkbox" data-filter="filterWished"><span>${i18n.get('wished')}</span></label></li>
+              <li><label><input type="checkbox" data-filter="filterIgnored"><span>${i18n.get('ignored')}</span></label></li>
+              <li><label><input type="checkbox" data-filter="filterNotOwned"><span>${i18n.get('notOwned')}</span></label></li>
+              <li><label><input type="checkbox" data-filter="filterNotApplicable"><span>${i18n.get('notApplicable')}</span></label></li>
+              <li><label><input type="checkbox" data-filter="filterNotFetched"><span>${i18n.get('notFetched')}</span></label></li>
+            </ul>
+          </li>
+          <li data-config="currency" class="SBSE-dropdown">
+            <span class="selectedCurrency">${xe.currencies[selectedCurrency][config.get('language')]}</span>
+            <ul class="SBSE-dropdown__list"></ul>
+          </li>
+          <li data-config="syncButton"><span>${i18n.get('settingsSyncLibrary')}</span></li>
+        </ul>
+      `);
       const $enablePlatiFeature = $menu.find('[data-config="enablePlatiFeature"] input');
       const $fetchOnStart = $menu.find('[data-config="fetchOnStart"] input');
       const $infiniteScroll = $menu.find('[data-config="infiniteScroll"] input');
@@ -5276,42 +5356,42 @@ const siteHandlers = {
     plati.init(); // inject css styles
 
     GM_addStyle(`
-            li[class*="hide"] { display: none; }
-            .SBSE-plati-menu { display: flex; margin: 10px 0 0 0 !important; list-style: none; }
-            .SBSE-plati-menu > li { height: 30px; line-height: 30px; padding-right: 30px; }
-            .SBSE-plati-menu > li > .SBSE-switch { vertical-align: text-bottom; }
-            .SBSE-plati-menu > li > * { cursor: pointer; }
-            .SBSE-dropdown__list { width: max-content; z-index: 999; box-shadow: 5px 5px 10px grey; }
-            .SBSE-dropdown__list li { cursor: default; }
-            .SBSE-dropdown__list li > label, .SBSE-dropdown__list li > span { width: 100%; display: inline-block; margin: 0 10px; cursor: pointer; text-align: left; }
-            tr.SBSE-item--processed:hover { background-color: #f3f3f3; }
-            tr.SBSE-item--processed:hover .product-title > div::after { display: none; }
-            .filterGame tr.SBSE-item--game,
-            .filterDLC tr.SBSE-item--DLC,
-            .filterPackage tr.SBSE-item--package,
-            .filterBundle tr.SBSE_bundle,
-            .filterOwned tr.SBSE-item--owned,
-            .filterWished tr.SBSE-item--wished,
-            .filterIgnored tr.SBSE-item--ignored,
-            .filterNotOwned tr.SBSE-item--notOwned,
-            .filterNotApplicable tr.SBSE-item--notApplicable,
-            .filterNotFetched tr.SBSE-item--notFetched { display: none; }
-            body.enablePlatiFeature .content_center { width: initial; }
-            body.enablePlatiFeature .right_side { display: none; }
-            body.enablePlatiFeature .goods-table { width: initial; }
-            body.enablePlatiFeature .product-title > div { max-width: 600px !important; }
-            body.enablePlatiFeature.infiniteScroll .SBSE-infiniteScroll-wrap {
-                max-height: 600px;
-                margin: 10px 0;
-                overflow: auto;
-            }
-            body.enablePlatiFeature.infiniteScroll .goods-table { margin: 0; }
-            body.enablePlatiFeature.infiniteScroll .goods-table tbody > tr > td:last-child { padding-right: 5px; }
-            .SBSE-icon { vertical-align: middle; }
-            body:not(.enablePlatiFeature) .type,
-            body:not(.enablePlatiFeature) .icon { display: none; }
-            .merchant_products > .SBSE-plati-menu { margin: 0 0 10px 0 !important; }
-        `);
+      li[class*="hide"] { display: none; }
+      .SBSE-plati-menu { display: flex; margin: 10px 0 0 0 !important; list-style: none; }
+      .SBSE-plati-menu > li { height: 30px; line-height: 30px; padding-right: 30px; }
+      .SBSE-plati-menu > li > .SBSE-switch { vertical-align: text-bottom; }
+      .SBSE-plati-menu > li > * { cursor: pointer; }
+      .SBSE-dropdown__list { width: max-content; z-index: 999; box-shadow: 5px 5px 10px grey; }
+      .SBSE-dropdown__list li { cursor: default; }
+      .SBSE-dropdown__list li > label, .SBSE-dropdown__list li > span { width: 100%; display: inline-block; margin: 0 10px; cursor: pointer; text-align: left; }
+      tr.SBSE-item--processed:hover { background-color: #f3f3f3; }
+      tr.SBSE-item--processed:hover .product-title > div::after { display: none; }
+      .filterGame tr.SBSE-item--game,
+      .filterDLC tr.SBSE-item--DLC,
+      .filterPackage tr.SBSE-item--package,
+      .filterBundle tr.SBSE_bundle,
+      .filterOwned tr.SBSE-item--owned,
+      .filterWished tr.SBSE-item--wished,
+      .filterIgnored tr.SBSE-item--ignored,
+      .filterNotOwned tr.SBSE-item--notOwned,
+      .filterNotApplicable tr.SBSE-item--notApplicable,
+      .filterNotFetched tr.SBSE-item--notFetched { display: none; }
+      body.enablePlatiFeature .content_center { width: initial; }
+      body.enablePlatiFeature .right_side { display: none; }
+      body.enablePlatiFeature .goods-table { width: initial; }
+      body.enablePlatiFeature .product-title > div { max-width: 600px !important; }
+      body.enablePlatiFeature.infiniteScroll .SBSE-infiniteScroll-wrap {
+        max-height: 600px;
+        margin: 10px 0;
+        overflow: auto;
+      }
+      body.enablePlatiFeature.infiniteScroll .goods-table { margin: 0; }
+      body.enablePlatiFeature.infiniteScroll .goods-table tbody > tr > td:last-child { padding-right: 5px; }
+      .SBSE-icon { vertical-align: middle; }
+      body:not(.enablePlatiFeature) .type,
+      body:not(.enablePlatiFeature) .icon { display: none; }
+      .merchant_products > .SBSE-plati-menu { margin: 0 0 10px 0 !important; }
+    `);
 
     if (location.pathname.startsWith('/seller/') || location.pathname.startsWith('/cat/')) {
       insertMenu();
