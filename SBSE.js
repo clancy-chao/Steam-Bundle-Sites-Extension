@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.15.0
+// @version      2.15.1
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -562,6 +562,7 @@ const i18n = {
       settingsASFIPCServer: 'ASF IPC IP位址',
       settingsASFIPCPort: 'ASF IPC 連接埠',
       settingsASFIPCPassword: 'ASF IPC 密碼',
+      settingsReportIssues: '回報問題／新功能請求',
       HBAlreadyOwned: '遊戲已擁有',
       HBRedeemAlreadyOwned: '確定刮開 %title% Steam 序號？',
       steamStore: 'Steam 商店',
@@ -670,6 +671,7 @@ const i18n = {
       settingsASFIPCServer: 'ASF IPC IP地址',
       settingsASFIPCPort: 'ASF IPC 端口',
       settingsASFIPCPassword: 'ASF IPC 密码',
+      settingsReportIssues: '回报问题／新功能请求',
       HBAlreadyOwned: '游戏已拥有',
       HBRedeemAlreadyOwned: '确定刮开 %title% Steam 激活码？',
       steamStore: 'Steam 商店',
@@ -778,6 +780,7 @@ const i18n = {
       settingsASFIPCServer: 'ASF IPC IP Address',
       settingsASFIPCPort: 'ASF IPC Port',
       settingsASFIPCPassword: 'ASF IPC Password',
+      settingsReportIssues: 'Report Issues or Request Features',
       HBAlreadyOwned: 'Game Already Owned',
       HBRedeemAlreadyOwned: 'Are you sure to redeem %title% Steam Key?',
       steamStore: 'Steam Store',
@@ -2319,6 +2322,17 @@ const settings = {
         default:
       }
     });
+
+    // append report section
+    $model.find('table').append(`
+      <tr>
+        <td class="name">${i18n.get('settingsReportIssues')}</td>
+        <td class="value">
+          <a href="https://keylol.com/t305330-1-1" target="_blank">其乐 Keylol</a>
+          <a href="https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/issues" target="_blank">GitHub</a>
+        </td>
+      </tr>
+    `);
 
     // apply settings
     const $sessionID = $model.find('[data-config="sessionID"]');
