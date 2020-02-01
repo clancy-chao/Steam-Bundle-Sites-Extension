@@ -6,7 +6,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.15.1
+// @version      2.15.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -3521,13 +3521,15 @@ const siteHandlers = {
 
             if (d.success) {
               $node.closest('.container').html(`
-              <div title="${d.key}" class="keyfield redeemed">
+              <div title="${d.key}" class="js-keyfield keyfield redeemed enabled">
                 <div class="keyfield-value">${d.key}</div>
-                <a class="steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
+                <a class="steam-redeem-button js-steam-redeem-button" href="https://store.steampowered.com/account/registerkey?key=${d.key}" target="_blank">
                   <div class="steam-redeem-text">Redeem</div>
                   <span class="tooltiptext">Redeem on Steam</span>
                 </a>
-                <div class="spinner"></div>
+                <div class="spinner-icon" aria-label="Loading">
+                  <i class="hb hb-spinner hb-spin"></i>
+                </div>
               </div>
             `);
             } else swal(i18n.get('failTitle'), JSON.stringify(d), 'error');
