@@ -6,7 +6,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.15.2
+// @version      2.16.0
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -15,6 +15,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @include      http*://store.steampowered.com/*
 // @include      https://www.indiegala.com/gift*
 // @include      https://www.indiegala.com/profile*
+// @include      https://www.indiegala.com/library*
 // @include      https://www.indiegala.com/game*
 // @include      https://www.fanatical.com/*
 // @include      https://www.humblebundle.com/*
@@ -2685,9 +2686,7 @@ const ASF = {
         return options;
       };
 
-      const sendCommand =
-      /*#__PURE__*/
-      function () {
+      const sendCommand = /*#__PURE__*/function () {
         var _ref3 = _asyncToGenerator(function* (command) {
           self.push('commands', command);
           const res = yield request(requestOptions('POST', `/Api/Command/${encodeURIComponent(command)}`));
@@ -3006,30 +3005,31 @@ const siteHandlers = {
       .SBSE-container { margin-top: 10px; }
       .SBSE-container__nav__item--show { border-bottom: 1px solid #CC001D; color: #CC001D; }
       .SBSE-container__content__model > textarea { border: 1px solid #CC001D; border-radius: 3px; }
-      .SBSE-button { width: 100px; background-color: #CC001D; color: white; border-radius: 3px; }
+      .SBSE-button { width: 100px; background-color: #CC001D; color: white; border: none; border-radius: 3px; }
       .swal2-popup .SBSE-switch__slider { margin: 0; }
-      .SBSE-icon { vertical-align: middle; }
+      .SBSE-icon { margin-top: 15px; }
     `);
     const handlers = {
       extract() {
-        const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
-        const bundleTitle = $('[aria-expanded="true"] > div#bundle-title, #bundle-title, #indie_gala_2 > div > span').eq(0).text().trim();
+        const $tabCont = $('.profile-private-page-library-tab-cont');
+        const $source = $tabCont.length > 1 ? $tabCont.filter('.profile-private-page-library-tab-active') : $tabCont;
+        const bundleTitle = $('.profile-private-page-library-selected .profile-private-page-library-title').text().trim();
         const data = {
           title: bundleTitle,
           filename: `IndieGala ${bundleTitle} Keys`,
           items: []
         };
-        $(source).find('.game-key-string').each((i, ele) => {
+        $source.find('ul[class^="profile-private-page"][class$="-active"]').find('.profile-private-page-library-subitem').each((i, ele) => {
           const $ele = $(ele);
-          const key = $ele.find('.keys').val();
+          const key = $ele.find('input[class*="key-serial"]').val();
 
           if (key) {
-            const d = JSON.parse($(ele).closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
+            const d = JSON.parse($(ele).attr('data-gameinfo') || '{}');
 
             if (Object.keys(d).length === 0) {
-              const $a = $ele.find('.title_game > a');
+              const $a = $ele.find('a[href*="steam"]');
               const matched = $a.attr('href').match(/steam.+\/(app|sub)\/(\d+)/);
-              d.title = $a.text().trim();
+              d.title = $ele.find('.profile-private-page-library-title *[title]').attr('title').trim();
               if (matched) d[matched[1]] = parseInt(matched[2], 10);
             }
 
@@ -3042,7 +3042,8 @@ const siteHandlers = {
       },
 
       reveal(e) {
-        const source = location.pathname === '/profile' ? 'div[id*="_sale_"].collapse.in' : document;
+        const $tabCont = $('.profile-private-page-library-tab-cont');
+        const $source = $tabCont.length > 1 ? $tabCont.filter('.profile-private-page-library-tab-active') : $tabCont;
         const $revealBtn = $(e.currentTarget);
         const selected = $('.SBSE-select-filter').val() || 'All';
 
@@ -3050,48 +3051,17 @@ const siteHandlers = {
           const game = $games.shift();
 
           if (game) {
-            const $game = $(game);
-            const code = $game.attr('id').split('_').pop();
-            const id = $game.attr('onclick').match(/steampowered\.com\/(app|sub)\/(\d+)/)[2];
-            const d = JSON.parse($game.closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
+            const d = JSON.parse($(game).closest('.SBSE-item--processed').attr('data-gameinfo') || '{}');
 
             if (selected === 'All' || selected === 'Owned' && d.owned || selected === 'NotOwned' && !d.owned) {
-              $.ajax({
-                method: 'GET',
-                url: '/myserials/syncget',
-                dataType: 'json',
-                data: {
-                  code,
-                  cache: false,
-                  productId: id
-                },
-
-                beforeSend() {
-                  $(`#permbutton_${code}, #fetchlink_${code}, #info_key_${code}`).hide();
-                  $(`#fetching_${code}`).fadeIn();
-                  $(`#ajax_loader_${code}`).show();
-                  $(`#container_activate_${code}`).html('');
-                },
-
-                success(data) {
-                  $(`#ajax_loader_${code}, #fetching_${code}, #info_key_${code}`).hide();
-                  $(`#serial_${code}`).fadeIn();
-                  $(`#serial_n_${code}`).val(data.serial_number);
-                  $game.parent().prev().find('.btn-convert-to-trade').remove();
-                  handler($games, callback);
-                },
-
-                error() {
-                  swal(i18n.get('failTitle'), i18n.get('failDetailUnexpected'), 'error');
-                }
-
-              });
-            } else handler($games, callback);
+              game.click();
+              setTimeout(handler.bind(null, $games, callback), 700);
+            } else setTimeout(handler.bind(null, $games, callback), 1);
           } else callback();
         };
 
         $revealBtn.addClass('SBSE-button--working');
-        handler($(source).find('a[id^=fetchlink_]'), () => {
+        handler($source.find('button[onclick^="getSerialKey"]'), () => {
           $revealBtn.removeClass('SBSE-button--working');
           $('.SBSE-button-retrieve').click();
         });
@@ -3099,23 +3069,28 @@ const siteHandlers = {
 
     };
 
-    const process = () => {
+    const process = $nodes => {
       const tooltipsData = [];
-      $('.game-key-string').each((i, ele) => {
+      const $source = $nodes && $nodes.length > 0 ? $nodes : $('.profile-private-page-library-subitem');
+      $source.each((i, ele) => {
         const $ele = $(ele);
-        const $a = $ele.find('.title_game > a');
+        const $a = $ele.find('a[href*="steam"]');
         const d = {
-          title: $a.text().trim()
+          title: $ele.find('.profile-private-page-library-title *[title]').attr('title').trim()
         };
-        const matched = $a.attr('href').match(/steam.+\/(app|sub)\/(\d+)/);
-        if (matched) d[matched[1]] = parseInt(matched[2], 10); // check if owned & wished
 
-        d.owned = steam.isOwned(d);
-        d.wished = steam.isWished(d);
-        if (d.owned) $ele.addClass('SBSE-item--owned');
-        if (d.wished) $ele.addClass('SBSE-item--wished'); // append icon
+        if ($a.length > 0) {
+          const matched = $a.attr('href').match(/steam.+\/(app|sub)\/(\d+)/);
+          if (matched) d[matched[1]] = parseInt(matched[2], 10); // check if owned & wished
 
-        $a.after($('<span class="SBSE-icon"></span>').mouseenter(keylolTooltip.show.bind(keylolTooltip)));
+          d.owned = steam.isOwned(d);
+          d.wished = steam.isWished(d);
+          if (d.owned) $ele.addClass('SBSE-item--owned');
+          if (d.wished) $ele.addClass('SBSE-item--wished');
+        } // append icon
+
+
+        $ele.find('.profile-private-page-library-title').after($('<span class="SBSE-icon"></span>').mouseenter(keylolTooltip.show.bind(keylolTooltip)));
         tooltipsData.push(d);
         $ele.attr('data-gameinfo', JSON.stringify(d)).addClass('SBSE-item--processed SBSE-item--steam');
       }); // load Keylol tooltip
@@ -3126,26 +3101,18 @@ const siteHandlers = {
     const $container = container.get('SBSE', handlers);
     process(); // insert container
 
-    $('#library-contain').eq(0).before($container); // support for new password protected gift page
-
-    const $node = $('#gift-contents');
-
-    if ($node.length > 0) {
-      const observer = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
-          Array.from(mutation.addedNodes).forEach(addedNode => {
-            if (addedNode.id === 'library-contain') {
-              process();
-              $node.prepend($container);
-              observer.disconnect();
-            }
-          });
+    $('.profile-private-page-library-menu').eq(0).before($container);
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        Array.from(mutation.addedNodes).forEach(addedNode => {
+          if (addedNode.nodeType === 1 && addedNode.classList.contains('profile-private-page-library-subitem')) process($(addedNode));
         });
       });
-      observer.observe($node[0], {
-        childList: true
-      });
-    }
+    });
+    observer.observe($('.profile-private-page-library-cont')[0], {
+      childList: true,
+      subtree: true
+    });
   },
 
   fanatical() {
@@ -3190,9 +3157,7 @@ const siteHandlers = {
       .SBSE-icon { vertical-align: bottom; }
     `);
 
-    const fetchAPIData =
-    /*#__PURE__*/
-    function () {
+    const fetchAPIData = /*#__PURE__*/function () {
       var _ref4 = _asyncToGenerator(function* (s, c) {
         let slug = s;
         let callback = c;
@@ -3221,9 +3186,7 @@ const siteHandlers = {
       };
     }();
 
-    const productHandler =
-    /*#__PURE__*/
-    function () {
+    const productHandler = /*#__PURE__*/function () {
       var _ref5 = _asyncToGenerator(function* (APIData) {
         if (Object.keys(APIData).length > 0) {
           const language = config.get('language');
@@ -3500,9 +3463,7 @@ const siteHandlers = {
     let gamekey;
     const atDownload = location.pathname === '/downloads';
 
-    const fetchKey =
-    /*#__PURE__*/
-    function () {
+    const fetchKey = /*#__PURE__*/function () {
       var _ref6 = _asyncToGenerator(function* ($node, machineName, callback) {
         if (gamekey) {
           const res = yield fetch('https://www.humblebundle.com/humbler/redeemkey', {
@@ -3607,9 +3568,7 @@ const siteHandlers = {
 
     };
 
-    const process =
-    /*#__PURE__*/
-    function () {
+    const process = /*#__PURE__*/function () {
       var _ref7 = _asyncToGenerator(function* ($node) {
         gamekey = new URLSearchParams(location.search).get('key');
         let json = GM_getValue(gamekey, '');
@@ -3737,9 +3696,7 @@ const siteHandlers = {
     } else {
       const observer = new MutationObserver(mutations => {
         mutations.forEach(mutation => {
-          Array.from(mutation.addedNodes).forEach(
-          /*#__PURE__*/
-          function () {
+          Array.from(mutation.addedNodes).forEach( /*#__PURE__*/function () {
             var _ref8 = _asyncToGenerator(function* (addedNode) {
               const $node = $(addedNode);
 
@@ -3867,9 +3824,7 @@ const siteHandlers = {
 
       if ($awaitRatings.length > 0) {
         $('#TableKeys td:contains(Rate TRADE)').text(i18n.get('DIGRateAllPositive')).css('cursor', 'pointer').click(() => {
-          $awaitRatings.each(
-          /*#__PURE__*/
-          function () {
+          $awaitRatings.each( /*#__PURE__*/function () {
             var _ref9 = _asyncToGenerator(function* (i, a) {
               const res = yield fetch(a.href, {
                 method: 'GET',
@@ -4420,9 +4375,7 @@ const siteHandlers = {
         const $searchResult = $('<div/>');
         $gameTitle.closest('table').after($searchResult);
         $searchResult.before(`<h3>${i18n.get('DIGMarketSearchResult')}</h3>`);
-        $('.tt-dropdown-menu').click(
-        /*#__PURE__*/
-        _asyncToGenerator(function* () {
+        $('.tt-dropdown-menu').click( /*#__PURE__*/_asyncToGenerator(function* () {
           $searchResult.empty();
           const res = yield fetch(`${location.origin}/account_tradesXT.html`, {
             method: 'POST',
@@ -4432,7 +4385,7 @@ const siteHandlers = {
             body: `search=${encodeURIComponent($gameTitle.val()).replace(/%20/g, '+')}&button=SEARCH`,
             credentials: 'same-origin'
           });
-          const result = res.ok ? $((yield res.text())).find('#TableKeys') : 'Network response was not ok.';
+          const result = res.ok ? $(yield res.text()).find('#TableKeys') : 'Network response was not ok.';
           $searchResult.append(result);
         })); // apply last input price
 
@@ -4630,9 +4583,7 @@ const siteHandlers = {
 
       $('.table-products').before($container); // load details
 
-      $('img[src*="steam.svg"]').each(
-      /*#__PURE__*/
-      function () {
+      $('img[src*="steam.svg"]').each( /*#__PURE__*/function () {
         var _ref11 = _asyncToGenerator(function* (index, ele) {
           $.ajax({
             url: $(ele).closest('tr').find('.item-link').attr('href'),
@@ -5037,7 +4988,7 @@ const siteHandlers = {
 
           if (this.pathname) {
             const res = yield fetch(`${this.pathname}?${$.param(params)}`);
-            const $resHTML = $((yield res.text()));
+            const $resHTML = $(yield res.text());
             const $trs = $resHTML.find('tbody > tr');
 
             if (res.ok && $trs.length > 0) {
