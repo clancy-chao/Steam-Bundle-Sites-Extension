@@ -1905,7 +1905,7 @@ const steam = {
       if (o.key === 'games' && o.sync !== false) {
         GM_xmlhttpRequest({
           method: 'GET',
-          url: 'http://steamspy.com/api.php?request=all',
+          url: 'https://steamspy.com/api.php?request=all',
           onload(res) {
             try {
               const data = JSON.parse(res.response);
