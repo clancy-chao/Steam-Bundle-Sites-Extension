@@ -9,7 +9,7 @@
 
 Steam Bundle Sites Extension is a tool kit for Steam bundle websites.🔧
 
-Supported webseites include [HumbleBundle](https://www.humblebundle.com), [BundleStars](https://www.bundlestars.com), [Indiegala](https://www.indiegala.com/), [Groupees](https://groupees.com/), [DailyIndieGames](http://www.dailyindiegame.com/) etc.
+Supported webseites include [HumbleBundle](https://www.humblebundle.com), [Fanatical (formerly "BundleStars")](https://www.fanatical.com/), [Indiegala](https://www.indiegala.com/), [Groupees](https://groupees.com/), [DailyIndieGames](http://www.dailyindiegame.com/) etc.
 
 ---
 
