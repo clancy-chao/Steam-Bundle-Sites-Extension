@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.16.1
+// @version      2.16.2
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -3103,6 +3103,7 @@ const siteHandlers = {
 
             if (selected === 'All' || (selected === 'Owned' && d.owned) || (selected === 'NotOwned' && !d.owned)) {
               game.click();
+              unsafeWindow.getSerialKeyGo = true; // fix: issue#27
               setTimeout(handler.bind(null, $games, callback), 700);
             } else setTimeout(handler.bind(null, $games, callback), 1);
           } else callback();
