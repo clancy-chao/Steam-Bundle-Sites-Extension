@@ -9,7 +9,7 @@
 
 Steam Bundle Sites Extension 是一个 Steam 包包站的工具箱。🔧
 
-目前支持的包站有：[HumbleBundle](https://www.humblebundle.com), [BundleStars](https://www.bundlestars.com), [Indiegala](https://www.indiegala.com/), [Groupees](https://groupees.com/), [DailyIndieGames](http://www.dailyindiegame.com/) 和 [阿奇索](alds.agiso.com)。
+目前支持的包站有：[HumbleBundle](https://www.humblebundle.com), [Fanatical (原 "BundleStars")](https://www.fanatical.com/), [Indiegala](https://www.indiegala.com/), [Groupees](https://groupees.com/), [DailyIndieGames](http://www.dailyindiegame.com/) 和 [阿奇索](alds.agiso.com)。
 
 ---
 

@@ -3055,6 +3055,7 @@ const siteHandlers = {
 
             if (selected === 'All' || selected === 'Owned' && d.owned || selected === 'NotOwned' && !d.owned) {
               game.click();
+              unsafeWindow.getSerialKeyGo = true; // fix: issue#27
               setTimeout(handler.bind(null, $games, callback), 700);
             } else setTimeout(handler.bind(null, $games, callback), 1);
           } else callback();
