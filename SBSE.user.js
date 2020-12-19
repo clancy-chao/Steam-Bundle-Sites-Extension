@@ -6,7 +6,7 @@ function _asyncToGenerator(fn) { return function () { var self = this, args = ar
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.16.3
+// @version      2.16.4
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -3391,7 +3391,7 @@ const siteHandlers = {
 
 
           if ($node.is('.order-item') || $node.children('div.order-bundle-items-container, div.order-item').length > 0) {
-            if (currentURL.includes('/orders/') || currentURL.includes('/product-library')) {
+            if (currentURL.includes('/orders/')) {
               // insert container
               const $anchor = $('.account-content h3');
 
