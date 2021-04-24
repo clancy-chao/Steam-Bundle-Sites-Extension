@@ -2,7 +2,7 @@
 // @name         Steam Bundle Sites Extension
 // @homepage     https://github.com/clancy-chao/Steam-Bundle-Sites-Extension
 // @namespace    http://tampermonkey.net/
-// @version      2.16.4
+// @version      2.16.5
 // @updateURL    https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.meta.js
 // @downloadURL  https://github.com/clancy-chao/Steam-Bundle-Sites-Extension/raw/master/SBSE.user.js
 // @description  A steam bundle sites' tool kits.
@@ -3350,7 +3350,7 @@ const siteHandlers = {
           items: [],
         };
 
-        $('.account-content .order-item').each((i, orderItem) => {
+        $('.account-content .order-item-details-container').each((i, orderItem) => {
           const $orderItem = $(orderItem);
           const key = $orderItem.find('input[type="text"]').val();
 
